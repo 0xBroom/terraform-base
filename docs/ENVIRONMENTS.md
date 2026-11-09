@@ -37,6 +37,7 @@ exist, which is what we want.
 | Deploys | a push to `main` | a push to `main` | a tag `pro-YYYYMMDDHH` |
 | Cloud SQL tier | `db-f1-micro` (shared core, 0.6 GB, no SLA), zonal | `db-custom-1-3840` (1 vCPU, 3.75 GB), zonal | `db-custom-2-7680` (2 vCPU, 7.5 GB), regional |
 | Cloud SQL disk | 10 GB SSD | 10 GB SSD | 20 GB SSD |
+| Cloud SQL deletion protection | off | on | on |
 | Cloud SQL `max_connections` | 25 | 100 | 200 |
 | Cloud SQL backups | 7, no point-in-time recovery | 7, no point-in-time recovery | 30, 7 days of WAL |
 | Cloud SQL insights | off | off | on |
@@ -107,10 +108,13 @@ export` for that. Snapshots need Redis 5.0 or later and add no charge to the
 instance. Stg leaves them off because its cache can be rebuilt, not to save
 money.
 
-All of them keep the database private, require SSL, protect the instance from
-deletion, require an identity in front of the service (IAP on `/*` in stg and
-pro, IAM on the run.app URL in dev), and refuse to disable billing when the
-budget is hit. `enable_auto_stop: false` matches the Terraform default and is written
+All of them keep the database private, require SSL, require an identity in
+front of the service (IAP on `/*` in stg and pro, IAM on the run.app URL in
+dev), and refuse to disable billing when the budget is hit. Stg and pro also
+protect the Cloud SQL instance from deletion. Dev does not, so `terraform
+destroy` removes it: export the data first when it matters (`gcloud sql
+export sql`), since by default the automated backups are deleted with the
+instance. `enable_auto_stop: false` matches the Terraform default and is written
 out so nobody turns it on by accident: `true` deploys a function that turns
 billing off, and every service in the project with it.
 
