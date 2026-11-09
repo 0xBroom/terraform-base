@@ -5,7 +5,7 @@ settings, locals, network, security, SQL, KMS and provider pins). This
 repository is that template: root files `gcp.*.tf`, vendored `tf_gcp_*`
 modules, one workspace file per environment.
 
-Open: 4. Done: 20. Accepted, do not port: 16.
+Open: 1. Done: 20. Accepted, do not port: 19.
 
 Regenerate this file with `python3 bin/audit-terraform.py --write` in the same
 pull request that closes an item. The status comes from the code, not from
@@ -21,30 +21,6 @@ versions.tf asks for hashicorp/google ~> 6.42.0 and Terraform >= 1.10. Tools Hub
 Evidence: versions.tf required_providers.google version ~> 6.42.0.
 
 Next change: Open one PR that bumps Terraform and both Google providers, runs validate, and notes every module argument the new provider rejects.
-
-### AUD-MOD-SEC (p2) The security baseline module is the May 2024 snapshot
-
-modules/tf_gcp_basic_project_security_v1.8-202405071510 is what this repo vendors. Tools Hub calls v2.6-202604231625 from Bitbucket. The newer module is private. Do not copy it into this repository. Record the gap so an upgrade is a deliberate import of a module this project is allowed to republish.
-
-Evidence: gcp.security.tf source = ./modules/tf_gcp_basic_project_security_v1.8-202405071510.
-
-Next change: When a republishable v2 module is available, vendor it under a new directory name and switch the source in one PR.
-
-### AUD-MOD-NET (p2) The networking module is the March 2025 snapshot
-
-modules/tf_gcp_networking_v3.5-202503101237. Tools Hub is on v3.8-202605270915. Same rule as the security module: the newer source is private, so this item waits for a module we can vendor.
-
-Evidence: gcp.network.tf source path contains tf_gcp_networking_v3.5.
-
-Next change: Vendor a newer networking module only if it can be republished, then switch gcp.network.tf.
-
-### AUD-MOD-RUN (p2) The Cloud Run module is the February 2025 snapshot
-
-modules/tf_gcp_cloudrun_v2_v6.5-202502191120. Tools Hub has moved on. Root files already pass command, args, probes and direct VPC egress, so the gap is the module's own defaults and monitoring, not a missing feature in the YAML.
-
-Evidence: gcp.cloudrun.tf source path contains tf_gcp_cloudrun_v2_v6.5.
-
-Next change: Upgrade in one PR when a republishable module is available. Do not fork the vendored copy in place.
 
 ## Done
 
@@ -209,6 +185,30 @@ Evidence: No AGENTS.md. No skill next to the audit.
 Next change: Add AGENTS.md and docs/audit/OPERATING.md. Point both at this script.
 
 ## Accepted, do not port
+
+### AUD-MOD-SEC (p2) The security baseline module is the May 2024 snapshot
+
+modules/tf_gcp_basic_project_security_v1.8-202405071510 is what this repo vendors. A newer snapshot exists in a private registry. Copying that source into this public repository is not allowed. Upgrade when a republishable module exists. Until then this is a decision, not an open task.
+
+Evidence: gcp.security.tf source = ./modules/tf_gcp_basic_project_security_v1.8-202405071510.
+
+Next change: Leave the vendored snapshot. Vendor a newer module only if it can be republished.
+
+### AUD-MOD-NET (p2) The networking module is the March 2025 snapshot
+
+modules/tf_gcp_networking_v3.5-202503101237. A newer snapshot exists in a private registry. Same rule as the security module: do not copy it into this public repository.
+
+Evidence: gcp.network.tf source path contains tf_gcp_networking_v3.5.
+
+Next change: Leave the vendored snapshot. Vendor a newer module only if it can be republished.
+
+### AUD-MOD-RUN (p2) The Cloud Run module is the February 2025 snapshot
+
+modules/tf_gcp_cloudrun_v2_v6.5-202502191120. A newer snapshot exists in a private registry and cannot be copied here. Root files already pass command, args, probes and direct VPC egress, so the YAML is not missing those features.
+
+Evidence: gcp.cloudrun.tf source path contains tf_gcp_cloudrun_v2_v6.5.
+
+Next change: Leave the vendored snapshot. Upgrade when a republishable module is available. Do not fork the copy in place.
 
 ### OK-MODULE-VPC (p1) Do not create one VPC per service or per module
 

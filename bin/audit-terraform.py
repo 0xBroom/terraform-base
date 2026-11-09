@@ -383,44 +383,44 @@ ITEMS: list[dict] = [
         "title": "The security baseline module is the May 2024 snapshot",
         "why": (
             "modules/tf_gcp_basic_project_security_v1.8-202405071510 is what this "
-            "repo vendors. Tools Hub calls v2.6-202604231625 from Bitbucket. The "
-            "newer module is private. Do not copy it into this repository. Record "
-            "the gap so an upgrade is a deliberate import of a module this project "
-            "is allowed to republish."
+            "repo vendors. A newer snapshot exists in a private registry. Copying "
+            "that source into this public repository is not allowed. Upgrade when "
+            "a republishable module exists. Until then this is a decision, not an "
+            "open task."
         ),
         "evidence": "gcp.security.tf source = ./modules/tf_gcp_basic_project_security_v1.8-202405071510.",
-        "change": "When a republishable v2 module is available, vendor it under a new directory name and switch the source in one PR.",
+        "change": "Leave the vendored snapshot. Vendor a newer module only if it can be republished.",
         "ok": security_module_current,
-        "disposition": "fix",
+        "disposition": "accepted",
     },
     {
         "id": "AUD-MOD-NET",
         "severity": "p2",
         "title": "The networking module is the March 2025 snapshot",
         "why": (
-            "modules/tf_gcp_networking_v3.5-202503101237. Tools Hub is on "
-            "v3.8-202605270915. Same rule as the security module: the newer source "
-            "is private, so this item waits for a module we can vendor."
+            "modules/tf_gcp_networking_v3.5-202503101237. A newer snapshot exists "
+            "in a private registry. Same rule as the security module: do not copy "
+            "it into this public repository."
         ),
         "evidence": "gcp.network.tf source path contains tf_gcp_networking_v3.5.",
-        "change": "Vendor a newer networking module only if it can be republished, then switch gcp.network.tf.",
+        "change": "Leave the vendored snapshot. Vendor a newer module only if it can be republished.",
         "ok": networking_module_current,
-        "disposition": "fix",
+        "disposition": "accepted",
     },
     {
         "id": "AUD-MOD-RUN",
         "severity": "p2",
         "title": "The Cloud Run module is the February 2025 snapshot",
         "why": (
-            "modules/tf_gcp_cloudrun_v2_v6.5-202502191120. Tools Hub has moved on. "
-            "Root files already pass command, args, probes and direct VPC egress, "
-            "so the gap is the module's own defaults and monitoring, not a missing "
-            "feature in the YAML."
+            "modules/tf_gcp_cloudrun_v2_v6.5-202502191120. A newer snapshot exists "
+            "in a private registry and cannot be copied here. Root files already "
+            "pass command, args, probes and direct VPC egress, so the YAML is not "
+            "missing those features."
         ),
         "evidence": "gcp.cloudrun.tf source path contains tf_gcp_cloudrun_v2_v6.5.",
-        "change": "Upgrade in one PR when a republishable module is available. Do not fork the vendored copy in place.",
+        "change": "Leave the vendored snapshot. Upgrade when a republishable module is available. Do not fork the copy in place.",
         "ok": cloudrun_module_current,
-        "disposition": "fix",
+        "disposition": "accepted",
     },
     {
         "id": "AUD-PAP",
