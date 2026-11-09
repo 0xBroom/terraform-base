@@ -4,7 +4,7 @@ The list of work that takes this template to a public, production-grade
 release: dev and stg cheap, pro ready for a security, backup and
 data-retention audit. Each item has a check in `bin/audit-terraform.py`.
 
-Open: 27. Done: 24. Accepted, not a gap: 22.
+Open: 26. Done: 25. Accepted, not a gap: 22.
 
 Regenerate with `python3 bin/audit-terraform.py --write` in the pull request
 that closes an item. `--next` names the item to take. How a session works an
@@ -12,14 +12,6 @@ item: `docs/audit/OPERATING.md`.
 
 
 ## Open
-
-### AUD-SQL-HARDEN (p1) Pro PostgreSQL has no connection or statement audit trail
-
-Auditors ask who connected and what ran. Pro sets only max_connections, and generated passwords have no special characters.
-
-Next change: In settings/pro.yaml add log_connections, log_disconnections, log_min_duration_statement, cloudsql.enable_pgaudit and pgaudit.log flags, and special_password enabled. Keep dev and stg without them.
-
-After: AUD-SQL-PITR
 
 ### AUD-AUDIT-ARCHIVE (p1) Audit logs are not archived in a locked bucket
 
@@ -351,3 +343,4 @@ Next change: Keep it equal to stg.
 - AUD-PUB-LEAKS (p0) Tracked files name private companies, products, people or real addresses
 - AUD-PUB-ELASTIC (p1) The Elastic Private Service Connect target is a literal project path
 - AUD-SQL-PITR (p1) Point-in-time recovery in the YAML never reaches Cloud SQL
+- AUD-SQL-HARDEN (p1) Pro PostgreSQL has no connection or statement audit trail

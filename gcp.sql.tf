@@ -45,7 +45,7 @@ module "cloud_sql" {
   maintenance_window      = try(each.value.sql.maintenance, null)
   deny_maintenance_period = try(each.value.sql.deny_maintenance_period, null)
   zones_name              = try(local.settings.zones_name, [])
-  special_characters_pass = try(each.value.sql.special_password, null)
+  special_characters_pass = try(each.value.sql.special_password, {})
   secrets_locations       = [local.settings.region_name] # Use regional location for secrets
   net_id                  = try(each.value.sql.ipv4_enabled, false) ? null : try(module.network[0].network_id, null)
   insights_config = {

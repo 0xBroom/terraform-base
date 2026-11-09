@@ -154,6 +154,15 @@ database:
         size: 20
       flags:
         max_connections: 200
+        log_connections: "on"
+        log_disconnections: "on"
+        log_min_duration_statement: "1000"
+        log_lock_waits: "on"
+        cloudsql.enable_pgaudit: "on"
+        pgaudit.log: "ddl,role"
+      special_password:
+        enabled: true
+        characters: "-_.~"
       backup:
         start_time: "02:00"
         retained_backups: 30

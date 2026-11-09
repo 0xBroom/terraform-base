@@ -28,6 +28,8 @@ exist, which is what we want.
 | Deploys | a push to `main` | a tag `pro-YYYYMMDDHH` |
 | Cloud SQL | zonal, 1 vCPU, 7 backups, insights off | regional, 2 vCPU, 30 backups, insights on |
 | Cloud SQL point-in-time recovery | off, the nightly backup only | 7 days of WAL |
+| Cloud SQL audit flags | none | connections, disconnections, statements over 1 s, lock waits, pgAudit `ddl,role` |
+| Generated database passwords | letters and digits | letters, digits and `-_.~` |
 | Redis | basic, no TLS | standard HA, TLS |
 | Bucket soft delete | 7 days | 30 days |
 | Budget | 40 EUR on dev, 80 EUR on stg | 400 EUR |
@@ -39,6 +41,14 @@ Both keep the database private, require SSL, protect the instance from
 deletion, put IAP on `/*`, and refuse to disable billing when the budget is
 hit. `enable_auto_stop: false` is set on purpose: the Terraform default is
 true, and dropping the line deploys a function that turns billing off.
+
+The pro audit flags write to Cloud Logging, so dev and stg leave them out.
+`cloudsql.enable_pgaudit` only loads pgAudit: the application's migration
+must run `CREATE EXTENSION pgaudit;` once in each database before
+`pgaudit.log` records anything. This stack has no PostgreSQL provider and
+does not run SQL. `pgaudit.log` stays at `ddl,role` because `write` logs the
+text of every data change, literal values included. Add it only when the
+retention and access rules of those logs allow it.
 
 The first Cloud Run revision is the public hello image. Cloud Build replaces
 the digest and Terraform leaves it alone. Do not pin a real image in the YAML.
