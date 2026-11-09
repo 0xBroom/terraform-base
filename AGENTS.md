@@ -52,7 +52,10 @@ IAM boundary.
 The `common` folder holds the ops project. It is the `project_sys` in
 `settings/default.yaml` and it owns:
 
-- the Terraform state bucket, `<org>-ops-<suffix>-tfstate`, referenced in `versions.tf`;
+- the Terraform state bucket, `<org>-ops-<suffix>-tfstate`, named in the gitignored
+  `backend.hcl` (copied from `backend.hcl.example`) and passed with
+  `terraform init -backend-config=backend.hcl`. `versions.tf` keeps an empty
+  `backend "gcs" {}`; never write the bucket there;
 - anything shared by all environments, such as base images or monitoring.
 
 Never put the state bucket inside an environment project. A mistake in `dev` must not be
@@ -85,6 +88,9 @@ gcloud billing projects link "$ORG-$APP-dev-$SUFFIX" --billing-account=<billing-
   app prefix.
 - One file per environment: `settings/dev.yaml`, `settings/stg.yaml`, `settings/pro.yaml`,
   each with its own `project.id`, `project.name` and `project.number`.
+- One `backend.hcl` per clone, from `backend.hcl.example`: `bucket` is the ops project's
+  state bucket, `prefix` optional. First `terraform init -backend-config=backend.hcl`,
+  then the workspaces.
 - One workspace per environment, with the same name: `terraform workspace new stg`.
 - Cloud Build tag patterns default to `^<workspace>-...`, so release tags look like
   `pro-2026010101`.

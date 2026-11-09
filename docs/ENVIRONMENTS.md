@@ -15,7 +15,8 @@ needs it.
 The files are full of placeholders (`example-app-dev`, `example-app-stg`, `example-app-pro`,
 `000000-000000-000000`, `replace-me@example.com`, GitHub owner `example-org`,
 installation id `1`). Replace those, put the state bucket name in
-`versions.tf`, and plan. Applying is a separate decision. Planning this file
+`backend.hcl` (copied from `backend.hcl.example`), run
+`terraform init -backend-config=backend.hcl`, and plan. Applying is a separate decision. Planning this file
 unchanged fails at GCP because the project and the billing account do not
 exist, which is what we want.
 
