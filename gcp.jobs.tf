@@ -54,9 +54,7 @@ resource "google_cloud_run_v2_job" "jobs" {
   launch_stage        = try(each.value.job-config.launch_stage, "GA")
   deletion_protection = try(each.value.job-config.deletion_protection, terraform.workspace == "pro")
 
-  labels = {
-    managed_by = "terraform"
-  }
+  labels = local.common_labels
 
   template {
     parallelism = try(each.value.job-config.parallelism, 1)

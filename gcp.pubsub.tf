@@ -81,13 +81,12 @@ resource "google_pubsub_topic" "topics" {
 
   message_retention_duration = try(local.settings.pubsub.message_retention, "604800s") # default 7 days
 
-  labels = {
+  labels = merge(local.common_labels, {
     environment = terraform.workspace
     domain      = local.topic_config[each.key].domain
     context     = local.topic_config[each.key].context
     event       = local.topic_config[each.key].event
-    managed_by  = "terraform"
-  }
+  })
 }
 
 # Dead Letter Topics
@@ -99,11 +98,10 @@ resource "google_pubsub_topic" "dead_letter" {
 
   message_retention_duration = "${each.value.retention_days * 86400}s" # days to seconds
 
-  labels = {
+  labels = merge(local.common_labels, {
     environment = terraform.workspace
     type        = "dead-letter"
-    managed_by  = "terraform"
-  }
+  })
 }
 #Permisos para que Pub/Sub firme tokens
 resource "google_service_account_iam_member" "pubsub_token_creator" {
@@ -129,9 +127,7 @@ resource "google_pubsub_subscription" "subscriptions" {
   ack_deadline_seconds       = try(each.value.ack_deadline_seconds, 600)
   message_retention_duration = try(local.settings.pubsub.message_retention, "604800s") # default 7 days
 
-  labels = {
-    managed_by = "terraform"
-  }
+  labels = local.common_labels
 
   dynamic "push_config" {
     for_each = each.value.type == "push" ? [1] : []

@@ -39,9 +39,7 @@ resource "google_secret_manager_secret" "run_secrets" {
   project   = local.settings.project.id
   secret_id = each.key
 
-  labels = {
-    managed_by = "terraform"
-  }
+  labels = local.common_labels
 
   replication {
     user_managed {

@@ -27,9 +27,7 @@ resource "google_compute_address" "elastic_psc_address" {
   purpose      = "GCE_ENDPOINT"
   description  = "Private Service Connect IP address for Elastic Cloud"
 
-  labels = {
-    managed_by = "terraform"
-  }
+  labels = local.common_labels
 }
 
 resource "google_compute_forwarding_rule" "elastic_psc_endpoint" {
@@ -43,9 +41,7 @@ resource "google_compute_forwarding_rule" "elastic_psc_endpoint" {
   load_balancing_scheme = ""
   description           = "Private Service Connect endpoint to Elastic Cloud deployment"
 
-  labels = {
-    managed_by = "terraform"
-  }
+  labels = local.common_labels
 }
 
 # Create a private DNS zone for the Elastic Cloud domain
@@ -56,9 +52,7 @@ resource "google_dns_managed_zone" "elastic_private_zone" {
   dns_name    = "cloud.es.io."
   description = "Private DNS zone for Elastic Cloud domain"
 
-  labels = {
-    managed_by = "terraform"
-  }
+  labels = local.common_labels
 
   visibility = "private"
 

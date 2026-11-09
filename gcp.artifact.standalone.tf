@@ -70,9 +70,7 @@ resource "google_artifact_registry_repository" "standalone" {
   description   = try(each.value.description, try(each.value.adopt, false) ? null : "Managed by terraform")
   format        = try(each.value.format, "DOCKER")
 
-  labels = try(each.value.adopt, false) ? {} : {
-    managed_by = "terraform"
-  }
+  labels = try(each.value.adopt, false) ? {} : local.common_labels
 
   # Declared only when the yaml says so: an adopted repository that has the block must
   # keep it, or the plan never converges.

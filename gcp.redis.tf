@@ -39,14 +39,7 @@ resource "google_redis_instance" "redis_instances" {
   display_name  = "${local.base_name_medium}-${each.value.name}"
 
   # Labels for resource management
-  labels = merge(
-    try(each.value.labels, {}),
-    {
-      workspace  = terraform.workspace
-      client     = local.settings.client.name
-      managed_by = "terraform"
-    }
-  )
+  labels = merge(local.common_labels, try(each.value.labels, {}))
 
   # Redis configuration parameters (optional)
   redis_configs = try(each.value.redis_configs, {})

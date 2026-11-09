@@ -5,7 +5,7 @@ settings, locals, network, security, SQL, KMS and provider pins). This
 repository is that template: root files `gcp.*.tf`, vendored `tf_gcp_*`
 modules, one workspace file per environment.
 
-Open: 11. Done: 13. Accepted, do not port: 16.
+Open: 10. Done: 14. Accepted, do not port: 16.
 
 Regenerate this file with `python3 bin/audit-terraform.py --write` in the same
 pull request that closes an item. The status comes from the code, not from
@@ -53,14 +53,6 @@ The storage module (v2.5, June 2024) exposes uniform_bucket_level_access and def
 Evidence: modules/tf_gcp_storage_v2.5-202406121124/vars.tf has no public_access_prevention.
 
 Next change: Add the argument to the vendored module, default it to enforced, and thread a YAML override through gcp.storage.tf. Bump the directory version suffix so the edit is visible.
-
-### AUD-LABELS (p2) Resources do not share an environment label
-
-Redis sets workspace, client and managed_by. Most other resources set nothing. A bill filtered by environment, or an asset search for this stack, cannot see the VPC, the database or the service. Tools Hub labels are not a module-level scheme this repo should copy. One local map is enough.
-
-Evidence: locals.tf defines base_name and the registry host, and no common_labels.
-
-Next change: Add local.common_labels (workspace, client, managed_by, repo) and pass it to every resource that accepts labels.
 
 ### AUD-SQL-SCHEMA (p2) Every Cloud Run service gets a database on every SQL instance
 
@@ -199,6 +191,14 @@ The template creates Secret Manager containers and a placeholder version, which 
 Evidence: versions.tf has no carlpett/sops provider.
 
 Next change: Add an optional SOPS path: a KMS key the workspace opts into, .sops.yaml, and secret versions read from an encrypted file when it exists. Keep the placeholder when the file is absent. Do not copy the Tools Hub key ring.
+
+### AUD-LABELS (p2) Resources do not share an environment label
+
+Redis sets workspace, client and managed_by. Most other resources set nothing. A bill filtered by environment, or an asset search for this stack, cannot see the VPC, the database or the service. Tools Hub labels are not a module-level scheme this repo should copy. One local map is enough.
+
+Evidence: locals.tf defines base_name and the registry host, and no common_labels.
+
+Next change: Add local.common_labels (workspace, client, managed_by, repo) and pass it to every resource that accepts labels.
 
 ### AUD-AGENTS (p1) A session that opens this repo has no operating rules
 

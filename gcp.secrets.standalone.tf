@@ -66,10 +66,9 @@ resource "google_secret_manager_secret" "standalone" {
   project   = local.settings.project.id
   secret_id = each.key
 
-  labels = {
-    managed_by = "terraform"
-    purpose    = try(each.value.purpose, "general")
-  }
+  labels = merge(local.common_labels, {
+    purpose = try(each.value.purpose, "general")
+  })
 
   replication {
     user_managed {

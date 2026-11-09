@@ -14,6 +14,13 @@ locals {
   registry_host        = "${local.settings.region_name}-docker.pkg.dev/${local.settings.project.id}"
   registry_host_python = "${local.settings.region_name}-python.pkg.dev/${local.settings.project.id}"
 
+  # One label set for every resource that accepts labels. Values stay lowercase.
+  common_labels = {
+    workspace  = terraform.workspace
+    client     = local.settings.client.name
+    managed_by = "terraform"
+    repo       = try(local.settings.iac.repo, "terraform-base")
+  }
 }
 
 locals {

@@ -10,9 +10,7 @@ resource "google_pubsub_topic" "stop_billing_budget_notifications" {
   project = local.settings.project.id
   name    = "${local.base_name}-budget-notifications"
 
-  labels = {
-    managed_by = "terraform"
-  }
+  labels = local.common_labels
 }
 
 # 4. Service Account for the Cloud Function
@@ -133,9 +131,7 @@ resource "google_cloudfunctions2_function" "stop_billing" {
   description = "Disables billing for the project when the budget is exceeded."
   project     = local.settings.project.id
 
-  labels = {
-    managed_by = "terraform"
-  }
+  labels = local.common_labels
 
   build_config {
     runtime     = "python313"
