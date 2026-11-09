@@ -4,7 +4,7 @@ The list of work that takes this template to a public, production-grade
 release: dev and stg cheap, pro ready for a security, backup and
 data-retention audit. Each item has a check in `bin/audit-terraform.py`.
 
-Open: 8. Done: 44. Accepted, not a gap: 22.
+Open: 7. Done: 45. Accepted, not a gap: 22.
 
 Regenerate with `python3 bin/audit-terraform.py --write` in the pull request
 that closes an item. `--next` names the item to take. How a session works an
@@ -34,12 +34,6 @@ Contributors get fmt and lint errors only after a push.
 Next change: Add .tflint.hcl with the google ruleset, .pre-commit-config.yaml (fmt, validate, tflint, the auditor) and a tflint step in CI.
 
 After: AUD-CI-MATRIX
-
-### AUD-COST-APIS (p3) APIs for SQL, Redis, Firestore and other features are enabled when unused
-
-default.yaml lists every API, so a Cloud Run only project enables the SQL Admin and Redis APIs.
-
-Next change: Keep base APIs in default.yaml and add a feature_apis map in locals that turns on an API when its section exists.
 
 ### AUD-NAMES (p2) Module directories carry build timestamps and some root files break the naming pattern
 
@@ -248,4 +242,5 @@ Next change: Keep it equal to stg.
 - AUD-CI-RUNNER (p1) CI runs on a moving runner label with Node 20 actions
 - AUD-COST-DEFAULTS (p1) Two code defaults cost money when a key is left out
 - AUD-COST-PROFILES (p1) dev is a copy of stg and stg a copy of pre
+- AUD-COST-APIS (p3) APIs for SQL, Redis, Firestore and other features are enabled when unused
 - AUD-LANG (p1) Docs and comments mix Spanish with English, and use em dashes

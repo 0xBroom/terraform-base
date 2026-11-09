@@ -9,7 +9,8 @@ JSON key is created, stored in a CI secret or rotated.
 Nothing is created until a workspace sets `wif`. When it does, the stack
 creates:
 
-- `sts.googleapis.com` (the token exchange);
+- `sts.googleapis.com` (the token exchange) and `iamcredentials.googleapis.com`,
+  through the `wif` entry of `local.feature_apis`;
 - one Workload Identity Pool per `wif.pools` key;
 - one OIDC provider per `providers` key, with its `attribute_condition`;
 - a service account `<client.name>-<key>` for each binding whose

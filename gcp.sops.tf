@@ -16,23 +16,13 @@ locals {
   }
 }
 
-resource "google_project_service" "cloudkms" {
-  count   = local.sops_enabled ? 1 : 0
-  project = local.settings.project.id
-  service = "cloudkms.googleapis.com"
-
-  disable_on_destroy = false
-
-  depends_on = [google_project_service.enabled_apis]
-}
-
 resource "google_kms_key_ring" "sops" {
   count    = local.sops_create_key ? 1 : 0
   project  = local.settings.project.id
   name     = "${local.base_name_medium}-sops"
   location = local.settings.region_name
 
-  depends_on = [google_project_service.cloudkms]
+  depends_on = [google_project_service.enabled_apis]
 }
 
 resource "google_kms_crypto_key" "sops" {

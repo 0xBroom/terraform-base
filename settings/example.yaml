@@ -81,6 +81,12 @@ project:
 #   name: "my-system-project-name"                 # System project name
 #   number: "987654321098"                         # System project number
 
+# APIs. default.yaml lists the base (`active-apis`); each section below turns on
+# its own APIs when it exists (local.feature_apis, docs/CONFIGURATION_GUIDE.md).
+# Never set `active-apis` here: the merge is shallow and it would replace the base.
+# extra-apis:                                      # [OPTIONAL] Added to the base and feature APIs (default: none)
+#   - "aiplatform.googleapis.com"                  #   An API no section enables, for example Vertex AI
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # 2. BITBUCKET WORKSPACE CONFIGURATION
@@ -1214,7 +1220,8 @@ security:
 # ═══════════════════════════════════════════════════════════════════════════════
 # Lets GitHub Actions, GitLab CI or any OIDC issuer act as a service account with
 # short-lived tokens, so no service account key is ever created. Omit `wif` and
-# nothing is created. When present it also enables sts.googleapis.com. No cost.
+# nothing is created. When present it also enables sts.googleapis.com and
+# iamcredentials.googleapis.com (local.feature_apis). No cost.
 #
 # Each provider MUST have an attribute_condition: without it any token of the
 # issuer (any repository on github.com) could use the pool, and the plan stops.

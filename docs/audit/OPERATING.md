@@ -79,7 +79,8 @@ stack's names there.
 `locals.tf` merges the workspace file over `settings/default.yaml` with
 `merge()`. A map in the workspace file replaces the whole map. Do not set
 `active-apis` in an environment file. Add an API to `default.yaml` when
-every workspace needs it.
+every workspace needs it, to `local.feature_apis` in `gcp.enabled.apis.tf`
+when one feature needs it, and to the workspace's `extra-apis` otherwise.
 
 ## Vendored modules
 

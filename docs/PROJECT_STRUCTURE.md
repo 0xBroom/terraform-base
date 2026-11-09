@@ -28,7 +28,7 @@ This document describes how the files in this repository fit together.
 
 YAML files that define the infrastructure, one per workspace.
 
-- `default.yaml`: baseline shared by every workspace (region, client prefix, enabled APIs).
+- `default.yaml`: baseline shared by every workspace (region, client prefix, base APIs; feature APIs come from `gcp.enabled.apis.tf`).
 - `example.yaml`: commented reference of every supported key.
 - `pre.yaml` and `pro.yaml`: a complete small service, sized for each environment. See `docs/ENVIRONMENTS.md`. Replace the placeholders before planning.
 - `<workspace>.yaml`: any further project. One file per workspace.
