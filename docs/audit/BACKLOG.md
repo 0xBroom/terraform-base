@@ -4,7 +4,7 @@ The list of work that takes this template to a public, production-grade
 release: dev and stg cheap, pro ready for a security, backup and
 data-retention audit. Each item has a check in `bin/audit-terraform.py`.
 
-Open: 13. Done: 51. Accepted, not a gap: 22.
+Open: 12. Done: 52. Accepted, not a gap: 22.
 
 Regenerate with `python3 bin/audit-terraform.py --write` in the pull request
 that closes an item. `--next` names the item to take. How a session works an
@@ -24,12 +24,6 @@ Next change: Add CONTRIBUTING.md, SECURITY.md, CHANGELOG.md, a pull request temp
 The settings merge is shallow, so project: {id: x} drops project.number from default.yaml, and several files interpolate local.settings.project.number without a fallback.
 
 Next change: Read the number from data.google_project when the YAML leaves it out, or stop the plan with a check that names the key.
-
-### AUD-DEV-NO-LB (p1) The dev reference still pays for a load balancer and Cloud Armor
-
-The load balancer and its policy are a fixed cost of about 34 USD a month, most of dev's bill, and the dev budget is below the estimate in docs/ENVIRONMENTS.md.
-
-Next change: dev: no lb section, services reached on their run.app URL with IAM (allow_unauthenticated false), and a budget at or above the estimate. Keep the LB in stg and pro and update the matrix.
 
 ### AUD-MON-SECURITY-DUP (p2) The security module's metric alerts cannot be turned off and duplicate the log alerts
 
@@ -284,3 +278,4 @@ Next change: Keep it equal to stg.
 - AUD-LANG (p1) Docs and comments mix Spanish with English, and use em dashes
 - AUD-PSA (p1) Private Service Access is never created, so private Cloud SQL and Redis fail on a new project
 - AUD-IAM-OPERATORS (p1) Operators can invoke every service and act as every service account
+- AUD-DEV-NO-LB (p1) The dev reference still pays for a load balancer and Cloud Armor

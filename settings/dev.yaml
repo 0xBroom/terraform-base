@@ -1,5 +1,6 @@
 # Dev workspace. The cheapest profile that still runs the same app: shared-core
-# Cloud SQL, no Redis, no Cloud NAT, scale to zero. See docs/ENVIRONMENTS.md.
+# Cloud SQL, no load balancer, no Redis, no Cloud NAT, scale to zero. See
+# docs/ENVIRONMENTS.md.
 # Replace every example-app-dev, 000000-000000-000000 and replace-me@example.com
 # before the first plan. Do not apply this file as it is.
 # project_sys is this same project: a separate monitoring project is a later choice.
@@ -27,7 +28,7 @@ logging:
 
 budget:
   billing_account: "000000-000000-000000"
-  amount: 40
+  amount: 25
   alert_spent_percents:
     - 0.5
     - 0.9
@@ -36,15 +37,11 @@ budget:
   # true deploys a function that disables billing when the budget is hit.
   enable_auto_stop: false
 
-lb:
-  domain:
-    - "dev.example.com"
-  timeout_sec: 30
-
-iap:
-  admin_access:
-    members:
-      - "user:replace-me@example.com"
+# No lb and no iap section: the load balancer and its Cloud Armor policy are
+# about 34 USD a month, more than the rest of dev. Services answer on their
+# run.app URL and require IAM: operators get run.invoker on each one. Reach
+# them with `gcloud run services proxy` or an identity token
+# (docs/ENVIRONMENTS.md). Copy the lb block from stg when dev needs a domain.
 
 project_access:
   viewers:
@@ -63,13 +60,6 @@ app:
   service:
     api:
       name: "api"
-      loadbalancer:
-        rules:
-          - path: "/*"
-            rewrite: "/"
-            iap:
-              enabled: true
-              use_default_members: true
       cloudbuild:
         repo_name: "example-api"
         inline: true
@@ -79,7 +69,7 @@ app:
         branch_pattern: "^main$"
       cloudrun:
         allow_unauthenticated: false
-        ingress: "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
+        ingress: "INGRESS_TRAFFIC_ALL"
         deletion_protection: false
         min_instances: 0
         max_instances: 3
