@@ -959,3 +959,7 @@ monitoring:
 # (security baseline, Cloud Run, LB, NAT). Always created, so this is mandatory.
 security:
   alerts_email: "alerts@example.com"                # [MANDATORY] Recipient of every alert
+  # audit_logging:                                  # [OPTIONAL] Defaults: admin_read true, data reads and writes off
+  #   admin_read: true
+  #   data_read: false
+  #   data_write: false

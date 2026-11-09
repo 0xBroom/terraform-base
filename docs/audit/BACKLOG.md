@@ -5,7 +5,7 @@ settings, locals, network, security, SQL, KMS and provider pins). This
 repository is that template: root files `gcp.*.tf`, vendored `tf_gcp_*`
 modules, one workspace file per environment.
 
-Open: 19. Done: 5. Accepted, do not port: 16.
+Open: 18. Done: 6. Accepted, do not port: 16.
 
 Regenerate this file with `python3 bin/audit-terraform.py --write` in the same
 pull request that closes an item. The status comes from the code, not from
@@ -13,14 +13,6 @@ this prose. How a session picks the next item: `docs/audit/OPERATING.md`.
 
 
 ## Open
-
-### AUD-AUDIT (p0) Admin-read audit logs are off
-
-gcp.security.tf sets admin_read, data_read and data_write to false. Tools Hub turns admin_read on and leaves data_read and data_write off, because data access logs are expensive and admin activity is the trail you need when someone changes IAM or firewalls. A production project without admin-read logs cannot answer who changed what.
-
-Evidence: gcp.security.tf audit_logging block, all three flags false.
-
-Next change: Default admin_read to true. Allow settings.security.audit_logging to override each flag. Keep data_read and data_write off unless a workspace asks.
 
 ### AUD-DELETE (p0) Cloud Run services and jobs can be destroyed with deletion_protection left false
 
@@ -199,6 +191,14 @@ gcp.storage.tf iterates local.settings.bucket directly. Every other map in this 
 Evidence: gcp.storage.tf for_each = local.settings.bucket.
 
 Next change: Guard the map with try(local.settings.bucket, {}).
+
+### AUD-AUDIT (p0) Admin-read audit logs are off
+
+gcp.security.tf sets admin_read, data_read and data_write to false. Tools Hub turns admin_read on and leaves data_read and data_write off, because data access logs are expensive and admin activity is the trail you need when someone changes IAM or firewalls. A production project without admin-read logs cannot answer who changed what.
+
+Evidence: gcp.security.tf audit_logging block, all three flags false.
+
+Next change: Default admin_read to true. Allow settings.security.audit_logging to override each flag. Keep data_read and data_write off unless a workspace asks.
 
 ### AUD-AGENTS (p1) A session that opens this repo has no operating rules
 
