@@ -5,7 +5,7 @@ settings, locals, network, security, SQL, KMS and provider pins). This
 repository is that template: root files `gcp.*.tf`, vendored `tf_gcp_*`
 modules, one workspace file per environment.
 
-Open: 7. Done: 17. Accepted, do not port: 16.
+Open: 6. Done: 18. Accepted, do not port: 16.
 
 Regenerate this file with `python3 bin/audit-terraform.py --write` in the same
 pull request that closes an item. The status comes from the code, not from
@@ -45,14 +45,6 @@ modules/tf_gcp_cloudrun_v2_v6.5-202502191120. Tools Hub has moved on. Root files
 Evidence: gcp.cloudrun.tf source path contains tf_gcp_cloudrun_v2_v6.5.
 
 Next change: Upgrade in one PR when a republishable module is available. Do not fork the vendored copy in place.
-
-### AUD-PAP (p2) Buckets cannot set public access prevention
-
-The storage module (v2.5, June 2024) exposes uniform_bucket_level_access and defaults it to true, which Tools Hub also does. It has no public_access_prevention argument. Uniform access stops ACLs. Public access prevention stops a later allUsers binding from making the bucket public. Both belong on a production bucket.
-
-Evidence: modules/tf_gcp_storage_v2.5-202406121124/vars.tf has no public_access_prevention.
-
-Next change: Add the argument to the vendored module, default it to enforced, and thread a YAML override through gcp.storage.tf. Bump the directory version suffix so the edit is visible.
 
 ### AUD-BINAUTH (p2) Binary Authorization, when turned on, only dry-runs an allow-all rule
 
@@ -167,6 +159,14 @@ The template creates Secret Manager containers and a placeholder version, which 
 Evidence: versions.tf has no carlpett/sops provider.
 
 Next change: Add an optional SOPS path: a KMS key the workspace opts into, .sops.yaml, and secret versions read from an encrypted file when it exists. Keep the placeholder when the file is absent. Do not copy the Tools Hub key ring.
+
+### AUD-PAP (p2) Buckets cannot set public access prevention
+
+The storage module (v2.5, June 2024) exposes uniform_bucket_level_access and defaults it to true, which Tools Hub also does. It has no public_access_prevention argument. Uniform access stops ACLs. Public access prevention stops a later allUsers binding from making the bucket public. Both belong on a production bucket.
+
+Evidence: modules/tf_gcp_storage_v2.6-202611091700/vars.tf defaults public_access_prevention to enforced.
+
+Next change: Add the argument to the vendored module, default it to enforced, and thread a YAML override through gcp.storage.tf. Bump the directory version suffix so the edit is visible.
 
 ### AUD-LABELS (p2) Resources do not share an environment label
 

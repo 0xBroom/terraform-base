@@ -10,6 +10,7 @@ resource "google_storage_bucket" "base" {
   location                    = var.region_name
   force_destroy               = var.force_destroy
   uniform_bucket_level_access = var.uniform_bucket_level_access
+  public_access_prevention    = var.public_access_prevention
 
   soft_delete_policy {
     retention_duration_seconds = var.soft_delete_retention_duration

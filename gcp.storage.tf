@@ -40,7 +40,7 @@ locals {
 module "storage_buckets" {
   for_each = local.buckets
 
-  source = "./modules/tf_gcp_storage_v2.5-202406121124"
+  source = "./modules/tf_gcp_storage_v2.6-202611091700"
 
   # If custom_name is set, use the exact bucket name; otherwise use standard naming convention
   base_name      = try(each.value.custom_name, null) != null ? each.value.custom_name : "${local.base_name_medium}-${try(each.value.name, each.key)}"
@@ -55,6 +55,7 @@ module "storage_buckets" {
   force_destroy               = try(each.value.force_destroy, false)
   enable_versioning           = try(each.value.enable_versioning, false)
   uniform_bucket_level_access = try(each.value.uniform_access, true)
+  public_access_prevention    = try(each.value.public_access_prevention, "enforced")
   authoritative_permissions   = try(each.value.authoritative_permissions, false)
   # Soft delete retention: Convert days to seconds (GCP requires seconds, min 7 days, max 90 days)
   soft_delete_retention_duration = try(each.value.soft_delete_days, 7) * 86400

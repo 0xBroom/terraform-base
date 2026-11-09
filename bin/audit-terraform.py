@@ -129,9 +129,8 @@ def networking_module_current() -> bool:
 
 
 def storage_module_has_pap() -> bool:
-    return "public_access_prevention" in read(
-        "modules/tf_gcp_storage_v2.5-202406121124/vars.tf"
-    )
+    paths = sorted((ROOT / "modules").glob("tf_gcp_storage_*/vars.tf"))
+    return any("public_access_prevention" in path.read_text(encoding="utf-8") for path in paths)
 
 
 def cloudrun_module_current() -> bool:
@@ -434,7 +433,7 @@ ITEMS: list[dict] = [
             "access prevention stops a later allUsers binding from making the bucket "
             "public. Both belong on a production bucket."
         ),
-        "evidence": "modules/tf_gcp_storage_v2.5-202406121124/vars.tf has no public_access_prevention.",
+        "evidence": "modules/tf_gcp_storage_v2.6-202611091700/vars.tf defaults public_access_prevention to enforced.",
         "change": "Add the argument to the vendored module, default it to enforced, and thread a YAML override through gcp.storage.tf. Bump the directory version suffix so the edit is visible.",
         "ok": storage_module_has_pap,
         "disposition": "fix",

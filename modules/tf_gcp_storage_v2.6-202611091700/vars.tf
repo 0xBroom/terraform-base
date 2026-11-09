@@ -55,6 +55,12 @@ variable "uniform_bucket_level_access" {
   default = true
 }
 
+variable "public_access_prevention" {
+  description = "enforced stops a later allUsers binding from making the bucket public."
+  type        = string
+  default     = "enforced"
+}
+
 variable "lifecycle_rules" {
   type = map(
     object({
