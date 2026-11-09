@@ -25,8 +25,9 @@
 - **Cost follows the environment.** Dev scales to zero with no load balancer, stg has
   the shape of pro at a fraction of the price, and pro is regional and warm.
 - **Pro is ready for an audit.** Locked audit logs, backups with point-in-time
-  recovery, IAP, Cloud Armor, signed images and per-event security alerts, each one
-  mapped to ISO 27001, SOC 2 and GDPR in [docs/COMPLIANCE.md](docs/COMPLIANCE.md).
+  recovery, IAP, Cloud Armor, signed images and security alerts that name who made
+  a change, each one mapped to ISO 27001, SOC 2 and GDPR in
+  [docs/COMPLIANCE.md](docs/COMPLIANCE.md).
 
 ## What you get
 
@@ -160,8 +161,9 @@ traffic, not a quote.
   database, Cloud Run scaled to zero with CPU only during requests, 30 days of logs,
   and no audit archive, uptime checks or image scanning.
 - **Budgets.** Every reference file sets `budget` with alerts at 50, 90 and 100
-  percent of spend, and pro at 75 too. The amounts are placeholders in EUR, and Cloud Billing refuses a budget in a
-  currency other than the billing account's. Set each one above the estimate.
+  percent of spend, and pro at 75 too. The amounts are placeholders in EUR, and
+  Cloud Billing refuses a budget in a currency other than the billing account's.
+  Set each one above the estimate.
 - **Opt-in auto stop.** `budget.enable_auto_stop: true` deploys a function that turns
   billing off when the budget is hit, which stops every service in the project. It is
   `false` in every reference file. See
@@ -173,12 +175,14 @@ Every workspace keeps the database on a private IP with SSL required, puts an id
 in front of the service, writes Admin Read audit logs and keeps secret values out of
 the YAML. Pro adds:
 
-- IAP on every path, Cloud Armor with the OWASP preconfigured rules and a `RESTRICTED`
-  TLS 1.2 policy;
+- IAP on every load balancer path, Cloud Armor with the OWASP preconfigured rules
+  and a `RESTRICTED` TLS 1.2 policy;
 - every Cloud Audit Log copied to a locked log bucket for 365 days, and 90 days in
   `_Default`;
-- one email per IAM, service account key, firewall, audit config, custom role, Cloud
-  SQL or bucket IAM change, and per secret read by an unexpected identity;
+- an email naming the principal when an IAM, service account key, firewall, audit
+  config, custom role, Cloud SQL or bucket IAM change happens, or an unexpected
+  identity reads a secret (at most one per alert every 5 minutes; the audit logs
+  keep every event);
 - Binary Authorization enforced on images signed by Cloud Build, with secret, code and
   dependency scans in the build and Artifact Registry scanning;
 - no service account keys (organization policy on the project) and Essential Contacts
@@ -193,8 +197,8 @@ and lists what stays with you. Vulnerability reports: [SECURITY.md](SECURITY.md)
 ## Configuration
 
 Top-level keys of a settings file, from `schemas/settings.schema.json`. Each one is
-documented in `settings/example.yaml`; [docs/CONFIGURATION_GUIDE.md](docs/CONFIGURATION_GUIDE.md)
-covers the common ones.
+documented in `settings/example.yaml`;
+[docs/CONFIGURATION_GUIDE.md](docs/CONFIGURATION_GUIDE.md) covers the common ones.
 
 | Key | What it drives | Read by |
 |---|---|---|
@@ -203,7 +207,7 @@ covers the common ones.
 | `active-apis`, `extra-apis` | Base APIs (`default.yaml` only) and per-workspace extras | `gcp.enabled.apis.tf` |
 | `security` | Alert email, audit log config, key policy, contacts, threshold alerts | `gcp.security.tf` |
 | `logging` | `_Default` retention, the audit archive | `gcp.logging.tf` |
-| `monitoring` | Log-based, load balancer, uptime and secret read alerts | `gcp.monitoring.tf`, `gcp.lb.tf` |
+| `monitoring` | Log-based, Cloud Run, load balancer, uptime and secret read alerts | `gcp.monitoring.tf`, `gcp.cloudrun.tf`, `gcp.lb.tf` |
 | `binary_authorization` | Image signing and enforcement | `gcp.binary_auth.tf` |
 | `sops` | KMS key and encrypted secret files | `gcp.sops.tf` |
 | `wif` | Workload identity federation for external CI | `gcp.wif.tf` |
