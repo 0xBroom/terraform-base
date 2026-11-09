@@ -26,6 +26,7 @@ exist, which is what we want.
 | Redis | basic, no TLS | standard HA, TLS |
 | Bucket soft delete | 7 days | 30 days |
 | Budget | 80 EUR | 400 EUR |
+| _Default log retention | 30 days | 90 days |
 | VPC | `10.10.1.0/24` | `10.20.1.0/24` |
 
 Both keep the database private, require SSL, protect the instance from

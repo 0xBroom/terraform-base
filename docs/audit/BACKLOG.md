@@ -5,7 +5,7 @@ settings, locals, network, security, SQL, KMS and provider pins). This
 repository is that template: root files `gcp.*.tf`, vendored `tf_gcp_*`
 modules, one workspace file per environment.
 
-Open: 8. Done: 16. Accepted, do not port: 16.
+Open: 7. Done: 17. Accepted, do not port: 16.
 
 Regenerate this file with `python3 bin/audit-terraform.py --write` in the same
 pull request that closes an item. The status comes from the code, not from
@@ -61,14 +61,6 @@ gcp.binary_auth.tf sets evaluation_mode ALWAYS_ALLOW and enforcement_mode DRYRUN
 Evidence: gcp.binary_auth.tf default_admission_rule.
 
 Next change: Let the YAML choose ALWAYS_ALLOW or REQUIRE_ATTESTATION, and default pro to dry-run only until an attestor exists. Do not pretend the current policy enforces anything.
-
-### AUD-LOGS (p3) Log buckets keep the Google default retention
-
-There is no google_logging_project_bucket_config. Admin activity is on once AUD-AUDIT lands, and then expires on Google's default. A production project usually wants _Default and _Required retention written down.
-
-Evidence: No gcp.logging.tf. gcp.security.tf creates the notification channel and the security module only.
-
-Next change: Add a small logging file driven by settings.logging.retention_days, with a sane default of 30 for pre and 90 for pro.
 
 ### AUD-CODEOWNERS (p3) No CODEOWNERS file
 
@@ -199,6 +191,14 @@ google_project_service_identity.pubsub_agent has no count. A project with no top
 Evidence: gcp.pubsub.tf resource google_project_service_identity.pubsub_agent.
 
 Next change: Give it a count tied to length(local.topic_config) > 0, and keep the topic resources depending on it.
+
+### AUD-LOGS (p3) Log buckets keep the Google default retention
+
+There is no google_logging_project_bucket_config. Admin activity is on once AUD-AUDIT lands, and then expires on Google's default. A production project usually wants _Default and _Required retention written down.
+
+Evidence: No gcp.logging.tf. gcp.security.tf creates the notification channel and the security module only.
+
+Next change: Add a small logging file driven by settings.logging.retention_days, with a sane default of 30 for pre and 90 for pro.
 
 ### AUD-AGENTS (p1) A session that opens this repo has no operating rules
 

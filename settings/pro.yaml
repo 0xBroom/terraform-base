@@ -21,6 +21,9 @@ security:
     data_read: false
     data_write: false
 
+logging:
+  retention_days: 90
+
 budget:
   billing_account: "000000-000000-000000"
   amount: 400
