@@ -20,6 +20,7 @@ Every page under `docs/`, grouped by what you are doing.
 - [STORAGE.md](STORAGE.md): bucket lifecycle rules, retention policies and access logs.
 - [SOPS.md](SOPS.md): secret values from SOPS-encrypted files.
 - [SCANNING.md](SCANNING.md): secret, code, dependency and image scanning.
+- [COMPLIANCE.md](COMPLIANCE.md): what the pro workspace gives an auditor, mapped to ISO 27001, SOC 2 and GDPR, and what stays with you.
 - [billing-budget-control.md](billing-budget-control.md): the budget, its alerts and the optional billing shutdown.
 
 ## Maintaining the template

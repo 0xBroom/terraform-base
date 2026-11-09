@@ -190,6 +190,9 @@ feature toggle.
 
 ## Production readiness backlog
 
+`docs/COMPLIANCE.md` maps each control of the pro workspace to ISO 27001, SOC 2
+and GDPR, with the evidence an auditor can pull and what the adopter still owns.
+
 `docs/audit/BACKLOG.md` is the list of work left before a public,
 production-grade release, plus the platform features this template
 deliberately leaves out (a VPC per service, a scanner that needs its own

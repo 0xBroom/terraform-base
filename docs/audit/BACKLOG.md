@@ -4,7 +4,7 @@ The list of work that takes this template to a public, production-grade
 release: dev and stg cheap, pro ready for a security, backup and
 data-retention audit. Each item has a check in `bin/audit-terraform.py`.
 
-Open: 2. Done: 62. Accepted, not a gap: 22.
+Open: 1. Done: 63. Accepted, not a gap: 22.
 
 Regenerate with `python3 bin/audit-terraform.py --write` in the pull request
 that closes an item. `--next` names the item to take. How a session works an
@@ -12,14 +12,6 @@ item: `docs/audit/OPERATING.md`.
 
 
 ## Open
-
-### AUD-DOC-COMPLIANCE (p1) Nothing maps the pro settings to audit controls
-
-An auditor or a buyer asks which control covers backups, retention, logging, encryption and access.
-
-Next change: Add docs/COMPLIANCE.md mapping each pro setting to ISO 27001 Annex A, SOC 2 and GDPR article 32, with the gaps a user still owns, and link it from the README.
-
-After: AUD-SQL-HARDEN, AUD-AUDIT-ARCHIVE, AUD-MON-LOG-ALERTS, AUD-WIF, AUD-PSA, AUD-IAM-OPERATORS, AUD-SA-KEY-POLICY, AUD-ESSENTIAL-CONTACTS, AUD-MON-SECURITY-DUP
 
 ### AUD-DOC-README (p1) The README does not explain the project at a glance
 
@@ -227,3 +219,4 @@ Next change: Keep it equal to stg.
 - AUD-DEV-SQL-DISPOSABLE (p3) dev keeps Cloud SQL deletion protection on
 - AUD-FIRESTORE-PRO (p3) Firestore in pro starts without PITR or delete protection
 - AUD-DOC-STALE (p1) Several docs describe files, keys and names that changed
+- AUD-DOC-COMPLIANCE (p1) Nothing maps the pro settings to audit controls
