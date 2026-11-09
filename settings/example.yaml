@@ -892,7 +892,7 @@ database:
 #     point_in_time_recovery: true                 # [OPTIONAL] Default true in pro, false elsewhere. 7 days of
 #                                                  #   versions, billed as storage
 #     delete_protection_state: "DELETE_PROTECTION_DISABLED"  # [OPTIONAL] Default DELETE_PROTECTION_ENABLED in pro,
-#                                                  #   DELETE_PROTECTION_DISABLED elsewhere
+#                                                  #   unset elsewhere: kept as the database has it
 #     deletion_policy: "DELETE"                    # [OPTIONAL] Default ABANDON: a destroy leaves the database in GCP
 #     indexes_file: "./settings/firestore/default.indexes.json" # [OPTIONAL]
 #     permissions:                                 # [OPTIONAL] Project-level IAM bindings

@@ -46,7 +46,7 @@ exist, which is what we want.
 | Redis | none | basic, 1 GB, no TLS | standard HA, 1 GB, TLS |
 | Redis deletion protection | no Redis | off | on |
 | Redis RDB snapshots | no Redis | off | every 12 hours |
-| Firestore, when a workspace adds one (`firestore`) | no point-in-time recovery, no delete protection | same as dev | point-in-time recovery (7 days), delete protection on |
+| Firestore, when a workspace adds one (`firestore`) | no point-in-time recovery, delete protection as the database has it (off when new) | same as dev | point-in-time recovery (7 days), delete protection on |
 | Bucket soft delete | 7 days (the shortest above off) | 7 days | 30 days |
 | Bucket noncurrent versions | kept | kept | deleted after 30 days (`docs/STORAGE.md`) |
 | Budget | 25 | 80 | 400 |
@@ -322,11 +322,13 @@ none. Pro lists the placeholder address with `SECURITY`, `TECHNICAL` and
 
 No reference file has a `firestore` section. When a workspace adds one,
 `gcp.firestore.tf` defaults `point_in_time_recovery` to `true` and
-`delete_protection_state` to `DELETE_PROTECTION_ENABLED` in pro, and to
-`false` and `DELETE_PROTECTION_DISABLED` elsewhere; a value in the YAML wins.
-Both are updated in place, without replacing the database. A database
-created before this default read back `DELETE_PROTECTION_DISABLED` already,
-so outside pro the plan shows no change; in pro it shows the two updates.
+`delete_protection_state` to `DELETE_PROTECTION_ENABLED` in pro. Elsewhere
+point-in-time recovery defaults to `false` and delete protection is left
+unset: the field is optional and computed, so Terraform keeps whatever the
+database has (disabled for a new one, the API default) and never turns off a
+protection someone set by hand. A value in the YAML wins. Both are updated
+in place, without replacing the database, so outside pro the plan shows no
+change and in pro it shows the two updates.
 Point-in-time recovery keeps 7 days of versions, billed as storage, which is
 why only pro has it. `deletion_policy` keeps the provider default,
 `ABANDON`: a destroy, or a block removed from the YAML, drops the database
