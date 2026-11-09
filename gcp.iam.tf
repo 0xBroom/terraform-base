@@ -1,12 +1,12 @@
 locals {
-  # Lectura de listas desde los archivos YAML (settings)
+  # Access lists read from the settings YAML files
   viewers   = try(local.settings.project_access.viewers, [])
   operators = try(local.settings.project_access.operators, [])
 
-  # Nueva lista para IAP (Identity-Aware Proxy)
+  # IAP (Identity-Aware Proxy) admin members
   iap_admin_members = try(local.settings.iap.admin_access.members, [])
 
-  # Fusión de listas para rol de visualización básico
+  # Viewers and operators merged for the basic viewer role
   all_viewers_list = setunion(local.viewers, local.operators)
 }
 
@@ -75,7 +75,7 @@ resource "google_project_iam_member" "cloudbuild_connection_admins" {
 }
 
 
-# 1. Identidad del Servicio (Service Account de IAP)
+# 1. Service identity (the IAP service agent)
 resource "google_project_service_identity" "iap_sa" {
   count    = 1
   provider = google-beta
@@ -83,17 +83,17 @@ resource "google_project_service_identity" "iap_sa" {
   service  = "iap.googleapis.com"
 }
 
-# 2. Timeout de Seguridad (60s espera para propagación)
+# 2. Safety wait (60s for the service agent to propagate)
 resource "time_sleep" "wait_for_iap_sa" {
   count           = 1
   create_duration = "60s"
   depends_on      = [google_project_service_identity.iap_sa]
 }
 
-# 3. Permiso de Invocación ESPECÍFICO POR SERVICIO (solo servicios con IAP habilitado)
+# 3. Invoker permission PER SERVICE (only services with IAP enabled)
 
 resource "google_cloud_run_service_iam_member" "iap_invoker_services" {
-  # Solo servicios que tienen IAP habilitado (ya sea directo o vía LB)
+  # Only services with IAP enabled (directly or through the load balancer)
   for_each = {
     for k, v in local.app_services : k => v
     if try(v.cloudrun.iap.enabled, false) == true || length([
@@ -112,8 +112,8 @@ resource "google_cloud_run_service_iam_member" "iap_invoker_services" {
   depends_on = [time_sleep.wait_for_iap_sa, module.cloud_run_services]
 }
 
-# 4. Permiso de ACCESO (IAP-Secured Web App User)
-# Otorga permiso a usuarios/grupos específicos para acceder a la aplicación a través de IAP
+# 4. ACCESS permission (IAP-Secured Web App User)
+# Lets specific users and groups reach the application through IAP
 resource "google_iap_web_cloud_run_service_iam_member" "iap_access_members" {
   for_each = {
     for pair in flatten([

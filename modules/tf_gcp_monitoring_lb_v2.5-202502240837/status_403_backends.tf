@@ -35,7 +35,7 @@ resource "google_monitoring_alert_policy" "lb_403_errors" {
   }
 }
 
-resource "google_logging_metric" "request_count_403_backend" { # To Do - Añadir ignore backends
+resource "google_logging_metric" "request_count_403_backend" { # TODO: add ignored backends
   count   = length(var.status_403_backends) == 0 ? 0 : 1
   name    = "request_count_403_backend"
   project = var.gcp_project_id_monitoring

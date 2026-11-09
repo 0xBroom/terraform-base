@@ -1,6 +1,6 @@
 # The Cloud Build pipeline
 
-One file — `cloudbuild_files/cloudbuild.yaml` — builds every image in this project. It
+One file, `cloudbuild_files/cloudbuild.yaml`, builds every image in this project. It
 contains no service names, no build arguments, no image paths and no timeouts. Anything
 that differs between two services is **data in `settings/<workspace>.yaml`**, turned into
 Cloud Build substitutions by `gcp.cloudbuild.tf` at plan time.
@@ -36,7 +36,7 @@ single-quoted, and the pipeline passes it verbatim to `docker build`:
 
 Single quotes are what make an arbitrary value safe: `$`, backticks, globs, spaces and
 newlines cannot reach the shell, and an embedded quote is escaped the POSIX way
-(`'\''`). A value containing `${_FOO}` is inserted literally — Cloud Build substitutes
+(`'\''`). A value containing `${_FOO}` is inserted literally: Cloud Build substitutes
 once and never re-expands what it inserted.
 
 Two consequences worth knowing:
@@ -53,30 +53,30 @@ entry. `settings/example.yaml` carries the same list with inline comments.
 
 | Key | Default | What it does |
 |---|---|---|
-| `repo_name` | — | mandatory; the connected repository |
+| `repo_name` | none | mandatory; the connected repository |
 | `provider` | `repo_providers.default` | `github` or `bitbucket` |
 | `inline` | `false` | `true`: pipeline read from `cloudbuild_files/`. `false`: from the application repository, and only `substitutions` reach it |
 | `cloudbuild_file_path` | `cloudbuild.yaml` | which pipeline file |
-| `dockerfile_path` | `Dockerfile` | matched literally — `dockerfile` is a different file |
+| `dockerfile_path` | `Dockerfile` | matched literally; `dockerfile` is a different file |
 | `build_context_path` | `.` | what docker sees; a Dockerfile that `COPY`s from its own directory needs that directory |
 | `build_args` | `{}` | **any** build-time variable, as a map |
-| `docker_target` | — | `--target=<stage>` for a multi-stage Dockerfile. Not a build arg |
+| `docker_target` | none | `--target=<stage>` for a multi-stage Dockerfile. Not a build arg |
 | `image` | `<client>-<svc>/<svc>` | Artifact Registry path, or a job's `job-config.image` minus the tag |
-| `image_base` | — | passed as `--build-arg IMAGE_BASE`, resolved against this project's registry when it has no host of its own |
-| `reqs_file` | — | passed as `--build-arg REQS_FILE` |
+| `image_base` | none | passed as `--build-arg IMAGE_BASE`, resolved against this project's registry when it has no host of its own |
+| `reqs_file` | none | passed as `--build-arg REQS_FILE` |
 | `artifact_registry_token` | `false` | adds a step that mints an access token and passes it as `--build-arg GOOGLE_ACCESS_TOKEN`. Only for images that install private packages from Artifact Registry |
 | `build_timeout` | pipeline's `1800s` | per-service build timeout |
 | `machine_type` | pipeline's default worker | a bigger builder |
 | `deploy` | `true` | `false` builds and pushes without touching Cloud Run |
-| `job_name` | — | a Cloud Run **job** that shares this service's image; the build repoints it at the digest it just pushed |
+| `job_name` | none | a Cloud Run **job** that shares this service's image; the build repoints it at the digest it just pushed |
 | `cloudrun.region` (outside the `cloudbuild` block) | `region_name` | where the service lives, and therefore where the build deploys it |
 | `branch_pattern` / `tag_pattern` | tag `^<workspace>-YYYYMMDDNN$` | what fires the trigger |
-| `build_filter_paths` | — | only build when these paths changed (branch triggers) |
+| `build_filter_paths` | none | only build when these paths changed (branch triggers) |
 | `substitutions` | `{}` | raw Cloud Build substitutions, for a pipeline this repository cannot see |
 
 ## Optional steps: `x-when`
 
-A step in the pipeline may carry `x-when: [flag, ...]` — a Terraform-only key, ANDed,
+A step in the pipeline may carry `x-when: [flag, ...]`: a Terraform-only key, ANDed,
 absent meaning unconditional. Terraform keeps the step only if every flag is on for that
 service, then **rewrites the `waitFor` of the steps that survived**, so removing a step
 never leaves a dangling dependency. A flag that is not a real capability is a plan
@@ -127,14 +127,14 @@ python3 bin/cloudbuild-render-test.py    # exit 0 required
   substitution, and refuses a name that is not a valid builtin. Shell variables inside a
   step are lowercase; a literal dollar for the shell is `$$`.
 - **`ALLOW_LOOSE` is forced on triggered builds**: an unset custom substitution becomes
-  an empty string instead of an error. Nothing tells you a variable never arrived — the
+  an empty string instead of an error. Nothing tells you a variable never arrived; the
   image just builds with the Dockerfile's default. This is exactly how the dev door of
   `leader-web` was served with production's `robots.txt`: the value was declared under
   `substitutions:` while the shared pipeline only ever passed a fixed list of build args.
 - **A substitution is not expanded inside another substitution.** Everything is resolved
   in Terraform, in full, which is why `_IMAGE` is a literal path and not a template.
 - **An external pipeline (`inline: false`) is handed as little as possible**: the naming
-  substitutions, the registry helpers, and whatever `substitutions:` declares — never
+  substitutions, the registry helpers, and whatever `substitutions:` declares, never
   `_IMAGE`, `_BUILD_ARGS`, `_DOCKER_TARGET` or `_JOB_NAME`. A file this repository cannot
   read may treat an unset substitution as a signal; a common pattern is one that
   falls back to `${_IMAGE_BASE}:${SHORT_SHA}` when `$_IMAGE` is empty. Defining one for
@@ -142,9 +142,9 @@ python3 bin/cloudbuild-render-test.py    # exit 0 required
 - **The rollout goes where the resource is.** Three services live in `us-east1` while the
   project's region is `europe-west1`, so the deploy step uses `_DEPLOY_REGION` (the
   service's own `cloudrun.region`) and the job steps use `_JOB_REGION`. `gcloud run
-  deploy` with the wrong region does not fail — it creates a second service.
+  deploy` with the wrong region does not fail: it creates a second service.
 - **Cloud Run pins the image digest at deploy time.** A job that shares a service's image
-  keeps running the digest it was created with until something updates it — that is what
+  keeps running the digest it was created with until something updates it, and that is what
   `job_name` is for.
 
 ## Scans

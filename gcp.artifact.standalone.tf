@@ -15,7 +15,7 @@
 #         - "cloudbuild"          # shorthand for the project's Cloud Build SAs
 #         - "serviceAccount:..."  # or any literal IAM member
 #
-# Absent from a workspace, `try(..., {})` makes the whole file a no-op — the other two
+# Absent from a workspace, `try(..., {})` makes the whole file a no-op; the other two
 # workspaces are unaffected.
 #
 # Also the home of repositories made by hand (or by Cloud Functions / `gcloud run deploy
@@ -30,7 +30,7 @@
 #
 # An adopted repository keeps its description and labels: the import must declare what is
 # there, and the only change the plan may show is the cleanup policy. Removing an adopted
-# entry from the yaml plans a DESTROY of the repository and every image in it — the apply
+# entry from the yaml plans a DESTROY of the repository and every image in it. The apply
 # procedure stops on destroys; take it out of state with a `removed` block instead.
 
 locals {
@@ -141,7 +141,7 @@ resource "google_artifact_registry_repository_iam_member" "standalone_legacy_clo
 
 # Readers: Cloud Run pulls as the job's own service account, and those are created in
 # gcp.jobs.tf. Rather than enumerate them, grant the project's default compute and run
-# agents plus any explicit reader — the same posture the per-service module takes.
+# agents plus any explicit reader, the same posture the per-service module takes.
 resource "google_artifact_registry_repository_iam_member" "standalone_readers" {
   for_each = {
     for pair in flatten([

@@ -193,9 +193,9 @@ variable "notification_channels_not_on_call" {
 }
 
 variable "evaluation_missing_data_behavior" {
-  # EVALUATION_MISSING_DATA_ACTIVE: Tratar la falta de datos como alerta activa.
-  # EVALUATION_MISSING_DATA_INACTIVE: Tratar la falta de datos como alerta inactiva.
-  # EVALUATION_MISSING_DATA_NO_OP: Ignorar la falta de datos (valor por defecto de GCP si no se especifica).
+  # EVALUATION_MISSING_DATA_ACTIVE: treat missing data as an active alert.
+  # EVALUATION_MISSING_DATA_INACTIVE: treat missing data as an inactive alert.
+  # EVALUATION_MISSING_DATA_NO_OP: ignore missing data (GCP's default when unset).
   description = "Behavior when data are missing in the evaluation"
   type        = string
   default     = "EVALUATION_MISSING_DATA_ACTIVE"

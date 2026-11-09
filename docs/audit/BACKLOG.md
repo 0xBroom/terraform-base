@@ -4,7 +4,7 @@ The list of work that takes this template to a public, production-grade
 release: dev and stg cheap, pro ready for a security, backup and
 data-retention audit. Each item has a check in `bin/audit-terraform.py`.
 
-Open: 19. Done: 33. Accepted, not a gap: 22.
+Open: 18. Done: 34. Accepted, not a gap: 22.
 
 Regenerate with `python3 bin/audit-terraform.py --write` in the pull request
 that closes an item. `--next` names the item to take. How a session works an
@@ -110,12 +110,6 @@ Next change: Keep base APIs in default.yaml and add a feature_apis map in locals
 modules/tf_gcp_x_v1.8-202405071510 reads like a build export, not a version. gcp.compute-nat.tf and gcp.repository.github-extra.tf mix hyphens into a dotted pattern.
 
 Next change: Rename modules to modules/gcp_<name>_v<major.minor> and update every source. Rename the two root files with dots. Module addresses in state do not change.
-
-### AUD-LANG (p1) Docs and comments mix Spanish with English
-
-A public template has one language. docs/cloudrun-service-resources.md and several comments are Spanish.
-
-Next change: Translate to English.
 
 ### AUD-DOC-OSS (p2) The repository has no contributor, security or change files
 
@@ -308,3 +302,4 @@ Next change: Keep it equal to stg.
 - AUD-CI-RUNNER (p1) CI runs on a moving runner label with Node 20 actions
 - AUD-COST-DEFAULTS (p1) Two code defaults cost money when a key is left out
 - AUD-COST-PROFILES (p1) dev is a copy of stg and stg a copy of pre
+- AUD-LANG (p1) Docs and comments mix Spanish with English, and use em dashes

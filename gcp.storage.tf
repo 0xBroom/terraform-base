@@ -16,8 +16,8 @@ locals {
   #   cloudrun_job:<job>   -> <client>-<job>-job-sa@…    (a Cloud Run job)
   #
   # Observed in practice: if a prefix is not expanded here, the failure is not a validation
-  # error in Terraform but a 400 from Google at apply time — «The member cloudrun_job:<job>
-  # is of an unknown type» — half way through a plan, which is the worst moment to discover a typo-shaped problem. A
+  # error in Terraform but a 400 from Google at apply time ("The member cloudrun_job:<job>
+  # is of an unknown type"), half way through a plan, which is the worst moment to discover a typo-shaped problem. A
   # prefix should mean the same thing wherever it is written.
   bucket_permissions = {
     for bucket_name, bucket_config in local.buckets : bucket_name => {
@@ -87,8 +87,8 @@ module "storage_buckets" {
   # Ensure Cloud Run services are created before bucket permissions
   #
   # The second entry is the same class of problem for a principal Terraform CANNOT see.
-  # A `permissions.members` entry written as a literal `serviceAccount:…` string — which
-  # is the only way YAML can name one — creates NO dependency edge to the resource that
+  # A `permissions.members` entry written as a literal `serviceAccount:…` string (which
+  # is the only way YAML can name one) creates NO dependency edge to the resource that
   # creates that account, so Terraform is free to grant the role first. Google then
   # rejects it with `Service account … does not exist`, which is a propagation delay
   # wearing the costume of a typo.
