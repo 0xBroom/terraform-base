@@ -18,40 +18,52 @@ locals {
     budget               = ["billingbudgets.googleapis.com", "cloudbilling.googleapis.com"]
     # The stop billing function is a 2nd gen Cloud Function fed by a Pub/Sub topic.
     budget_auto_stop = ["cloudfunctions.googleapis.com", "eventarc.googleapis.com", "pubsub.googleapis.com"]
-    cloud_tasks      = ["cloudtasks.googleapis.com"]
-    compute          = ["compute.googleapis.com"]
-    database         = ["sqladmin.googleapis.com", "servicenetworking.googleapis.com"]
-    dns              = ["dns.googleapis.com"]
-    firestore        = ["firestore.googleapis.com"]
-    iap              = ["iap.googleapis.com"]
-    lb               = ["compute.googleapis.com"]
-    network          = ["compute.googleapis.com", "servicenetworking.googleapis.com", "vpcaccess.googleapis.com"]
-    pubsub           = ["pubsub.googleapis.com"]
-    redis            = ["redis.googleapis.com", "servicenetworking.googleapis.com"]
-    scheduler        = ["cloudscheduler.googleapis.com"]
-    sops             = ["cloudkms.googleapis.com"]
-    wif              = ["sts.googleapis.com", "iamcredentials.googleapis.com"]
+    # A service or job that mounts a Cloud SQL instance (this project's or another's)
+    # needs the SQL Admin API in its own project, with or without a database section.
+    cloud_sql_mount = ["sqladmin.googleapis.com"]
+    cloud_tasks     = ["cloudtasks.googleapis.com"]
+    compute         = ["compute.googleapis.com"]
+    database        = ["sqladmin.googleapis.com", "servicenetworking.googleapis.com"]
+    dns             = ["dns.googleapis.com"]
+    firestore       = ["firestore.googleapis.com"]
+    iap             = ["iap.googleapis.com"]
+    lb              = ["compute.googleapis.com"]
+    network         = ["compute.googleapis.com", "servicenetworking.googleapis.com", "vpcaccess.googleapis.com"]
+    pubsub          = ["pubsub.googleapis.com"]
+    redis           = ["redis.googleapis.com", "servicenetworking.googleapis.com"]
+    scheduler       = ["cloudscheduler.googleapis.com"]
+    sops            = ["cloudkms.googleapis.com"]
+    # A job that names a Serverless VPC Access connector instead of direct VPC egress.
+    vpc_connector = ["vpcaccess.googleapis.com"]
+    wif           = ["sts.googleapis.com", "iamcredentials.googleapis.com"]
   }
 
-  # Each gate reuses the local that creates the feature's resources.
+  # Each gate is the expression the feature's resources (or the module input) are built from.
   feature_enabled = {
     artifact_scanning    = try(local.settings.security.artifact_scanning, false)
     binary_authorization = local.enable_binary_auth
     budget               = local.enable_billing
     budget_auto_stop     = local.enable_stop_billing
-    cloud_tasks          = length(local.cloud_tasks_configs) > 0
-    compute              = length(local.compute_instances) > 0 || length(local.compute_nats) > 0
-    database             = length(try(local.settings.database, {})) > 0
-    dns                  = length(local.dns_zones) > 0 || local.enable_elastic_psc_dns
-    firestore            = length(local.all_firestore) > 0
-    iap                  = local.iap_identity_enabled
-    lb                   = local.lb_enabled
-    network              = local.network_enabled
-    pubsub               = length(try(local.settings.pubsub.topics, {})) > 0
-    redis                = length(try(local.settings.redis, {})) > 0
-    scheduler            = length(try(local.settings.scheduler, {})) > 0 || length(try(local.settings.service_scheduler, {})) > 0
-    sops                 = local.sops_enabled
-    wif                  = local.wif_enabled
+    cloud_sql_mount = anytrue(concat(
+      [for config in values(local.app_services) : try(config.cloudrun.cloud_sql_instances_mount, null) != null],
+      [for config in values(try(local.settings.app.job, {})) : try(config.job-config.cloud_sql_instances_mount, null) != null],
+    ))
+    cloud_tasks = length(local.cloud_tasks_configs) > 0
+    compute     = length(local.compute_instances) > 0 || length(local.compute_nats) > 0
+    database    = length(try(local.settings.database, {})) > 0
+    dns         = length(local.dns_zones) > 0 || local.enable_elastic_psc_dns
+    firestore   = length(local.all_firestore) > 0
+    iap         = local.iap_identity_enabled
+    lb          = local.lb_enabled
+    network     = local.network_enabled
+    pubsub      = length(try(local.settings.pubsub.topics, {})) > 0
+    redis       = length(try(local.settings.redis, {})) > 0
+    scheduler   = length(try(local.settings.scheduler, {})) > 0 || length(try(local.settings.service_scheduler, {})) > 0
+    sops        = local.sops_enabled
+    vpc_connector = anytrue([
+      for config in values(try(local.settings.app.job, {})) : try(config.job-config.vpc_access.connector, null) != null
+    ])
+    wif = local.wif_enabled
   }
 
   enabled_apis = sort(distinct(concat(
@@ -100,7 +112,8 @@ moved {
 }
 
 # Binary Authorization and SOPS both enabled Cloud KMS and only one move can own the key.
-# The SOPS copy leaves state without an API call; enabled_apis keeps the API on.
+# The SOPS copy leaves state without an API call. With SOPS only, enabled_apis declares
+# the API again, a create that changes nothing on an API that is already on.
 removed {
   from = google_project_service.cloudkms
 
