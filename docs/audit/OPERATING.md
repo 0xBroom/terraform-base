@@ -26,11 +26,16 @@ plan, in that workspace. A pull request is not that yes.
 
 ## What "production" means here
 
-`settings/pre.yaml` and `settings/pro.yaml` are the reference workspaces once
-they exist. Pre is smaller and zonal. Pro is regional, warm, and protected
-against an accidental delete. Both are full of placeholders (`REPLACE_ME` and
-`example.com`). Planning them against a real project comes after those values
-are replaced. Applying them is a separate decision.
+`settings/pre.yaml` and `settings/pro.yaml` are the reference workspaces.
+Pre is smaller and zonal. Pro is regional, warm, and protected against an
+accidental delete. Both use placeholders (`example-app-pre`,
+`example-app-pro`, `replace-me@example.com`). Planning them against a real
+project comes after those values are replaced. Applying them is a separate
+decision. The difference between the two files is `docs/ENVIRONMENTS.md`.
+
+Pull requests run the same fmt and validate on the default workspace
+(`.github/workflows/terraform.yml`). A green local validate is still the
+check you run before opening the pull request.
 
 Secret values never go in YAML or in HCL. The stack creates the secret and a
 placeholder version. The payload is added with `gcloud secrets versions add`,
