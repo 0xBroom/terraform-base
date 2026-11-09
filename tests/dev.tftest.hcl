@@ -34,6 +34,11 @@ run "dev_shape_is_cheap" {
   }
 
   assert {
+    condition     = length(google_org_policy_policy.service_account_keys) == 0 && !contains(local.enabled_apis, "orgpolicy.googleapis.com")
+    error_message = "dev writes no organization policy and does not enable the Org Policy API."
+  }
+
+  assert {
     condition     = local.network_enabled && length(module.network) == 1
     error_message = "dev has network.services_cidr: one shared VPC (positive control for the NAT check)."
   }

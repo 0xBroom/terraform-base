@@ -1186,6 +1186,12 @@ security:
   #   admin_read: true
   #   data_read: false
   #   data_write: false
+  # Enforce iam.disableServiceAccountKeyCreation and
+  # iam.disableServiceAccountKeyUpload on the project (google_org_policy_policy,
+  # Org Policy API enabled with it). Existing keys keep working. Nothing in this
+  # stack uses a key. The identity that applies needs roles/orgpolicy.policyAdmin,
+  # which exists only on the organization or a folder. No cost.
+  # disable_service_account_keys: true              # [OPTIONAL] Default: false. true in pro
   # Threshold alerts of the security baseline module, one log-based metric and
   # one alert policy per family. true (default) or false for all, or a map
   # where an omitted family stays on. Five families report the same events as

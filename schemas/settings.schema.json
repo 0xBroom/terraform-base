@@ -34,6 +34,7 @@
       "properties": {
         "alerts_email": { "type": "string", "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$" },
         "artifact_scanning": { "type": "boolean" },
+        "disable_service_account_keys": { "type": "boolean", "description": "Enforce the organization policies that refuse service account key creation and upload on the project." },
         "audit_logging": {
           "type": "object",
           "additionalProperties": false,

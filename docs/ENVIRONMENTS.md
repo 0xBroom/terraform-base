@@ -58,6 +58,7 @@ exist, which is what we want.
 | Uptime check (`monitoring.uptime`) | none | none | the first `lb.domain` every 5 minutes from 3 regions |
 | Secret read alert (`monitoring.secret_access`) | none | none | Secret Manager Data Access logs, one email per unexpected reader |
 | Binary Authorization | off | off | enforced: Cloud Build signs each digest with a KMS key, unsigned images are refused |
+| Service account keys (`security.disable_service_account_keys`) | allowed | allowed | refused: creation and upload, by organization policy on the project |
 | External CI federation (`wif`) | none | none | none, a commented example (`docs/WIF.md`) |
 | VPC | `10.8.1.0/24` | `10.10.1.0/24` | `10.20.1.0/24` |
 | Private Service Access range (no charge) | `10.9.0.0/16` | `10.11.0.0/16` | `10.21.0.0/16` |
@@ -266,6 +267,33 @@ log ingestion per project and month and cost 0.50 USD per GiB past it, and pro
 also keeps them for 365 days in the locked audit archive. One read is a small
 entry, written when an instance starts, a job runs or a build reads a secret,
 so the volume is low, but it is not zero. Dev and stg leave the key out.
+
+Pro sets `security.disable_service_account_keys`. `gcp.security.tf` then
+enforces two boolean organization policy constraints on the project with
+`google_org_policy_policy`: `iam.disableServiceAccountKeyCreation` (no new
+key) and `iam.disableServiceAccountKeyUpload` (no public key of an external
+key pair uploaded to a service account). The `service_account_key_created`
+log alert stays on as a second line, for the day the policy is lifted. Keys
+that exist keep working; list them with
+`gcloud iam service-accounts keys list` and delete the user-managed ones.
+Nothing in this stack needs a key: Cloud Run, jobs and Cloud Build run as
+attached service accounts, and external CI uses `wif`. Two things to know:
+
+- **The applier needs `roles/orgpolicy.policyAdmin`.** The role can only be
+  granted on the organization or a folder, never on the project, so it
+  usually comes from whoever runs the organization. Without it the apply
+  fails on these two resources with a 403. The Org Policy API
+  (`orgpolicy.googleapis.com`) is enabled with them and costs nothing.
+- **The organization may enforce it already.** Organizations created since
+  May 2024 enforce both constraints by default, and then the project policy only
+  states the same rule in code, so it survives a change at the folder.
+  Setting the key to `false` deletes the project policy and the project
+  inherits again; it does not grant an exception. An exception (a third-party
+  tool that only takes a key) is a project policy with `enforce = "FALSE"`,
+  which this stack does not write.
+
+Dev and stg leave the key out: a policy costs nothing, but a sandbox may need
+a key for a quick test, and the folder policy decides there.
 
 The first Cloud Run revision is the public hello image. Cloud Build replaces
 the digest and Terraform leaves it alone. Do not pin a real image in the YAML.

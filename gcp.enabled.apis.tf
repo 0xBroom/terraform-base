@@ -29,6 +29,7 @@ locals {
     iap             = ["iap.googleapis.com"]
     lb              = ["compute.googleapis.com"]
     network         = ["compute.googleapis.com", "servicenetworking.googleapis.com", "vpcaccess.googleapis.com"]
+    org_policy      = ["orgpolicy.googleapis.com"]
     pubsub          = ["pubsub.googleapis.com"]
     redis           = ["redis.googleapis.com", "servicenetworking.googleapis.com"]
     scheduler       = ["cloudscheduler.googleapis.com"]
@@ -56,6 +57,7 @@ locals {
     iap         = local.iap_identity_enabled
     lb          = local.lb_enabled
     network     = local.network_enabled
+    org_policy  = length(local.service_account_key_constraints) > 0
     pubsub      = length(try(local.settings.pubsub.topics, {})) > 0
     redis       = length(try(local.settings.redis, {})) > 0
     scheduler   = length(try(local.settings.scheduler, {})) > 0 || length(try(local.settings.service_scheduler, {})) > 0
