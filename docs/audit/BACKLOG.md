@@ -5,7 +5,7 @@ settings, locals, network, security, SQL, KMS and provider pins). This
 repository is that template: root files `gcp.*.tf`, vendored `tf_gcp_*`
 modules, one workspace file per environment.
 
-Open: 20. Done: 4. Accepted, do not port: 16.
+Open: 19. Done: 5. Accepted, do not port: 16.
 
 Regenerate this file with `python3 bin/audit-terraform.py --write` in the same
 pull request that closes an item. The status comes from the code, not from
@@ -13,14 +13,6 @@ this prose. How a session picks the next item: `docs/audit/OPERATING.md`.
 
 
 ## Open
-
-### AUD-BUCKET (p0) A workspace with no bucket key cannot plan
-
-gcp.storage.tf iterates local.settings.bucket directly. Every other map in this repo uses try(..., {}). The README says a missing section creates nothing. Buckets are the exception, so the first plan of a new project fails before it creates anything.
-
-Evidence: gcp.storage.tf for_each = local.settings.bucket.
-
-Next change: Guard the map with try(local.settings.bucket, {}).
 
 ### AUD-AUDIT (p0) Admin-read audit logs are off
 
@@ -199,6 +191,14 @@ allow_internal_vpc permits 10.10.1.0/24, 10.20.0.0/24 and 10.20.1.0/24. Only the
 Evidence: gcp.firewall.tf source_ranges.
 
 Next change: Use settings.network.services_cidr plus an optional extra_internal_cidrs list.
+
+### AUD-BUCKET (p0) A workspace with no bucket key cannot plan
+
+gcp.storage.tf iterates local.settings.bucket directly. Every other map in this repo uses try(..., {}). The README says a missing section creates nothing. Buckets are the exception, so the first plan of a new project fails before it creates anything.
+
+Evidence: gcp.storage.tf for_each = local.settings.bucket.
+
+Next change: Guard the map with try(local.settings.bucket, {}).
 
 ### AUD-AGENTS (p1) A session that opens this repo has no operating rules
 

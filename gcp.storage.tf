@@ -6,6 +6,9 @@
 
 # Local variables for dynamic permission processing
 locals {
+  # A workspace with no bucket: key creates nothing (AUD-BUCKET).
+  buckets = try(local.settings.bucket, {})
+
   # Process bucket permissions, expanding the same member shorthands the rest of this repo
   # uses:
   #
@@ -17,7 +20,7 @@ locals {
   # is of an unknown type» — half way through a plan, which is the worst moment to discover a typo-shaped problem. A
   # prefix should mean the same thing wherever it is written.
   bucket_permissions = {
-    for bucket_name, bucket_config in local.settings.bucket : bucket_name => {
+    for bucket_name, bucket_config in local.buckets : bucket_name => {
       for permission_name, permission_config in try(bucket_config.permissions, {}) : permission_name => {
         members = [
           for member in permission_config.members :
@@ -35,7 +38,7 @@ locals {
 
 # Create all storage buckets using for_each loop
 module "storage_buckets" {
-  for_each = local.settings.bucket
+  for_each = local.buckets
 
   source = "./modules/tf_gcp_storage_v2.5-202406121124"
 
