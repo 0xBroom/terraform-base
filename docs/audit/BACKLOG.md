@@ -4,7 +4,7 @@ The list of work that takes this template to a public, production-grade
 release: dev and stg cheap, pro ready for a security, backup and
 data-retention audit. Each item has a check in `bin/audit-terraform.py`.
 
-Open: 3. Done: 61. Accepted, not a gap: 22.
+Open: 2. Done: 62. Accepted, not a gap: 22.
 
 Regenerate with `python3 bin/audit-terraform.py --write` in the pull request
 that closes an item. `--next` names the item to take. How a session works an
@@ -12,12 +12,6 @@ item: `docs/audit/OPERATING.md`.
 
 
 ## Open
-
-### AUD-DOC-OSS (p2) The repository has no contributor, security or change files
-
-A public project needs to say how to contribute, how to report a vulnerability and what changed.
-
-Next change: Add CONTRIBUTING.md, SECURITY.md, CHANGELOG.md, a pull request template and issue templates.
 
 ### AUD-DOC-COMPLIANCE (p1) Nothing maps the pro settings to audit controls
 
@@ -220,6 +214,7 @@ Next change: Keep it equal to stg.
 - AUD-COST-APIS (p3) APIs for SQL, Redis, Firestore and other features are enabled when unused
 - AUD-NAMES (p2) Module directories carry build timestamps and some root files break the naming pattern
 - AUD-LANG (p1) Docs and comments mix Spanish with English, and use em dashes
+- AUD-DOC-OSS (p2) The repository has no contributor, security or change files
 - AUD-PSA (p1) Private Service Access is never created, so private Cloud SQL and Redis fail on a new project
 - AUD-PROJECT-NUMBER (p1) A workspace that sets project with only an id loses the project number
 - AUD-IAM-OPERATORS (p1) Operators can invoke every service and act as every service account
