@@ -5,7 +5,7 @@ settings, locals, network, security, SQL, KMS and provider pins). This
 repository is that template: root files `gcp.*.tf`, vendored `tf_gcp_*`
 modules, one workspace file per environment.
 
-Open: 14. Done: 10. Accepted, do not port: 16.
+Open: 13. Done: 11. Accepted, do not port: 16.
 
 Regenerate this file with `python3 bin/audit-terraform.py --write` in the same
 pull request that closes an item. The status comes from the code, not from
@@ -13,14 +13,6 @@ this prose. How a session picks the next item: `docs/audit/OPERATING.md`.
 
 
 ## Open
-
-### AUD-LOCK (p1) The provider lock file is gitignored
-
-.gitignore lists *.lock.hcl. Two applies on different days can pick different provider builds inside the same pessimistic pin. Tools Hub commits the lock. A template that others clone should too.
-
-Evidence: .gitignore contains *.lock.hcl. No .terraform.lock.hcl in the tree.
-
-Next change: Stop ignoring the lock file, generate it with terraform init -backend=false, and commit it.
 
 ### AUD-CI (p1) Nothing checks fmt or validate on a pull request
 
@@ -199,6 +191,14 @@ Pro is where deletion protection, regional SQL, a warm instance, longer backups,
 Evidence: settings/ has no pro.yaml.
 
 Next change: Add settings/pro.yaml. Regional SQL, min_instances 1, deletion protection on, encrypted SQL, HA Redis with in-transit encryption.
+
+### AUD-LOCK (p1) The provider lock file is gitignored
+
+.gitignore lists *.lock.hcl. Two applies on different days can pick different provider builds inside the same pessimistic pin. Tools Hub commits the lock. A template that others clone should too.
+
+Evidence: .gitignore contains *.lock.hcl. No .terraform.lock.hcl in the tree.
+
+Next change: Stop ignoring the lock file, generate it with terraform init -backend=false, and commit it.
 
 ### AUD-AGENTS (p1) A session that opens this repo has no operating rules
 
