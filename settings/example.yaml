@@ -693,6 +693,9 @@ database:
       # Database flags (PostgreSQL configuration parameters)
       flags:                                        # [OPTIONAL] PostgreSQL server flags
         max_connections: 200                        #   Max concurrent connections
+      # insights:                                   # [OPTIONAL] Query Insights. Off unless a workspace asks.
+      #   enabled: true                             #   pro should turn this on
+      #   query_plans_per_minute: 5
         # log_min_duration_statement: 1000          #   Log queries slower than N ms
         # shared_buffers: 256                       #   Shared memory buffers (MB)
 

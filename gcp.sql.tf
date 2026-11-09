@@ -49,11 +49,11 @@ module "cloud_sql" {
   secrets_locations       = [local.settings.region_name] # Use regional location for secrets
   net_id                  = try(each.value.sql.ipv4_enabled, false) ? null : try(module.network[0].network_id, null)
   insights_config = {
-    query_insights_enabled  = false
-    query_plans_per_minute  = 0
-    query_string_length     = 2048
-    record_application_tags = false
-    record_client_address   = false
+    query_insights_enabled  = try(each.value.sql.insights.enabled, false)
+    query_plans_per_minute  = try(each.value.sql.insights.query_plans_per_minute, 0)
+    query_string_length     = try(each.value.sql.insights.query_string_length, 2048)
+    record_application_tags = try(each.value.sql.insights.record_application_tags, false)
+    record_client_address   = try(each.value.sql.insights.record_client_address, false)
   }
   monitoring                        = try(each.value.sql.monitoring, {})
   flags                             = try(each.value.sql.flags, {})

@@ -5,7 +5,7 @@ settings, locals, network, security, SQL, KMS and provider pins). This
 repository is that template: root files `gcp.*.tf`, vendored `tf_gcp_*`
 modules, one workspace file per environment.
 
-Open: 17. Done: 7. Accepted, do not port: 16.
+Open: 16. Done: 8. Accepted, do not port: 16.
 
 Regenerate this file with `python3 bin/audit-terraform.py --write` in the same
 pull request that closes an item. The status comes from the code, not from
@@ -13,14 +13,6 @@ this prose. How a session picks the next item: `docs/audit/OPERATING.md`.
 
 
 ## Open
-
-### AUD-INSIGHTS (p1) Cloud SQL Query Insights cannot be turned on
-
-gcp.sql.tf hardcodes query_insights_enabled = false. Pre can live without it. Pro should be able to record slow queries without a module edit. The SQL module already accepts an insights_config object.
-
-Evidence: gcp.sql.tf insights_config block.
-
-Next change: Map settings.database.<id>.sql.insights over that object. Default stays off.
 
 ### AUD-PRE (p1) There is no pre workspace
 
@@ -199,6 +191,14 @@ gcp.cloudrun.tf and gcp.jobs.tf hardcode deletion_protection = false. Cloud SQL 
 Evidence: gcp.cloudrun.tf line deletion_protection = false. gcp.jobs.tf the same.
 
 Next change: Read the YAML key, and default it to true when terraform.workspace is pro.
+
+### AUD-INSIGHTS (p1) Cloud SQL Query Insights cannot be turned on
+
+gcp.sql.tf hardcodes query_insights_enabled = false. Pre can live without it. Pro should be able to record slow queries without a module edit. The SQL module already accepts an insights_config object.
+
+Evidence: gcp.sql.tf insights_config block.
+
+Next change: Map settings.database.<id>.sql.insights over that object. Default stays off.
 
 ### AUD-AGENTS (p1) A session that opens this repo has no operating rules
 
