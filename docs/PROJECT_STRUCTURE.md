@@ -7,6 +7,7 @@ This document describes how the files in this repository fit together.
 - `README.md`: overview and getting started.
 - `locals.tf`: loads `settings/default.yaml`, merges `settings/<workspace>.yaml` on top, and exposes the result as `local.settings`.
 - `providers.tf` and `versions.tf`: provider configuration, version pins and the remote state backend.
+- `outputs.tf`: root outputs (load balancer IP and domains, Cloud Run URLs, Cloud SQL connection names, registry paths, federation providers and accounts, audit archive bucket). Each is an empty map or null when its feature is absent; none is a secret.
 - `gcp.<type>.tf`: one root file per GCP resource type. Each one reads its section of `local.settings` and creates nothing when that section is absent.
   - `gcp.cloudrun.tf`: Cloud Run services, their service accounts, IAM and volumes.
   - `gcp.jobs.tf`: Cloud Run jobs.
