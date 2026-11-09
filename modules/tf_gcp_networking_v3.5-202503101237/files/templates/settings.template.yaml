@@ -1,0 +1,10 @@
+network:
+  network_tier: PREMIUM # Optional
+  internal_connection: true # Optional
+  services_cidr: "10.20.0.0/24"
+  private_google_access: true # Optional
+
+  # Nat configuration
+  nat_addresses: 0 # Optional
+  nat_min_vm_ports: 2048 # Optional
+  nat_max_vm_ports: 16384 # Optional

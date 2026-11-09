@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="354" viewBox="0 0 1200 354" role="img">
+<rect x="0.5" y="0.5" width="1199" height="353" rx="14" fill="#f6f8fa" stroke="#d0d7de"/>
+<line x1="36" y1="98" x2="1164" y2="98" stroke="#1f2328" stroke-width="2"/>
+<text x="36" y="76" font-family="Georgia, 'Times New Roman', serif" font-size="34" fill="#1f2328" font-weight="bold" text-anchor="start">terraform-base</text>
+<text x="36" y="116" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="15" fill="#57606a" font-weight="normal" text-anchor="start">One YAML file per project. 33 Terraform files that read it. Nothing clicked in a console.</text>
+<rect x="36" y="146" width="112" height="56" rx="8" fill="#ffffff" stroke="#d8dee4"/>
+<text x="50" y="167" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="10" fill="#57606a" font-weight="normal" text-anchor="start">WORKSPACES</text>
+<text x="50" y="188" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="15" fill="#1f2328" font-weight="bold" text-anchor="start">3 live</text>
+<rect x="160" y="146" width="95.2" height="56" rx="8" fill="#ffffff" stroke="#d8dee4"/>
+<text x="174" y="167" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="10" fill="#57606a" font-weight="normal" text-anchor="start">GCP.*.TF</text>
+<text x="174" y="188" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="15" fill="#1f2328" font-weight="bold" text-anchor="start">30</text>
+<rect x="267.2" y="146" width="120.4" height="56" rx="8" fill="#ffffff" stroke="#d8dee4"/>
+<text x="281.2" y="167" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="10" fill="#57606a" font-weight="normal" text-anchor="start">ORACLE.*.TF</text>
+<text x="281.2" y="188" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="15" fill="#1f2328" font-weight="bold" text-anchor="start">3</text>
+<rect x="399.6" y="146" width="162.4" height="56" rx="8" fill="#ffffff" stroke="#d8dee4"/>
+<text x="413.6" y="167" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="10" fill="#57606a" font-weight="normal" text-anchor="start">VENDORED MODULES</text>
+<text x="413.6" y="188" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="15" fill="#1f2328" font-weight="bold" text-anchor="start">9</text>
+<rect x="36" y="232" width="198.4" height="58" rx="10" fill="#ffffff" stroke="#4285f4" stroke-width="1.5"/>
+<text x="135.2" y="267" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" fill="#1f2328" font-weight="normal" text-anchor="middle">settings/&lt;ws&gt;.yaml</text>
+<line x1="240.4" y1="261" x2="258.4" y2="261" stroke="#4285f4" stroke-width="1.5"/>
+<polygon points="258.4,256 258.4,266 267.4,261" fill="#4285f4"/>
+<rect x="268.4" y="232" width="198.4" height="58" rx="10" fill="#ffffff" stroke="#4285f4" stroke-width="1.5"/>
+<text x="367.6" y="267" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" fill="#1f2328" font-weight="normal" text-anchor="middle">local.settings</text>
+<line x1="472.8" y1="261" x2="490.8" y2="261" stroke="#4285f4" stroke-width="1.5"/>
+<polygon points="490.8,256 490.8,266 499.8,261" fill="#4285f4"/>
+<rect x="500.8" y="232" width="198.4" height="58" rx="10" fill="#ffffff" stroke="#4285f4" stroke-width="1.5"/>
+<text x="600" y="267" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" fill="#1f2328" font-weight="normal" text-anchor="middle">gcp.*.tf</text>
+<line x1="705.2" y1="261" x2="723.2" y2="261" stroke="#4285f4" stroke-width="1.5"/>
+<polygon points="723.2,256 723.2,266 732.2,261" fill="#4285f4"/>
+<rect x="733.2" y="232" width="198.4" height="58" rx="10" fill="#ffffff" stroke="#4285f4" stroke-width="1.5"/>
+<text x="832.4" y="267" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" fill="#1f2328" font-weight="normal" text-anchor="middle">terraform apply</text>
+<line x1="937.6" y1="261" x2="955.6" y2="261" stroke="#4285f4" stroke-width="1.5"/>
+<polygon points="955.6,256 955.6,266 964.6,261" fill="#4285f4"/>
+<rect x="965.6" y="232" width="198.4" height="58" rx="10" fill="#ffffff" stroke="#4285f4" stroke-width="1.5"/>
+<text x="1064.8" y="267" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" fill="#1f2328" font-weight="normal" text-anchor="middle">GCP project</text>
+<text x="36" y="318" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#57606a" font-weight="normal" text-anchor="start">settings/&lt;workspace&gt;.yaml feeds local.settings, which the gcp.*.tf files read</text>
+</svg>

@@ -1,0 +1,130 @@
+# The one pipeline every image in this project is built with.
+#
+# TERRAFORM-ONLY ARTIFACT. The `x-when` keys below are not Cloud Build syntax; Terraform
+# reads them and drops them before it creates the build, so `gcloud builds submit
+# --config cloudbuild_files/cloudbuild.yaml` rejects this file. Render it instead with
+#     bin/cloudbuild-render.py <workspace> <service>
+#
+# It carries NO service-specific knowledge — no build args, no image names, no timeouts,
+# no framework flags. Everything that differs between services arrives as a substitution
+# Terraform computes from settings/<workspace>.yaml (docs/cloudbuild-pipeline.md):
+#
+#   _IMAGE               Artifact Registry path of the image, fully resolved
+#   _BUILD_ARGS          every `--build-arg K='v'` from cloudbuild.build_args, quoted
+#   _DOCKER_TARGET       `--target=<stage>` from cloudbuild.docker_target, else empty
+#   _DOCKERFILE_PATH     cloudbuild.dockerfile_path
+#   _BUILD_CONTEXT_PATH  cloudbuild.build_context_path
+#   _PREFIXED_NAME       the Cloud Run service to deploy
+#   _DEPLOY_REGION       where that service lives — NOT always the project's region
+#   _JOB_NAME            the Cloud Run job to update
+#   _JOB_REGION          where that job lives
+#
+# `x-when: [flag]` keeps a step only when every listed capability is on for that service
+# (local.cloudbuild_capabilities in gcp.cloudbuild.tf). Terraform rewrites the `waitFor`
+# of the steps that survive, so dropping a step never leaves a dangling dependency. A
+# flag that is not a real capability is a plan error, never a step that silently stops
+# running.
+#
+# Mind the dollars: Cloud Build reads `$WORD` anywhere in this file — comments included —
+# as a substitution. Shell variables here are lowercase, and a literal dollar for the
+# shell is written `$$`.
+steps:
+  # Only for images that install private packages from this project's Artifact Registry.
+  # Off by default: an undeclared --build-arg is dropped by docker, so passing a token to
+  # an image that never asked for one only lengthens the build and puts a credential one
+  # `docker history` away.
+  - id: "ar-token"
+    x-when: ["ar_token"]
+    name: "gcr.io/cloud-builders/gcloud"
+    entrypoint: "bash"
+    args:
+      - "-c"
+      - "gcloud auth print-access-token --scopes=https://www.googleapis.com/auth/cloud-platform > /workspace/access_token.txt"
+
+  - id: "build"
+    name: "gcr.io/cloud-builders/docker"
+    entrypoint: "bash"
+    waitFor: ["ar-token"]
+    env:
+      - "DOCKER_BUILDKIT=1"
+    args:
+      - "-c"
+      - |
+        set -e
+        docker build \
+          -f ${_DOCKERFILE_PATH} \
+          ${_DOCKER_TARGET} \
+          ${_BUILD_ARGS} \
+          -t ${_IMAGE}:${SHORT_SHA} \
+          -t ${_IMAGE}:latest \
+          ${_BUILD_CONTEXT_PATH}
+
+  - id: "push"
+    name: "gcr.io/cloud-builders/docker"
+    waitFor: ["build"]
+    args:
+      - "push"
+      - "${_IMAGE}"
+      - "--all-tags"
+
+  - id: "deploy-service"
+    x-when: ["deploy_service"]
+    name: "gcr.io/cloud-builders/gcloud"
+    entrypoint: "gcloud"
+    waitFor: ["push"]
+    args:
+      - "run"
+      - "deploy"
+      - "${_PREFIXED_NAME}"
+      - "--image"
+      - "${_IMAGE}:${SHORT_SHA}"
+      - "--region"
+      - "${_DEPLOY_REGION}"
+      - "--platform"
+      - "managed"
+      - "--quiet"
+
+  # The build of a Cloud Run job: the job IS the deliverable, so a failure here is the
+  # build's failure.
+  - id: "deploy-job"
+    x-when: ["deploy_job"]
+    name: "gcr.io/cloud-builders/gcloud"
+    entrypoint: "gcloud"
+    waitFor: ["push"]
+    args:
+      - "run"
+      - "jobs"
+      - "update"
+      - "${_JOB_NAME}"
+      - "--image"
+      - "${_IMAGE}:${SHORT_SHA}"
+      - "--region"
+      - "${_JOB_REGION}"
+      - "--quiet"
+
+  # A job that shares a service's image (cloudbuild.job_name). Cloud Run pins the digest
+  # at deploy time, so without this the job would keep running the digest it was created
+  # with, forever. allowFailure because the service is the deliverable here and the job
+  # may not exist yet on the first build.
+  - id: "update-companion-job"
+    x-when: ["update_companion_job"]
+    name: "gcr.io/cloud-builders/gcloud"
+    entrypoint: "gcloud"
+    waitFor: ["push"]
+    allowFailure: true
+    args:
+      - "run"
+      - "jobs"
+      - "update"
+      - "${_JOB_NAME}"
+      - "--image"
+      - "${_IMAGE}:${SHORT_SHA}"
+      - "--region"
+      - "${_JOB_REGION}"
+      - "--quiet"
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+# Default only. Per service: cloudbuild.build_timeout in settings/<workspace>.yaml.
+timeout: "1800s"
