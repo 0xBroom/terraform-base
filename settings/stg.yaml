@@ -1,4 +1,5 @@
-# Pre workspace. Copy of the shape pro uses, sized down.
+# Stg workspace. One step up from dev and the shape pro uses, without HA:
+# dedicated-core zonal Cloud SQL, Redis BASIC, Cloud NAT. See docs/ENVIRONMENTS.md.
 # Replace every example-app-stg, 000000-000000-000000 and replace-me@example.com
 # before the first plan. Do not apply this file as it is.
 # project_sys is this same project: a separate monitoring project is a later choice.
@@ -37,7 +38,7 @@ budget:
 
 lb:
   domain:
-    - "pre.example.com"
+    - "stg.example.com"
   timeout_sec: 30
 
 iap:
@@ -74,7 +75,7 @@ app:
         inline: true
         dockerfile_path: "Dockerfile"
         build_context_path: "."
-        # Pre builds from main. Pro builds from a tag. See docs/ENVIRONMENTS.md.
+        # Stg builds from main. Pro builds from a tag. See docs/ENVIRONMENTS.md.
         branch_pattern: "^main$"
       cloudrun:
         allow_unauthenticated: false

@@ -266,6 +266,14 @@ app:
                                                     #   true = CPU only during requests (request-based billing);
                                                     #   background work after the response is throttled
                                                     #   false = CPU always allocated (instance-based billing)
+        # vpc_access_enabled: true                  # [OPTIONAL] Direct VPC egress onto the shared VPC
+                                                    #   Default: true when the workspace has network.services_cidr
+        # vpc:                                      # [OPTIONAL] Direct VPC egress settings
+        #   egress: "ALL_TRAFFIC"                   #   Default "ALL_TRAFFIC": every request goes through the
+                                                    #   VPC, so public hosts need Cloud NAT (network.nats)
+                                                    #   "PRIVATE_RANGES_ONLY" = only private IPs (Cloud SQL,
+                                                    #   Redis) use the VPC; public traffic leaves directly,
+                                                    #   no NAT needed, no static outbound IP (dev does this)
 
         # Additional IAM roles granted to the service's auto-generated service account
         additional_roles:                           # [OPTIONAL] Extra IAM roles for the service account
@@ -612,12 +620,14 @@ network:
   private_google_access: true                       # [MANDATORY] Access Google APIs without external IP
                                                     #   Must be true for serverless VPC access
 
-  # NAT Gateway configuration (for outbound internet from VPC)
-  # nat:                                            # [OPTIONAL] Cloud NAT configuration
-  #   enabled: true                                 #   Enable NAT (default: depends on module)
-  #   source_ip_ranges_to_nat: "ALL_SUBNETWORKS_ALL_IP_RANGES"  # NAT scope
-  #   log_config_enable: true                       #   Enable NAT logging
-  #   log_config_filter: "ERRORS_ONLY"              #   Log filter: "ALL", "ERRORS_ONLY", "TRANSLATIONS_ONLY"
+  # Cloud NAT (outbound internet from the VPC). Billed per hour plus per GB, and
+  # each reserved address is billed. Needed only when Cloud Run egress is
+  # "ALL_TRAFFIC" and the app calls public hosts, or when a third party must
+  # allowlist a static egress IP. Dev leaves it out and uses PRIVATE_RANGES_ONLY.
+  # nats:                                           # [OPTIONAL] One router + NAT per entry
+  #   services:                                     #   Entry key, part of the NAT name
+  #     region: europe-west1                        #   [MANDATORY] Region of the subnet
+  #     number_of_addresses: 1                      #   Reserved static IPs (0 = auto-allocated)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
