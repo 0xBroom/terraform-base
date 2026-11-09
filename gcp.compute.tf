@@ -27,7 +27,7 @@ resource "google_compute_instance" "vm" {
   zone                = each.value.zone
   project             = local.settings.project.id
   description         = try(each.value.description, null)
-  deletion_protection = try(each.value.deletion_protection, false)
+  deletion_protection = try(each.value.deletion_protection, terraform.workspace == "pro")
   tags                = try(each.value.tags, [])
   can_ip_forward      = try(each.value.can_ip_forward, false)
   enable_display      = try(each.value.enable_display, false)

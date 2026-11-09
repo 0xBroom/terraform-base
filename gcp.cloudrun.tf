@@ -227,7 +227,7 @@ module "cloud_run_services" {
   gcp_project_id      = local.settings.project.id
   gcp_project_sys_id  = local.settings.project_sys.id
   region_name         = local.service_regions[each.key]
-  deletion_protection = false
+  deletion_protection = try(each.value.cloudrun.deletion_protection, terraform.workspace == "pro")
 
   # Service account: use external SA if specified, otherwise create a dedicated one
   service_account = try(each.value.cloudrun.external_sa, null) != null ? {

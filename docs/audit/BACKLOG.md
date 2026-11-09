@@ -5,7 +5,7 @@ settings, locals, network, security, SQL, KMS and provider pins). This
 repository is that template: root files `gcp.*.tf`, vendored `tf_gcp_*`
 modules, one workspace file per environment.
 
-Open: 18. Done: 6. Accepted, do not port: 16.
+Open: 17. Done: 7. Accepted, do not port: 16.
 
 Regenerate this file with `python3 bin/audit-terraform.py --write` in the same
 pull request that closes an item. The status comes from the code, not from
@@ -13,14 +13,6 @@ this prose. How a session picks the next item: `docs/audit/OPERATING.md`.
 
 
 ## Open
-
-### AUD-DELETE (p0) Cloud Run services and jobs can be destroyed with deletion_protection left false
-
-gcp.cloudrun.tf and gcp.jobs.tf hardcode deletion_protection = false. Cloud SQL already defaults it to true inside its module. A pro workspace should have to opt out of protecting the service and the job, the same way it has to opt out of protecting the database. Tools Hub still hardcodes false too; this template should not copy that.
-
-Evidence: gcp.cloudrun.tf line deletion_protection = false. gcp.jobs.tf the same.
-
-Next change: Read the YAML key, and default it to true when terraform.workspace is pro.
 
 ### AUD-INSIGHTS (p1) Cloud SQL Query Insights cannot be turned on
 
@@ -199,6 +191,14 @@ gcp.security.tf sets admin_read, data_read and data_write to false. Tools Hub tu
 Evidence: gcp.security.tf audit_logging block, all three flags false.
 
 Next change: Default admin_read to true. Allow settings.security.audit_logging to override each flag. Keep data_read and data_write off unless a workspace asks.
+
+### AUD-DELETE (p0) Cloud Run services and jobs can be destroyed with deletion_protection left false
+
+gcp.cloudrun.tf and gcp.jobs.tf hardcode deletion_protection = false. Cloud SQL already defaults it to true inside its module. A pro workspace should have to opt out of protecting the service and the job, the same way it has to opt out of protecting the database. Tools Hub still hardcodes false too; this template should not copy that.
+
+Evidence: gcp.cloudrun.tf line deletion_protection = false. gcp.jobs.tf the same.
+
+Next change: Read the YAML key, and default it to true when terraform.workspace is pro.
 
 ### AUD-AGENTS (p1) A session that opens this repo has no operating rules
 

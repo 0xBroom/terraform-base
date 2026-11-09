@@ -244,6 +244,7 @@ app:
                                                     #   "INGRESS_TRAFFIC_INTERNAL_ONLY" = only VPC traffic
                                                     #   "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER" = LB + VPC only
         min_instances: 0                            # [OPTIONAL] Minimum running instances (default: 0)
+        # deletion_protection: true                 # [OPTIONAL] Default true when the workspace is pro, false otherwise
                                                     #   0 = scale to zero (cost saving, but cold starts)
                                                     #   1+ = always warm (faster responses, higher cost)
         max_instances: 5                            # [OPTIONAL] Maximum instances for auto-scaling (default: 10)
