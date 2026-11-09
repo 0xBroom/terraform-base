@@ -38,6 +38,8 @@ exist, which is what we want.
 | Cloud SQL audit flags | none | none | connections, disconnections, statements over 1 s, lock waits, pgAudit `ddl,role` |
 | Generated database passwords | letters and digits | letters and digits | letters, digits and `-_.~` |
 | Redis | none | basic, 1 GB, no TLS | standard HA, 1 GB, TLS |
+| Redis deletion protection | no Redis | off | on |
+| Redis RDB snapshots | no Redis | off | every 12 hours |
 | Bucket soft delete | 7 days (the shortest above off) | 7 days | 30 days |
 | Bucket noncurrent versions | kept | kept | deleted after 30 days (`docs/STORAGE.md`) |
 | Budget | 40 | 80 | 400 |
@@ -77,6 +79,19 @@ sets `cloudrun.vpc.egress: "PRIVATE_RANGES_ONLY"`, so only private addresses
 Cloud Run directly. Those calls come from a Google-owned address, not a
 static one. When a third party must allowlist the egress IP, copy the
 `network.nats` block from stg and drop the `vpc.egress` override.
+
+Redis `deletion_protection` defaults to `true` in pro and `false` elsewhere,
+so stg can be torn down and pro cannot: `terraform destroy`, or a change that
+would replace the instance, fails while it is `true`. The flag lives in
+Terraform state only. Turning it off is an in-place update with no API call,
+applied before the destroy. Pro also sets `persistence`: an RDB snapshot every
+12 hours. A STANDARD_HA instance fails over to its replica first and loads the
+snapshot only when the replica is lost too; a BASIC instance reloads it after
+every restart, scale or version upgrade. Only the last snapshot is kept and it
+cannot be restored by hand, so it is not a backup: use `gcloud redis instances
+export` for that. Snapshots need Redis 5.0 or later and add no charge to the
+instance. Stg leaves them off because its cache can be rebuilt, not to save
+money.
 
 All of them keep the database private, require SSL, protect the instance from
 deletion, put IAP on `/*`, and refuse to disable billing when the budget is

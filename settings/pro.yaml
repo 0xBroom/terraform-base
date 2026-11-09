@@ -235,3 +235,7 @@ redis:
     auth_enabled: true
     transit_encryption_mode: "SERVER_AUTHENTICATION"
     redis_version: "REDIS_7_0"
+    deletion_protection: true
+    persistence:
+      persistence_mode: "RDB"
+      rdb_snapshot_period: "TWELVE_HOURS"
