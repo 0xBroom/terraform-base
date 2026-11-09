@@ -34,6 +34,8 @@ override.tf.json
 
 *.swp
 *~
+__pycache__/
+*.pyc
 
 ## script folder
 scripts/

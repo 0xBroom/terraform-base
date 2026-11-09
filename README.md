@@ -134,6 +134,15 @@ version, and you add the real value with `gcloud secrets versions add`.
 Check that destroys actually happened. Firestore in particular can survive an apply that
 says it was destroyed, so confirm with `gcloud` afterwards.
 
+## Catching up with a production baseline
+
+`docs/audit/BACKLOG.md` is the gap list against the current Tools Hub Terraform,
+plus the platform pieces this template deliberately does not copy (a VPC per
+product, Shieldcode, a CMEK programme, and the rest of that list). Refresh it
+with `python3 bin/audit-terraform.py --write`. How to take one item into a
+pull request: `docs/audit/OPERATING.md`. Sessions that edit this repo should
+read `AGENTS.md` first.
+
 ## License
 
 MIT. See `LICENSE`.
