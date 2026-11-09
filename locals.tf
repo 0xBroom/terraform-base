@@ -14,12 +14,17 @@ locals {
   registry_host        = "${local.settings.region_name}-docker.pkg.dev/${local.settings.project.id}"
   registry_host_python = "${local.settings.region_name}-python.pkg.dev/${local.settings.project.id}"
 
-  # One label set for every resource that accepts labels. Values stay lowercase.
+  # One label set for every resource that accepts labels, applied by the providers
+  # (providers.tf). GCP label values allow at most 63 lowercase letters, digits,
+  # `_` and `-`, so the values read from YAML are lowercased, every other
+  # character becomes `-`, and the result is cut to 63.
   common_labels = {
-    workspace  = terraform.workspace
-    client     = local.settings.client.name
-    managed_by = "terraform"
-    repo       = try(local.settings.iac.repo, "terraform-base")
+    for key, value in {
+      workspace  = terraform.workspace
+      client     = local.settings.client.name
+      managed_by = "terraform"
+      repo       = try(local.settings.iac.repo, "terraform-base")
+    } : key => substr(replace(lower(value), "/[^a-z0-9_-]/", "-"), 0, 63)
   }
 }
 
