@@ -394,6 +394,15 @@ def ci_matrix() -> bool:
     return all(ws in flows for ws in ("dev", "stg", "pro")) and "cloudbuild-render-test.py" in flows and "TF_WORKSPACE" in flows
 
 
+def ci_runner_pinned() -> bool:
+    flows = workflows()
+    return (
+        bool(flows)
+        and "ubuntu-latest" not in flows
+        and not re.search(r"actions/checkout@v[1-5]\b|setup-terraform@v[1-3]\b|setup-python@v[1-5]\b", flows)
+    )
+
+
 def lint_tooling() -> bool:
     return exists(".tflint.hcl") and exists(".pre-commit-config.yaml") and "tflint" in workflows()
 
@@ -636,6 +645,12 @@ ITEMS: list[Item] = [
          "Build render test exists and does not run.",
          "Validate a matrix of default, dev, stg and pro with TF_WORKSPACE and a local backend override, and run "
          "bin/cloudbuild-render-test.py.", ci_matrix),
+    Item("AUD-CI-RUNNER", "p1", "CI runs on a moving runner label with Node 20 actions",
+         "ubuntu-latest is migrating to a new image and Node 20 actions are deprecated. Runs on the fork created "
+         "only some matrix jobs and could not be retried, so a pull request can look green without validating "
+         "every workspace.",
+         "Pin runs-on to ubuntu-24.04 and move checkout, setup-terraform and setup-python to their Node 24 majors.",
+         ci_runner_pinned),
     Item("AUD-LINT", "p3", "No tflint or pre-commit configuration",
          "Contributors get fmt and lint errors only after a push.", "Add .tflint.hcl with the google ruleset, "
          ".pre-commit-config.yaml (fmt, validate, tflint, the auditor) and a tflint step in CI.", lint_tooling,
