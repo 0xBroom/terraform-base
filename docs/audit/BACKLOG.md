@@ -4,7 +4,7 @@ The list of work that takes this template to a public, production-grade
 release: dev and stg cheap, pro ready for a security, backup and
 data-retention audit. Each item has a check in `bin/audit-terraform.py`.
 
-Open: 29. Done: 22. Accepted, not a gap: 22.
+Open: 28. Done: 23. Accepted, not a gap: 22.
 
 Regenerate with `python3 bin/audit-terraform.py --write` in the pull request
 that closes an item. `--next` names the item to take. How a session works an
@@ -12,12 +12,6 @@ item: `docs/audit/OPERATING.md`.
 
 
 ## Open
-
-### AUD-PUB-ELASTIC (p1) The Elastic Private Service Connect target is a literal project path
-
-gcp.elastic.psc.tf hardcodes a provider-side service attachment. A different region or deployment cannot use it, and the template should not ship a third party's project id as a default.
-
-Next change: Read the attachment, region and name from settings.elastic_psc. Create nothing when the key is absent. Document it in settings/example.yaml.
 
 ### AUD-SQL-PITR (p1) Point-in-time recovery in the YAML never reaches Cloud SQL
 
@@ -361,3 +355,4 @@ Next change: Keep it equal to stg.
 - AUD-CODEOWNERS (p3) No CODEOWNERS file
 - AUD-AGENTS (p1) A session that opens this repo has no operating rules
 - AUD-PUB-LEAKS (p0) Tracked files name private companies, products, people or real addresses
+- AUD-PUB-ELASTIC (p1) The Elastic Private Service Connect target is a literal project path

@@ -86,6 +86,20 @@ compute_instances:
       size_gb: 20
 ```
 
+## 🔌 Private Service Connect to Elastic Cloud
+
+`elastic_psc` creates an internal address in the `services` subnet and a PSC
+endpoint to the provider's service attachment. Without the key nothing is
+created. The attachment must be in `region_name`, and `network` must be set.
+`dns_domain` is optional and adds a private zone with apex and wildcard records
+pointing at the endpoint.
+
+```yaml
+elastic_psc:
+  service_attachment: "projects/example-provider-project/regions/europe-west1/serviceAttachments/example-attachment"
+  dns_domain: "psc.example-provider.example.com"
+```
+
 ## 🔐 Security & Access
 
 ### Project Operators
