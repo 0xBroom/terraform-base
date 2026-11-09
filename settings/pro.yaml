@@ -85,6 +85,22 @@ project_access:
   operators:
     - "user:replace-me@example.com"
 
+# External CI without service account keys (docs/WIF.md). Off until a pipeline
+# outside Cloud Build needs to deploy. Free when enabled.
+# wif:
+#   pools:
+#     ci:
+#       providers:
+#         github:
+#           type: "github"
+#           attribute_condition: "assertion.repository == 'example-org/example-repo' && assertion.ref.startsWith('refs/tags/pro-')"
+#       bindings:
+#         - service_account: "deployer"
+#           principal_set: "attribute.repository/example-org/example-repo"
+#           roles:
+#             - "roles/run.developer"
+#             - "roles/artifactregistry.writer"
+
 repo_providers:
   default: github
   github:

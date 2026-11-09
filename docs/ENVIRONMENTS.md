@@ -37,6 +37,7 @@ exist, which is what we want.
 | Audit log archive | none | locked log bucket, 365 days |
 | Log-based security alerts | none | seven presets, one email per event |
 | Binary Authorization | off | dry-run, attestation required |
+| External CI federation (`wif`) | none | none, a commented example (`docs/WIF.md`) |
 | VPC | dev `10.8.1.0/24`, stg and pre `10.10.1.0/24` | `10.20.1.0/24` |
 
 Both keep the database private, require SSL, protect the instance from

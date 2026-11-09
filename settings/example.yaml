@@ -42,7 +42,8 @@
 # │ 18  │ billing                          │ (reference only - BigQuery export table)                    │
 # │ 19  │ access_policy                    │ (reference only - org-level Access Context Manager)         │
 # │ 20  │ security                         │ Monitoring Notification Channel (alerts email)              │
-# │ 20  │ security                         │ Monitoring Notification Channel (alerts email)              │
+# │ 22  │ wif                              │ Workload Identity Pools and Providers, CI Service Accounts, │
+# │     │                                  │ workloadIdentityUser and project role bindings              │
 # └─────┴──────────────────────────────────┴─────────────────────────────────────────────────────────────┘
 #
 # ARCHITECTURE OVERVIEW:
@@ -1056,3 +1057,50 @@ security:
 #     location: "global"                            # [OPTIONAL] Bucket location (default: global), e.g. "europe-west1"
 #     bucket_id: "audit-archive"                    # [OPTIONAL] Bucket id (default: audit-archive)
 #     filter: 'log_id("cloudaudit.googleapis.com/activity")'  # [OPTIONAL] Replaces the default filter (all four audit logs)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 22. WORKLOAD IDENTITY FEDERATION (EXTERNAL CI WITHOUT KEYS)
+# ═══════════════════════════════════════════════════════════════════════════════
+# Lets GitHub Actions, GitLab CI or any OIDC issuer act as a service account with
+# short-lived tokens, so no service account key is ever created. Omit `wif` and
+# nothing is created. When present it also enables sts.googleapis.com. No cost.
+#
+# Each provider MUST have an attribute_condition: without it any token of the
+# issuer (any repository on github.com) could use the pool, and the plan stops.
+# Default attribute_mapping per type (an attribute_mapping you set is merged over it):
+#   github: google.subject, attribute.actor, attribute.repository,
+#           attribute.repository_owner, attribute.ref, attribute.workflow_ref
+#   gitlab: google.subject, attribute.actor (user_login), attribute.repository
+#           (project_path), attribute.namespace_path, attribute.ref, attribute.ref_type
+#   oidc:   google.subject only
+#
+# A binding's service_account is an existing email, or a short key that creates
+# <client.name>-<key> (6 to 30 characters in total). principal_set selects who in
+# the pool may impersonate it: attribute.<name>/<value>, or * for every identity
+# the providers' conditions already accepted. Guide: docs/WIF.md.
+wif:
+  pools:
+    ci:                                             # [MANDATORY] Pool id, 4 to 32 lowercase letters, digits, hyphens
+      display_name: "External CI"                   # [OPTIONAL] Default: the key
+      description: "CI pipelines of example-app"    # [OPTIONAL]
+      providers:
+        github:                                     # [MANDATORY] Provider id, 4 to 32 characters
+          type: "github"                            # [OPTIONAL] github | gitlab | oidc (default: oidc)
+          attribute_condition: "assertion.repository == 'example-org/example-repo'"  # [MANDATORY]
+          # issuer_uri: "https://token.actions.githubusercontent.com"  # [OPTIONAL] Default per type, MANDATORY for oidc
+          # allowed_audiences: []                   # [OPTIONAL] Default: the provider resource name
+          # attribute_mapping:                      # [OPTIONAL] Merged over the type default
+          #   attribute.environment: "assertion.environment"
+        # gitlab:
+        #   type: "gitlab"
+        #   issuer_uri: "https://gitlab.example.com"  # self-managed GitLab; gitlab.com is the default
+        #   attribute_condition: "assertion.namespace_path == 'example-group'"
+      bindings:
+        - service_account: "deployer"               # [MANDATORY] Key (creates <client.name>-deployer) or an existing email
+          principal_set: "attribute.repository/example-org/example-repo"  # [MANDATORY]
+          roles:                                    # [OPTIONAL] Project roles granted to the service account
+            - "roles/run.developer"
+            - "roles/artifactregistry.writer"
+        # - service_account: "existing-sa@example-app-dev.iam.gserviceaccount.com"
+        #   principal_set: "attribute.ref/refs/heads/main"
