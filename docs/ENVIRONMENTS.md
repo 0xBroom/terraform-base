@@ -1,13 +1,17 @@
-# Pre and pro
+# Environments
 
-`settings/pre.yaml` and `settings/pro.yaml` are the reference workspaces. They
-describe one service: Cloud Run behind the HTTPS load balancer and IAP, a
+`AGENTS.md` names the workspaces `dev`, `stg` and `pro`. `settings/dev.yaml`
+and `settings/stg.yaml` are that shape. `settings/pre.yaml` is that same shape under the older name, with project id
+`example-app-pre`. It stays so the auditor still finds a pre workspace. Use
+`stg` for a new project.
+
+They describe one service: Cloud Run behind the HTTPS load balancer and IAP, a
 private Cloud SQL instance, Redis, one bucket, one shared VPC with Cloud NAT,
 a budget, and a GitHub Cloud Build connection. Anything else (Pub/Sub,
 Firestore, a VM, Elastic) stays in `settings/example.yaml` until the project
 needs it.
 
-Both files are full of placeholders (`example-app-pre`, `example-app-pro`,
+The files are full of placeholders (`example-app-dev`, `example-app-stg`, `example-app-pro`,
 `000000-000000-000000`, `replace-me@example.com`, GitHub owner `example-org`,
 installation id `1`). Replace those, put the state bucket name in
 `versions.tf`, and plan. Applying is a separate decision. Planning this file
@@ -18,17 +22,17 @@ exist, which is what we want.
 
 ## What changes between them
 
-| | pre | pro |
+| | dev and stg | pro |
 |---|---|---|
 | Cloud Run | scale to zero, 1 vCPU, 512Mi, deletion protection off | one warm instance, 2 vCPU, 2Gi, deletion protection on |
 | Deploys | a push to `main` | a tag `pro-YYYYMMDDHH` |
 | Cloud SQL | zonal, 1 vCPU, 7 backups, insights off | regional, 2 vCPU, 30 backups, insights on |
 | Redis | basic, no TLS | standard HA, TLS |
 | Bucket soft delete | 7 days | 30 days |
-| Budget | 80 EUR | 400 EUR |
+| Budget | 40 EUR on dev, 80 EUR on stg | 400 EUR |
 | _Default log retention | 30 days | 90 days |
 | Binary Authorization | off | dry-run, attestation required |
-| VPC | `10.10.1.0/24` | `10.20.1.0/24` |
+| VPC | dev `10.8.1.0/24`, stg and pre `10.10.1.0/24` | `10.20.1.0/24` |
 
 Both keep the database private, require SSL, protect the instance from
 deletion, put IAP on `/*`, and refuse to disable billing when the budget is

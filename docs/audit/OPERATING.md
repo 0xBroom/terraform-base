@@ -26,12 +26,14 @@ plan, in that workspace. A pull request is not that yes.
 
 ## What "production" means here
 
-`settings/pre.yaml` and `settings/pro.yaml` are the reference workspaces.
-Pre is smaller and zonal. Pro is regional, warm, and protected against an
-accidental delete. Both use placeholders (`example-app-pre`,
-`example-app-pro`, `replace-me@example.com`). Planning them against a real
-project comes after those values are replaced. Applying them is a separate
-decision. The difference between the two files is `docs/ENVIRONMENTS.md`.
+`settings/dev.yaml`, `settings/stg.yaml` and `settings/pro.yaml` are the
+reference workspaces. `settings/pre.yaml` is the older name for the stg shape
+and stays. Dev and stg are smaller and zonal. Pro is regional, warm, and
+protected against an accidental delete. They use placeholders
+(`example-app-dev`, `example-app-stg`, `example-app-pro`,
+`replace-me@example.com`). Planning them against a real project comes after
+those values are replaced. Applying them is a separate decision. The
+difference is `docs/ENVIRONMENTS.md`.
 
 Pull requests run the same fmt and validate on the default workspace
 (`.github/workflows/terraform.yml`). A green local validate is still the
@@ -39,13 +41,13 @@ check you run before opening the pull request.
 
 Secret values never go in YAML or in HCL. The stack creates the secret and a
 placeholder version. The payload is added with `gcloud secrets versions add`,
-or later through the SOPS path in `AUD-SOPS`.
+or through the SOPS path in `docs/SOPS.md`.
 
 ## Settings merge
 
 `locals.tf` merges the workspace file over `settings/default.yaml` with
 `merge()`. A map in the workspace file replaces the whole map. Do not set
-`active-apis` in `pre.yaml` or `pro.yaml`. Add an API to `default.yaml` when
+`active-apis` in an environment file. Add an API to `default.yaml` when
 every workspace needs it.
 
 ## Vendored modules
