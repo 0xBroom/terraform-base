@@ -39,6 +39,7 @@ exist, which is what we want.
 | Generated database passwords | letters and digits | letters and digits | letters, digits and `-_.~` |
 | Redis | none | basic, 1 GB, no TLS | standard HA, 1 GB, TLS |
 | Bucket soft delete | 7 days (the shortest above off) | 7 days | 30 days |
+| Bucket noncurrent versions | kept | kept | deleted after 30 days (`docs/STORAGE.md`) |
 | Budget | 40 | 80 | 400 |
 | _Default log retention | 30 days | 30 days | 90 days |
 | Audit log archive | none | none | locked log bucket, 365 days |

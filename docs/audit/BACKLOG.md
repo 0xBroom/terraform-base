@@ -4,7 +4,7 @@ The list of work that takes this template to a public, production-grade
 release: dev and stg cheap, pro ready for a security, backup and
 data-retention audit. Each item has a check in `bin/audit-terraform.py`.
 
-Open: 18. Done: 34. Accepted, not a gap: 22.
+Open: 17. Done: 35. Accepted, not a gap: 22.
 
 Regenerate with `python3 bin/audit-terraform.py --write` in the pull request
 that closes an item. `--next` names the item to take. How a session works an
@@ -12,12 +12,6 @@ item: `docs/audit/OPERATING.md`.
 
 
 ## Open
-
-### AUD-GCS-RETENTION (p2) Buckets cannot set a retention policy or access logs, and pro keeps old versions forever
-
-Versioning without a lifecycle keeps every deleted object, which breaks data minimisation. A regulated bucket also needs an optional retention policy and access logs.
-
-Next change: Copy the storage module to a new version with retention_policy and logging. In pro, delete noncurrent versions after a set number of days.
 
 ### AUD-REDIS (p2) Redis blocks destroy in every workspace and has no persistence option
 
@@ -295,6 +289,7 @@ Next change: Keep it equal to stg.
 - AUD-SQL-PITR (p1) Point-in-time recovery in the YAML never reaches Cloud SQL
 - AUD-SQL-HARDEN (p1) Pro PostgreSQL has no connection or statement audit trail
 - AUD-AUDIT-ARCHIVE (p1) Audit logs are not archived in a locked bucket
+- AUD-GCS-RETENTION (p2) Buckets cannot set a retention policy or access logs, and pro keeps old versions forever
 - AUD-MON-LOG-ALERTS (p1) No alert fires on IAM, firewall, service account key or audit config changes
 - AUD-WIF (p1) External CI can only authenticate with a service account key
 - AUD-TF-GUARDS (p1) A minimal workspace still fails on missing keys and wrong defaults

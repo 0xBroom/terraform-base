@@ -181,7 +181,7 @@ locals {
 module "cloudrun_gcs_volumes" {
   for_each = local.gcs_volumes_to_create
 
-  source = "./modules/tf_gcp_storage_v2.6-202611091700"
+  source = "./modules/tf_gcp_storage_v2.7"
 
   base_name      = local.gcs_bucket_names[each.key]
   region_name    = local.settings.region_name

@@ -1,5 +1,5 @@
 module "storage_processing" {
-  source = "./modules/tf_gcp_storage_v2.6-202611091700"
+  source = "./modules/tf_gcp_storage_v2.7"
 
   base_name      = local.base_name
   region_name    = local.settings.region_name
@@ -23,6 +23,23 @@ module "storage_processing" {
         "tmp/",
       ]
     }
+    delete_noncurrent_versions = {
+      days_since_noncurrent_time = 30,
+      action_type                = "Delete",
+    }
+  }
+
+  # Retention policy (Optional): objects cannot be deleted or replaced for 10 years.
+  # is_locked = true is irreversible.
+  retention_policy = {
+    retention_period = 10 * 365 * 86400
+    is_locked        = false
+  }
+
+  # Usage and storage logs (Optional), written into an existing bucket
+  logging = {
+    log_bucket        = "example-app-gcs-logs"
+    log_object_prefix = "processing"
   }
 
   # Permissions are optional

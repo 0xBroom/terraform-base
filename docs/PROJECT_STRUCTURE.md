@@ -14,7 +14,7 @@ This document describes how the files in this repository fit together.
   - `gcp.network.tf`: VPC, subnets, serverless connector and Cloud NAT.
   - `gcp.lb.tf` and `gcp.waf.tf`: global HTTPS load balancer, backends, URL map, Cloud Armor.
   - `gcp.sql.tf`, `gcp.redis.tf`, `gcp.firestore.tf`: data stores.
-  - `gcp.storage.tf`, `gcp.secrets*.tf`, `gcp.artifact*.tf`: buckets, secrets, registries.
+  - `gcp.storage.tf`, `gcp.secrets*.tf`, `gcp.artifact*.tf`: buckets (`docs/STORAGE.md`), secrets, registries.
   - `gcp.iam.tf`, `gcp.service.permissions.tf`, `gcp.security.tf`: project IAM and the security baseline.
   - `gcp.wif.tf`: Workload Identity Federation for external CI (`docs/WIF.md`).
   - `gcp.billing.tf`: budget with optional automatic billing shutdown.

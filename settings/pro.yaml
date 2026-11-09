@@ -165,6 +165,13 @@ bucket:
     enable_versioning: true
     soft_delete_days: 30
     force_destroy: false
+    # Data minimisation: an overwritten or deleted file stays readable as a
+    # noncurrent version for 30 days, then soft delete keeps it 30 more. No
+    # retention_policy here: a locked one would block deleting a user's files.
+    lifecycle_rules:
+      delete_noncurrent_versions:
+        days_since_noncurrent_time: 30
+        action_type: "Delete"
     permissions:
       api:
         members:

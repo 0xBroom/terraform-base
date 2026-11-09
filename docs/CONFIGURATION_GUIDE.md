@@ -71,6 +71,9 @@ bucket:
     soft_delete_days: 7
 ```
 
+Lifecycle rules, retention policies (Bucket Lock) and usage logs, and when to
+use each, are in [STORAGE.md](STORAGE.md).
+
 ## 🖥️ Compute Instances (VMs)
 
 VMs are defined under `compute_instances`.
