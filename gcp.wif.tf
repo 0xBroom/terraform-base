@@ -114,6 +114,13 @@ resource "google_iam_workload_identity_pool" "wif" {
   display_name              = try(each.value.display_name, each.key)
   description               = try(each.value.description, "External CI federation (${each.key})")
 
+  lifecycle {
+    precondition {
+      condition     = can(regex("^[a-z0-9-]{4,32}$", each.key)) && !startswith(each.key, "gcp-")
+      error_message = "wif.pools.${each.key}: a pool id is 4 to 32 lowercase letters, digits or hyphens and cannot start with gcp-."
+    }
+  }
+
   depends_on = [google_project_service.enabled_apis, google_project_service.wif_sts]
 }
 
@@ -133,6 +140,10 @@ resource "google_iam_workload_identity_pool_provider" "wif" {
   }
 
   lifecycle {
+    precondition {
+      condition     = can(regex("^[a-z0-9-]{4,32}$", each.value.provider_key)) && !startswith(each.value.provider_key, "gcp-")
+      error_message = "wif.pools.${each.value.pool_key}.providers.${each.value.provider_key}: a provider id is 4 to 32 lowercase letters, digits or hyphens and cannot start with gcp-."
+    }
     precondition {
       condition     = contains(keys(local.wif_default_issuer), each.value.type)
       error_message = "wif.pools.${each.value.pool_key}.providers.${each.value.provider_key}.type must be github, gitlab or oidc."

@@ -31,7 +31,7 @@ repository, and narrow the binding further with `principal_set`:
 ```yaml
 wif:
   pools:
-    ci:
+    ci-pool:
       providers:
         github:
           type: "github"
@@ -48,8 +48,9 @@ For deploys from one branch only, put it in the condition
 (`assertion.repository == 'example-org/example-repo' && assertion.ref == 'refs/heads/main'`)
 or bind `principal_set: "attribute.ref/refs/heads/main"`.
 
-A deleted pool or provider id stays reserved for 30 days. Pick keys you will
-keep.
+The pool and provider keys are their ids: 4 to 32 lowercase letters, digits or
+hyphens, not starting with `gcp-` (the plan stops otherwise). A deleted pool or
+provider id stays reserved for 30 days. Pick keys you will keep.
 
 ## GitHub Actions
 
@@ -57,7 +58,7 @@ Read the provider name once after the apply:
 
 ```bash
 gcloud iam workload-identity-pools providers describe github \
-  --project=example-app-dev --location=global --workload-identity-pool=ci \
+  --project=example-app-dev --location=global --workload-identity-pool=ci-pool \
   --format='value(name)'
 ```
 
@@ -75,14 +76,16 @@ jobs:
       - uses: actions/checkout@v4
       - uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: projects/123456789/locations/global/workloadIdentityPools/ci/providers/github
-          service_account: sa-deployer@example-app-dev.iam.gserviceaccount.com
+          workload_identity_provider: projects/123456789/locations/global/workloadIdentityPools/ci-pool/providers/github
+          service_account: app-deployer@example-app-dev.iam.gserviceaccount.com
       - uses: google-github-actions/setup-gcloud@v2
       - run: gcloud run services list --project=example-app-dev
 ```
 
-The provider name and the service account email are not secrets; they can live
-in repository variables.
+A binding key creates the account `<client.name>-<key>`, so with the default
+`client.name: app` the key `deployer` becomes
+`app-deployer@<project id>.iam.gserviceaccount.com`. The provider name and the
+service account email are not secrets; they can live in repository variables.
 
 ## GitLab CI
 

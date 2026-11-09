@@ -89,7 +89,7 @@ project_access:
 # outside Cloud Build needs to deploy. Free when enabled.
 # wif:
 #   pools:
-#     ci:
+#     ci-pool:
 #       providers:
 #         github:
 #           type: "github"

@@ -42,6 +42,7 @@
 # │ 18  │ billing                          │ (reference only - BigQuery export table)                    │
 # │ 19  │ access_policy                    │ (reference only - org-level Access Context Manager)         │
 # │ 20  │ security                         │ Monitoring Notification Channel (alerts email)              │
+# │ 21  │ logging                          │ _Default/_Required retention, audit archive bucket and sink │
 # │ 22  │ wif                              │ Workload Identity Pools and Providers, CI Service Accounts, │
 # │     │                                  │ workloadIdentityUser and project role bindings              │
 # └─────┴──────────────────────────────────┴─────────────────────────────────────────────────────────────┘
@@ -1081,11 +1082,11 @@ security:
 # the providers' conditions already accepted. Guide: docs/WIF.md.
 wif:
   pools:
-    ci:                                             # [MANDATORY] Pool id, 4 to 32 lowercase letters, digits, hyphens
+    ci-pool:                                        # [MANDATORY] Pool id, 4 to 32 of a-z 0-9 -, not gcp-*
       display_name: "External CI"                   # [OPTIONAL] Default: the key
       description: "CI pipelines of example-app"    # [OPTIONAL]
       providers:
-        github:                                     # [MANDATORY] Provider id, 4 to 32 characters
+        github:                                     # [MANDATORY] Provider id, same rule as the pool id
           type: "github"                            # [OPTIONAL] github | gitlab | oidc (default: oidc)
           attribute_condition: "assertion.repository == 'example-org/example-repo'"  # [MANDATORY]
           # issuer_uri: "https://token.actions.githubusercontent.com"  # [OPTIONAL] Default per type, MANDATORY for oidc
