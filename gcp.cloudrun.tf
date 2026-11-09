@@ -276,7 +276,10 @@ module "cloud_run_services" {
           cpu               = try(each.value.cloudrun.cpu_limit, format("%dm", try(each.value.cloudrun.cpu, 2) * 1000))
           memory            = try(each.value.cloudrun.ram, "2048Mi")
           startup_cpu_boost = try(each.value.cloudrun.startup_cpu_boost, true)
-          cpu_idle          = try(each.value.cloudrun.cpu_idle, false)
+          # true = CPU only while a request is served (request-based billing); work
+          # left running after the response is throttled. Pro keeps CPU allocated
+          # so its warm instances can run background work.
+          cpu_idle = try(each.value.cloudrun.cpu_idle, terraform.workspace != "pro")
         }
 
         # Environment variables

@@ -65,8 +65,8 @@ budget:
     - 0.75
     - 0.9
     - 1.0
-  # The code default is true. Leaving this line out deploys a function that
-  # disables billing when the budget is hit. Pro must not do that by surprise.
+  # Same as the code default, written out so nobody flips it by accident:
+  # true deploys a function that disables billing when the budget is hit.
   enable_auto_stop: false
 
 lb:

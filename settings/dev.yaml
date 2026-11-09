@@ -31,8 +31,8 @@ budget:
     - 0.5
     - 0.9
     - 1.0
-  # The code default is true. Leaving this line out deploys a function that
-  # disables billing when the budget is hit. Pre does not want that.
+  # Same as the code default, written out so nobody flips it by accident:
+  # true deploys a function that disables billing when the budget is hit.
   enable_auto_stop: false
 
 lb:

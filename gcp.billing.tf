@@ -1,8 +1,9 @@
 # ===================================================================
 # BILLING BUDGET AND AUTOMATED COST CONTROL (STOP BILLING)
 # ===================================================================
-# This section handles budget alerts and the Cloud Function trigger
-# to disable billing automatically if limits are exceeded.
+# This section handles budget alerts and, only when
+# `budget.enable_auto_stop: true`, the Cloud Function that disables billing
+# automatically if limits are exceeded.
 
 # 3. Pub/Sub topic to receive budget notifications
 resource "google_pubsub_topic" "stop_billing_budget_notifications" {
@@ -67,8 +68,9 @@ locals {
   # Check if the budget section exists in settings at all
   enable_billing = try(local.settings.budget, null) != null
 
-  # Feature flag to enable/disable the stop billing function from YAML
-  enable_stop_billing = local.enable_billing && try(local.settings.budget.enable_auto_stop, true)
+  # Opt-in: the function disables billing on the project, which stops every
+  # billable service in it. Only `budget.enable_auto_stop: true` deploys it.
+  enable_stop_billing = local.enable_billing && try(local.settings.budget.enable_auto_stop, false)
 }
 
 # ===================================================================

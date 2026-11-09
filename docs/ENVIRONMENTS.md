@@ -25,6 +25,7 @@ exist, which is what we want.
 | | dev and stg | pro |
 |---|---|---|
 | Cloud Run | scale to zero, 1 vCPU, 512Mi, deletion protection off | one warm instance, 2 vCPU, 2Gi, deletion protection on |
+| Cloud Run CPU (`cpu_idle` default) | only during requests (`true`) | always allocated (`false`) |
 | Deploys | a push to `main` | a tag `pro-YYYYMMDDHH` |
 | Cloud SQL | zonal, 1 vCPU, 7 backups, insights off | regional, 2 vCPU, 30 backups, insights on |
 | Cloud SQL point-in-time recovery | off, the nightly backup only | 7 days of WAL |
@@ -42,8 +43,16 @@ exist, which is what we want.
 
 Both keep the database private, require SSL, protect the instance from
 deletion, put IAP on `/*`, and refuse to disable billing when the budget is
-hit. `enable_auto_stop: false` is set on purpose: the Terraform default is
-true, and dropping the line deploys a function that turns billing off.
+hit. `enable_auto_stop: false` matches the Terraform default and is written
+out so nobody turns it on by accident: `true` deploys a function that turns
+billing off, and every service in the project with it.
+
+`cloudrun.cpu_idle` defaults to `true` in every workspace but pro: a service
+gets CPU only while it serves a request and is billed per request. Work that
+keeps running after the response (a thread, a queue consumer, a flush on a
+timer) is throttled and may never finish. A service that needs it sets
+`cpu_idle: false`, which bills the CPU for as long as an instance is up. Pro
+defaults to `false`, so its warm instance keeps its CPU.
 
 The pro audit flags write to Cloud Logging, so dev and stg leave them out.
 `cloudsql.enable_pgaudit` only loads pgAudit: the application's migration

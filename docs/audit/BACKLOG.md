@@ -4,7 +4,7 @@ The list of work that takes this template to a public, production-grade
 release: dev and stg cheap, pro ready for a security, backup and
 data-retention audit. Each item has a check in `bin/audit-terraform.py`.
 
-Open: 21. Done: 30. Accepted, not a gap: 22.
+Open: 20. Done: 31. Accepted, not a gap: 22.
 
 Regenerate with `python3 bin/audit-terraform.py --write` in the pull request
 that closes an item. `--next` names the item to take. How a session works an
@@ -98,12 +98,6 @@ Contributors get fmt and lint errors only after a push.
 Next change: Add .tflint.hcl with the google ruleset, .pre-commit-config.yaml (fmt, validate, tflint, the auditor) and a tflint step in CI.
 
 After: AUD-CI-MATRIX
-
-### AUD-COST-DEFAULTS (p1) Two code defaults cost money when a key is left out
-
-budget.enable_auto_stop defaults to true, which deploys a function that disables billing and takes the project down. cpu_idle defaults to false, so every non-pro service pays for CPU between requests.
-
-Next change: Default enable_auto_stop to false and cpu_idle to true outside pro.
 
 ### AUD-COST-PROFILES (p1) dev is a copy of stg and stg a copy of pre
 
@@ -319,3 +313,4 @@ Next change: Keep it equal to stg.
 - AUD-WIF (p1) External CI can only authenticate with a service account key
 - AUD-TF-GUARDS (p1) A minimal workspace still fails on missing keys and wrong defaults
 - AUD-CI-MATRIX (p1) CI validates only the default workspace
+- AUD-COST-DEFAULTS (p1) Two code defaults cost money when a key is left out
