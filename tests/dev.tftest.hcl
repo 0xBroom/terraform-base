@@ -3,6 +3,9 @@
 # that scale to zero without deletion protection.
 
 mock_provider "google" {}
+mock_provider "google" {
+  alias = "unlabelled"
+}
 mock_provider "google-beta" {}
 mock_provider "random" {}
 mock_provider "time" {}

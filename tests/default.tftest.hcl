@@ -3,6 +3,9 @@
 # Cloud Build service account. Mock providers: no credentials, no API call.
 
 mock_provider "google" {}
+mock_provider "google" {
+  alias = "unlabelled"
+}
 mock_provider "google-beta" {}
 mock_provider "random" {}
 mock_provider "time" {}

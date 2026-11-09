@@ -3,6 +3,9 @@
 # the Cloud SQL module itself with the pro instance settings.
 
 mock_provider "google" {}
+mock_provider "google" {
+  alias = "unlabelled"
+}
 mock_provider "google-beta" {}
 mock_provider "random" {}
 mock_provider "time" {}
