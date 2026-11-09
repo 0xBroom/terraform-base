@@ -13,7 +13,7 @@ moved {
 
 module "network" {
   count  = local.network_enabled ? 1 : 0
-  source = "./modules/tf_gcp_networking_v3.5-202503101237"
+  source = "./modules/gcp_networking_v3.5"
 
   # Base name used in module (Mandatory)
   base_name = format("%s-vpc", local.base_name)

@@ -498,7 +498,7 @@ resource "google_service_account" "cloudbuild" {
 # IAM permissions for Cloud Build Service Account using standardized module
 module "iam_member_permission_run_cloudbuild_sa" {
   count  = local.cloudbuild_sa_enabled ? 1 : 0
-  source = "./modules/tf_gcp_project_iam_permissions_v2.0-202405091017"
+  source = "./modules/gcp_project_iam_permissions_v2.0"
 
   project_id = local.settings.project.id
   permissions = [
@@ -553,7 +553,7 @@ locals {
 
 module "cloudbuild_artifacts_bucket" {
   count  = local.cloudbuild_enabled ? 1 : 0
-  source = "./modules/tf_gcp_storage_v2.7"
+  source = "./modules/gcp_storage_v2.7"
 
   base_name      = "${local.base_name_medium}-cloudbuild-artifacts"
   region_name    = local.settings.region_name

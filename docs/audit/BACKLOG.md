@@ -4,7 +4,7 @@ The list of work that takes this template to a public, production-grade
 release: dev and stg cheap, pro ready for a security, backup and
 data-retention audit. Each item has a check in `bin/audit-terraform.py`.
 
-Open: 7. Done: 45. Accepted, not a gap: 22.
+Open: 6. Done: 46. Accepted, not a gap: 22.
 
 Regenerate with `python3 bin/audit-terraform.py --write` in the pull request
 that closes an item. `--next` names the item to take. How a session works an
@@ -34,12 +34,6 @@ Contributors get fmt and lint errors only after a push.
 Next change: Add .tflint.hcl with the google ruleset, .pre-commit-config.yaml (fmt, validate, tflint, the auditor) and a tflint step in CI.
 
 After: AUD-CI-MATRIX
-
-### AUD-NAMES (p2) Module directories carry build timestamps and some root files break the naming pattern
-
-modules/tf_gcp_x_v1.8-202405071510 reads like a build export, not a version. gcp.compute-nat.tf and gcp.repository.github-extra.tf mix hyphens into a dotted pattern.
-
-Next change: Rename modules to modules/gcp_<name>_v<major.minor> and update every source. Rename the two root files with dots. Module addresses in state do not change.
 
 ### AUD-DOC-OSS (p2) The repository has no contributor, security or change files
 
@@ -157,9 +151,9 @@ Next change: Leave it.
 
 ### OK-MODULE-SNAPSHOTS (p2) Vendored modules stay snapshots
 
-A module changes only through a new version directory. Newer private modules are not copied in.
+A module changes only through a new version directory, named modules/gcp_<name>_v<major.minor> with no timestamp. Newer private modules are not copied in.
 
-Next change: Upgrade one module per change, with a new directory.
+Next change: Upgrade one module per change, with a new directory that bumps the version, and delete the old one once no source points at it.
 
 ### OK-OCI (p3) The optional Oracle Cloud files stay
 
@@ -243,4 +237,5 @@ Next change: Keep it equal to stg.
 - AUD-COST-DEFAULTS (p1) Two code defaults cost money when a key is left out
 - AUD-COST-PROFILES (p1) dev is a copy of stg and stg a copy of pre
 - AUD-COST-APIS (p3) APIs for SQL, Redis, Firestore and other features are enabled when unused
+- AUD-NAMES (p2) Module directories carry build timestamps and some root files break the naming pattern
 - AUD-LANG (p1) Docs and comments mix Spanish with English, and use em dashes

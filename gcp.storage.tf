@@ -2,7 +2,7 @@
 # CLOUD STORAGE BUCKETS
 # ===================================================================
 # This file manages Cloud Storage buckets for the project
-# using the tf_gcp_storage module with configuration from settings YAML files.
+# using the gcp_storage module with configuration from settings YAML files.
 
 # Local variables for dynamic permission processing
 locals {
@@ -40,7 +40,7 @@ locals {
 module "storage_buckets" {
   for_each = local.buckets
 
-  source = "./modules/tf_gcp_storage_v2.7"
+  source = "./modules/gcp_storage_v2.7"
 
   # If custom_name is set, use the exact bucket name; otherwise use standard naming convention
   base_name      = try(each.value.custom_name, null) != null ? each.value.custom_name : "${local.base_name_medium}-${try(each.value.name, each.key)}"

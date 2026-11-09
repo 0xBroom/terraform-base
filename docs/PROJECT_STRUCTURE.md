@@ -35,7 +35,7 @@ YAML files that define the infrastructure, one per workspace.
 
 ### `modules/`
 
-Vendored, version-stamped Terraform modules. Each one covers a single component (Cloud Run v2, Cloud SQL, networking, storage, IAM, LB monitoring, Artifact Registry, managed SSL, project security). The version is in the directory name, so upgrading a module is an explicit, reviewable change.
+Vendored Terraform modules, one directory per module version: `gcp_<name>_v<major.minor>`, for example `gcp_cloudsql_v7.5`. Each one covers a single component (Cloud Run v2, Cloud SQL, networking, storage, IAM, LB monitoring, Artifact Registry, managed SSL, project security). The version is in the directory name, so upgrading a module is an explicit, reviewable change: a new directory with the next version, every `source` pointed at it, the old directory deleted. Only the versions a root file uses are kept.
 
 ### `docs/`
 

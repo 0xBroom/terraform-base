@@ -108,8 +108,10 @@ gcloud billing projects link "$ORG-$APP-dev-$SUFFIX" --billing-account=<billing-
 ## Catching up with a production baseline
 
 Workspaces are `settings/<workspace>.yaml` merged over `settings/default.yaml`. Root
-files are `gcp.<type>.tf`. Modules under `modules/` are vendored snapshots. Do not edit
-them in place, except for comment or documentation fixes that change no behaviour.
+files are `gcp.<type>.tf` or `gcp.<type>.<part>.tf`, with no hyphens. Modules under
+`modules/` are vendored snapshots named `gcp_<name>_v<major.minor>`. Do not edit them in
+place, except for comment or documentation fixes that change no behaviour: a change is a
+copy with the next version.
 
 Read `docs/audit/OPERATING.md`. Run:
 

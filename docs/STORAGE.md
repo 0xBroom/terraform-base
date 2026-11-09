@@ -1,7 +1,7 @@
 # Buckets: retention, lifecycle and access logs
 
 Every bucket under `bucket:` in the settings goes through
-`modules/tf_gcp_storage_v2.7` (`gcp.storage.tf`). This page covers the three
+`modules/gcp_storage_v2.7` (`gcp.storage.tf`). This page covers the three
 settings that decide how long objects live and who can see that they were
 read: `lifecycle_rules`, `retention_policy` and `access_logs`. All three are
 off unless a bucket sets them. `settings/example.yaml` shows every key.
