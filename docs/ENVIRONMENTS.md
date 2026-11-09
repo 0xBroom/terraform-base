@@ -36,8 +36,10 @@ true, and dropping the line deploys a function that turns billing off.
 The first Cloud Run revision is the public hello image. Cloud Build replaces
 the digest and Terraform leaves it alone. Do not pin a real image in the YAML.
 
-The database name `api-db` and the user `api-app-user` are generated from the
-service name `api`. That coupling is backlog item AUD-SQL-SCHEMA.
+The database name `api-db` and the user `api-app-user` are the default, built
+from the service name `api`, because these files omit `databases` and `users`.
+Set those lists on the instance (siblings of `sql`) when a service should not
+get a database, or when the names should differ.
 
 ## What this is not
 

@@ -657,6 +657,10 @@ redis:
 database:
   my-database:                                      # Unique database instance identifier
     name: "my-database"                             # [MANDATORY] Instance name (becomes: "{client.name}-{name}")
+    # databases: ["api-db"]                         # [OPTIONAL] Omit to create <service>-db for every service
+    # users:                                        # [OPTIONAL] Omit to create <service>-app-user for every service
+    #   - name: "api-app-user"
+    #     host: ""
 
     sql:
       version: "POSTGRES_15"                        # [MANDATORY] PostgreSQL version

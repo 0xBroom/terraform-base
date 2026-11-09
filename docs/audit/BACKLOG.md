@@ -5,7 +5,7 @@ settings, locals, network, security, SQL, KMS and provider pins). This
 repository is that template: root files `gcp.*.tf`, vendored `tf_gcp_*`
 modules, one workspace file per environment.
 
-Open: 10. Done: 14. Accepted, do not port: 16.
+Open: 9. Done: 15. Accepted, do not port: 16.
 
 Regenerate this file with `python3 bin/audit-terraform.py --write` in the same
 pull request that closes an item. The status comes from the code, not from
@@ -53,14 +53,6 @@ The storage module (v2.5, June 2024) exposes uniform_bucket_level_access and def
 Evidence: modules/tf_gcp_storage_v2.5-202406121124/vars.tf has no public_access_prevention.
 
 Next change: Add the argument to the vendored module, default it to enforced, and thread a YAML override through gcp.storage.tf. Bump the directory version suffix so the edit is visible.
-
-### AUD-SQL-SCHEMA (p2) Every Cloud Run service gets a database on every SQL instance
-
-gcp.sql.tf builds the database and user lists from keys(local.app_services) and passes that list to every instance. A second database, or a service that does not use SQL, still receives a database and a user. Tools Hub declares databases on the instance entry. This template should too.
-
-Evidence: gcp.sql.tf local.schema.databases is a for over service_names.
-
-Next change: Read databases and users from the database YAML. Keep generating one database per service only as a default when the YAML omits the lists.
 
 ### AUD-PUBSUB-AGENT (p3) The Pub/Sub service identity is created in every workspace
 
@@ -199,6 +191,14 @@ Redis sets workspace, client and managed_by. Most other resources set nothing. A
 Evidence: locals.tf defines base_name and the registry host, and no common_labels.
 
 Next change: Add local.common_labels (workspace, client, managed_by, repo) and pass it to every resource that accepts labels.
+
+### AUD-SQL-SCHEMA (p2) Every Cloud Run service gets a database on every SQL instance
+
+gcp.sql.tf builds the database and user lists from keys(local.app_services) and passes that list to every instance. A second database, or a service that does not use SQL, still receives a database and a user. Tools Hub declares databases on the instance entry. This template should too.
+
+Evidence: gcp.sql.tf local.schema.databases is a for over service_names.
+
+Next change: Read databases and users from the database YAML. Keep generating one database per service only as a default when the YAML omits the lists.
 
 ### AUD-AGENTS (p1) A session that opens this repo has no operating rules
 

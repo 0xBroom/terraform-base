@@ -1,18 +1,11 @@
 
 locals {
-  # Extract service names dynamically from app configuration
-  service_names = keys(local.app_services)
-
-  schema = {
-    # Database names for each service - dynamically generated from app services
-    databases = [
-      for service in local.service_names : "${service}-db"
-    ]
-    # Database users for each service - dynamically generated from app services
-    users = [
-      for service in local.service_names : { name = "${service}-app-user", host = "" }
-    ]
-  }
+  # Used only when an instance omits databases and users. A list on the instance
+  # entry (database.<name>.databases / .users) replaces this default.
+  sql_default_databases = [for name in keys(local.app_services) : "${name}-db"]
+  sql_default_users = [
+    for name in keys(local.app_services) : { name = "${name}-app-user", host = "" }
+  ]
 }
 
 check "private_sql_needs_shared_vpc" {
@@ -38,9 +31,16 @@ module "cloud_sql" {
   region_name        = local.settings.region_name
 
   ## All the below options are optional and if not provided, the default settings will be used
-  dbe                     = try(each.value.sql, null)         # Pass the specific database configuration
-  databases               = try(local.schema.databases, null) # All services get databases in each instance
-  users                   = try(local.schema.users, null)     # All service users in each instance
+  dbe = try(each.value.sql, null)
+  databases = length(try(each.value.databases, [])) > 0 ? [
+    for db in each.value.databases : try(db.name, db)
+  ] : local.sql_default_databases
+  users = length(try(each.value.users, [])) > 0 ? [
+    for user in each.value.users : {
+      name = try(user.name, user)
+      host = try(user.host, "")
+    }
+  ] : local.sql_default_users
   backup_configuration    = try(each.value.sql.backup, null)
   maintenance_window      = try(each.value.sql.maintenance, null)
   deny_maintenance_period = try(each.value.sql.deny_maintenance_period, null)
