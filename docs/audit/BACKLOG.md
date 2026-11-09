@@ -5,7 +5,7 @@ settings, locals, network, security, SQL, KMS and provider pins). This
 repository is that template: root files `gcp.*.tf`, vendored `tf_gcp_*`
 modules, one workspace file per environment.
 
-Open: 12. Done: 12. Accepted, do not port: 16.
+Open: 11. Done: 13. Accepted, do not port: 16.
 
 Regenerate this file with `python3 bin/audit-terraform.py --write` in the same
 pull request that closes an item. The status comes from the code, not from
@@ -13,14 +13,6 @@ this prose. How a session picks the next item: `docs/audit/OPERATING.md`.
 
 
 ## Open
-
-### AUD-SOPS (p1) Secret values have no sealed path into the plan
-
-The template creates Secret Manager containers and a placeholder version, which is the right default, and then stops. Tools Hub also decrypts secrets/<workspace>/<service>.enc.yaml with SOPS and a Cloud KMS key at plan time, so a rotation is a commit instead of a console edit. This repo has no sops provider, no .sops.yaml and no secrets/ tree.
-
-Evidence: versions.tf has no carlpett/sops provider.
-
-Next change: Add an optional SOPS path: a KMS key the workspace opts into, .sops.yaml, and secret versions read from an encrypted file when it exists. Keep the placeholder when the file is absent. Do not copy the Tools Hub key ring.
 
 ### AUD-PROVIDER (p2) The Google provider is pinned to 6.42 while Tools Hub is on 7.42
 
@@ -199,6 +191,14 @@ There is no .github/workflows. A bad merge reaches main and the next person find
 Evidence: No .github/workflows directory.
 
 Next change: Add a workflow that runs fmt on the root files (not the vendored modules), init -backend=false, and validate.
+
+### AUD-SOPS (p1) Secret values have no sealed path into the plan
+
+The template creates Secret Manager containers and a placeholder version, which is the right default, and then stops. Tools Hub also decrypts secrets/<workspace>/<service>.enc.yaml with SOPS and a Cloud KMS key at plan time, so a rotation is a commit instead of a console edit. This repo has no sops provider, no .sops.yaml and no secrets/ tree.
+
+Evidence: versions.tf has no carlpett/sops provider.
+
+Next change: Add an optional SOPS path: a KMS key the workspace opts into, .sops.yaml, and secret versions read from an encrypted file when it exists. Keep the placeholder when the file is absent. Do not copy the Tools Hub key ring.
 
 ### AUD-AGENTS (p1) A session that opens this repo has no operating rules
 
