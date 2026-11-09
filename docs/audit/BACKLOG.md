@@ -4,7 +4,7 @@ The list of work that takes this template to a public, production-grade
 release: dev and stg cheap, pro ready for a security, backup and
 data-retention audit. Each item has a check in `bin/audit-terraform.py`.
 
-Open: 6. Done: 58. Accepted, not a gap: 22.
+Open: 5. Done: 59. Accepted, not a gap: 22.
 
 Regenerate with `python3 bin/audit-terraform.py --write` in the pull request
 that closes an item. `--next` names the item to take. How a session works an
@@ -24,12 +24,6 @@ Next change: Add CONTRIBUTING.md, SECURITY.md, CHANGELOG.md, a pull request temp
 The settings merge is shallow, so project: {id: x} drops project.number from default.yaml, and several files interpolate local.settings.project.number without a fallback.
 
 Next change: Read the number from data.google_project when the YAML leaves it out, or stop the plan with a check that names the key.
-
-### AUD-FIRESTORE-PRO (p3) Firestore in pro starts without PITR or delete protection
-
-A pro workspace that adds a firestore section gets the unprotected defaults.
-
-Next change: Default point-in-time recovery and DELETE_PROTECTION_ENABLED to on in pro, off elsewhere, still overridable from YAML.
 
 ### AUD-DOC-STALE (p1) Several docs describe files, keys and names that changed
 
@@ -247,3 +241,4 @@ Next change: Keep it equal to stg.
 - AUD-SA-KEY-POLICY (p2) Nothing prevents service account key creation
 - AUD-ESSENTIAL-CONTACTS (p2) Google has nobody to tell about security, legal or billing notices
 - AUD-DEV-SQL-DISPOSABLE (p3) dev keeps Cloud SQL deletion protection on
+- AUD-FIRESTORE-PRO (p3) Firestore in pro starts without PITR or delete protection

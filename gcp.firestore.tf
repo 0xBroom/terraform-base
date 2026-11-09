@@ -12,8 +12,9 @@
 #   type                    (required) - "FIRESTORE_NATIVE" or "DATASTORE_MODE"
 #   location_id             (optional) - Default from region_name
 #   concurrency_mode        (optional) - e.g. "OPTIMISTIC"
-#   point_in_time_recovery  (optional) - Default false
-#   delete_protection_state (optional) - e.g. "DELETE_PROTECTION_ENABLED"
+#   point_in_time_recovery  (optional) - Default true in pro, false elsewhere
+#   delete_protection_state (optional) - Default "DELETE_PROTECTION_ENABLED" in pro,
+#                                        "DELETE_PROTECTION_DISABLED" elsewhere
 #   deletion_policy         (optional) - "ABANDON" (provider default) or "DELETE".
 #                                        ABANDON drops the database from Terraform
 #                                        state on destroy but LEAVES IT RUNNING in
@@ -77,9 +78,11 @@ resource "google_firestore_database" "databases" {
   location_id                       = try(each.value.location_id, local.settings.region_name)
   type                              = each.value.type
   concurrency_mode                  = try(each.value.concurrency_mode, null)
-  point_in_time_recovery_enablement = try(each.value.point_in_time_recovery, false) ? "POINT_IN_TIME_RECOVERY_ENABLED" : "POINT_IN_TIME_RECOVERY_DISABLED"
-  delete_protection_state           = try(each.value.delete_protection_state, null)
-  deletion_policy                   = try(each.value.deletion_policy, null)
+  point_in_time_recovery_enablement = try(each.value.point_in_time_recovery, local.workspace == "pro") ? "POINT_IN_TIME_RECOVERY_ENABLED" : "POINT_IN_TIME_RECOVERY_DISABLED"
+  # Both values are updated in place. A database created without the field
+  # already reads back as DELETE_PROTECTION_DISABLED.
+  delete_protection_state = try(each.value.delete_protection_state, local.workspace == "pro" ? "DELETE_PROTECTION_ENABLED" : "DELETE_PROTECTION_DISABLED")
+  deletion_policy         = try(each.value.deletion_policy, null)
 
   depends_on = [google_project_service.enabled_apis]
 }
