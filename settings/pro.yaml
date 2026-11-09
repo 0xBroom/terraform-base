@@ -27,10 +27,10 @@ security:
   disable_service_account_keys: true
   # Who Google tells about security incidents, outages and suspensions of this
   # project, instead of the owners only. Billing notices go to the contacts of
-  # the billing account, which this stack does not own.
+  # the billing account, which this stack does not own. No email: the entry
+  # follows alerts_email above.
   essential_contacts:
-    - email: "replace-me@example.com"
-      categories: ["SECURITY", "TECHNICAL", "SUSPENSION"]
+    - categories: ["SECURITY", "TECHNICAL", "SUSPENSION"]
   # The monitoring.log_alerts presets below report these events once per
   # change, with the principal. The module's threshold alerts on the same
   # events would send a second email. Network, routes and owner stay on.
@@ -124,7 +124,7 @@ monitoring:
 # Cloud Build signs every pushed digest, and Cloud Run refuses an unsigned one.
 # The hello placeholder is on the whitelist, so the first apply goes through.
 # A project that already runs unsigned images goes through a dry-run first:
-# docs/cloudbuild-pipeline.md, "Signing for Binary Authorization".
+# docs/cloudbuild-pipeline.md, "Image signing".
 binary_authorization:
   enabled: true
   enforcement_mode: "ENFORCED_BLOCK_AND_AUDIT_LOG"

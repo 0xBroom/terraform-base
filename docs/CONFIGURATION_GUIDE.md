@@ -1,16 +1,16 @@
-# Configuration Guide (YAML)
+# Configuration guide (YAML)
 
 This guide explains how to manage infrastructure using the YAML settings in the `settings/` directory.
 
-## 🚀 Basic Workflow
+## Basic workflow
 
 1. Open `settings/${workspace}.yaml`.
 2. Add or modify the desired resource block.
 3. Run `python3 bin/validate-settings.py` (see below).
 4. Run `terraform plan` to verify the changes.
-5. Run `terraform apply` to deploy.
+5. Run `terraform apply` once the plan has been reviewed and approved.
 
-## ✅ Validating the settings
+## Validating the settings
 
 The root files read most keys through `try()`, so a misspelled key (`netwrok:`,
 `min_instance:`) is not an error in Terraform: the default applies and the plan
@@ -38,7 +38,7 @@ python3 bin/validate-settings.py
   Without PyYAML only the key cross-checks run and the script exits 2;
   `SETTINGS_SCHEMA_OPTIONAL=1` turns that into exit 0 with a `skipped` notice.
 
-## 🏷️ Labels
+## Labels
 
 Both Google providers set `default_labels` to `local.common_labels`
 (`locals.tf`), so every resource with a `labels` field gets the same four:
@@ -62,20 +62,15 @@ the values are lowercased, any other character becomes `-` and the result is
 cut to 63. A label set on the resource (Redis `labels`, a VM's `labels`) is
 merged on top and wins on the same key. Resources without labels (IAM, DNS
 records, alert policies) are not affected. Cloud SQL keeps its labels in
-`user_labels`, which the provider default does not reach.
-
-The first plan after this change shows an in-place update on every labelled
-resource that did not carry the four labels yet (buckets, Cloud Run, Pub/Sub,
-secrets, Artifact Registry, addresses and forwarding rules, Redis, VMs, KMS
-keys, DNS zones): it adds `terraform_labels` and `effective_labels`, nothing is
-replaced. Repositories adopted with `artifact_repos.<key>.adopt` get the four
-labels too, next to the ones they already have.
+`user_labels`, which the provider default does not reach. Repositories adopted
+with `artifact_repos.<key>.adopt` get the four labels too, next to the ones they
+already have.
 
 Cloud Run domain mappings use the `google.unlabelled` provider alias, which has
 no default labels: their labels are immutable, and adding one would destroy and
 recreate the mapping and its certificate.
 
-## 🔌 Enabled APIs
+## Enabled APIs
 
 `gcp.enabled.apis.tf` enables one list, the distinct union of three sources:
 
@@ -101,6 +96,8 @@ recreate the mapping and its certificate.
 | `scheduler` | `scheduler` or `service_scheduler` jobs | `cloudscheduler` |
 | `budget` | a `budget` section | `billingbudgets`, `cloudbilling` |
 | `budget_auto_stop` | `budget.enable_auto_stop: true` | `cloudfunctions`, `eventarc`, `pubsub` |
+| `contacts` | `security.essential_contacts` with at least one contact | `essentialcontacts` |
+| `org_policy` | `security.disable_service_account_keys: true` | `orgpolicy` |
 | `artifact_scanning` | `security.artifact_scanning: true` | `containerscanning` |
 | `binary_authorization` | `binary_authorization.enabled: true` | `binaryauthorization`, `containeranalysis`, `cloudkms` |
 | `sops` | `sops.enabled: true` | `cloudkms` |
@@ -126,13 +123,13 @@ it would replace the whole base list.
 
 An API that leaves the list is never disabled. `google_project_service` has
 `disable_on_destroy = false`, so the plan shows a destroy that only drops the
-entry from state, and the project keeps the API on. That is what an existing
-workspace sees on the first plan after the base list got shorter, for any API
-its sections do not use (Firestore, Cloud Tasks, Cloud Scheduler, DNS, Cloud
-Functions and Eventarc when the auto stop is off). A feature it does use keeps
-its API under the same `enabled_apis["<api>"]` address, with no change.
+entry from state, and the project keeps the API on. A workspace applied with
+an older, longer base list sees such a destroy for every API its sections do not
+use (Firestore, Cloud Tasks, Cloud Scheduler, DNS, Cloud Functions and Eventarc
+when the auto stop is off). A feature it does use keeps its API under the same
+`enabled_apis["<api>"]` address, with no change.
 
-The APIs that had their own resource before (`wif_sts`, `binary_authorization`,
+The APIs that older versions managed as their own resource (`wif_sts`, `binary_authorization`,
 `container_analysis`, `binauth_kms`, `container_scanning`) are moved into
 `enabled_apis` with `moved` blocks. Cloud KMS had two copies, one for Binary
 Authorization (`binauth_kms`) and one for SOPS (`cloudkms`), and only one move
@@ -143,11 +140,11 @@ Binary Authorization on, the moved entry carries on. With SOPS only,
 `enabled_apis` declares the API again: the plan shows a create, and enabling an
 API that is already on changes nothing in the project.
 
-## 📦 Cloud Run Services
+## Cloud Run services
 
 Services are defined under `app.service`.
 
-### Adding a New Service
+### Adding a new service
 
 ```yaml
 app:
@@ -163,16 +160,16 @@ app:
         allow_unauthenticated: true
 ```
 
-### Environment Variables & Secrets
+### Environment variables and secrets
 
-#### Plain Text Environment Variables
+#### Plain text environment variables
 ```yaml
         env:
           - name: APP_COLOR
             value: "blue"
 ```
 
-#### Mounting Secrets as Volumes
+#### Mounting an existing secret as a file
 ```yaml
         existing_secret_volume:
           - name: "config-secret"
@@ -181,18 +178,21 @@ app:
             file_name: "config.json"
 ```
 
-### Storage Volumes (GCS)
+### Storage volumes (GCS)
 
-You can mount GCS buckets as volumes. If `create_gcs: true`, the bucket will be created automatically.
+You can mount GCS buckets as volumes. With `create_gcs: true` the bucket is
+created too. Without it the volume mounts `bucket_name`, or
+`{client}-{workspace}-{service}-{name}` when that is not set, and the bucket
+must exist.
 
 ```yaml
         gcs_volume:
           - name: "uploads"
             mount_path: "/data/uploads"
-            create_gcs: true # Will create a bucket named {client}-{workspace}-{service}-uploads
+            create_gcs: true # Creates {client}-{workspace}-{service}-uploads--<random hex>
 ```
 
-## 🪣 GCS Buckets
+## GCS buckets
 
 Stand-alone buckets are defined under `bucket`.
 
@@ -208,7 +208,7 @@ bucket:
 Lifecycle rules, retention policies (Bucket Lock) and usage logs, and when to
 use each, are in [STORAGE.md](STORAGE.md).
 
-## 🖥️ Compute Instances (VMs)
+## Compute instances (VMs)
 
 VMs are defined under `compute_instances`.
 
@@ -223,7 +223,7 @@ compute_instances:
       size_gb: 20
 ```
 
-## 🔒 Private Service Access (private Cloud SQL and Memorystore)
+## Private Service Access (private Cloud SQL and Memorystore)
 
 A Cloud SQL instance with `ipv4_enabled: false` and a redis with
 `connect_mode: PRIVATE_SERVICE_ACCESS` take their IP from a range reserved in
@@ -261,10 +261,10 @@ network:
 
 ### Workspaces that created the peering by hand
 
-Before this, the stack passed the ranges to the module but created nothing, so
-a running private database means someone made the range and the connection
-outside Terraform. Bring them into state before the first apply of this
-version instead of letting the plan create a second range. With the VPC named
+Older versions passed the ranges to the module but created nothing, so a
+running private database in a workspace applied with one of them means someone
+made the range and the connection outside Terraform. Bring them into state
+before the next apply instead of letting the plan create a second range. With the VPC named
 `<base_name>-vpc` and the range key `private` (`terraform state show
 'module.network[0].google_compute_network.net'` prints the name):
 
@@ -288,7 +288,7 @@ state, so it needs the same go as an apply. If the connection is not imported,
 `update_on_creation_fail` makes the create patch the existing one with the
 ranges in the settings instead of failing.
 
-## 🔌 Private Service Connect to Elastic Cloud
+## Private endpoint for Elastic Cloud
 
 `elastic_psc` creates an internal address in the `services` subnet and a PSC
 endpoint to the provider's service attachment. Without the key nothing is
@@ -304,9 +304,9 @@ elastic_psc:
   dns_domain: "psc.example-provider.example.com"
 ```
 
-## 🔐 Security & Access
+## Security and access
 
-### Project Operators
+### Project operators
 Define who runs the application day to day. `viewers` get `roles/viewer` on
 the project; `operators` get it too, plus:
 
@@ -331,9 +331,9 @@ still start builds. A service with `cloudrun.external_sa`, or a job with an
 external `service_account`, uses an account this stack does not manage:
 whoever owns it grants `actAs` on it.
 
-Workspaces applied before this scoping had `run.invoker`,
+Older versions granted operators `run.invoker`,
 `iam.serviceAccountUser` and `cloudbuild.connectionAdmin` on the whole
-project. The next apply removes those three project bindings and adds the
+project. On a workspace applied with one of them, the next apply removes those three project bindings and adds the
 per-resource ones. Operators then lose: invoking Cloud Run services this
 stack does not manage, acting as any other service account in the project
 (`run-cloudbuild-sa` and the default compute account included), running or
@@ -342,7 +342,7 @@ lets a caller fetch a read-write token for every linked repository). Grant
 any of those back outside `project_access`, on the one resource that needs
 it.
 
-### Security Alerts
+### Security alerts
 ```yaml
 security:
   alerts_email: "security@example.com"

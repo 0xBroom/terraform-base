@@ -2,7 +2,7 @@
 
 Read `README.md` and `docs/PROJECT_STRUCTURE.md` before changing anything. This file adds
 the conventions an agent must follow when it sets up or extends a project from this
-template. The gap list against a production baseline is `docs/audit/BACKLOG.md`.
+template. The production readiness backlog is `docs/audit/BACKLOG.md`.
 
 ## GCP resource hierarchy
 
@@ -106,7 +106,7 @@ gcloud billing projects link "$ORG-$APP-dev-$SUFFIX" --billing-account=<billing-
   or `pro`. The default file carries placeholder project values so CI can validate
   without a GCP login. Replace them before any plan of that workspace.
 
-## Catching up with a production baseline
+## The production readiness backlog
 
 Workspaces are `settings/<workspace>.yaml` merged over `settings/default.yaml`. Root
 files are `gcp.<type>.tf` or `gcp.<type>.<part>.tf`, with no hyphens. Modules under

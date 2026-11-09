@@ -1,8 +1,9 @@
 # ╔═══════════════════════════════════════════════════════════════════════════════╗
 # ║              YAML SETTINGS TEMPLATE & REFERENCE                               ║
 # ║                                                                               ║
-# ║  This file documents ALL available configuration parameters.                  ║
-# ║  Copy sections you need into your environment file (dev/pre/pro.yaml).        ║
+# ║  This file documents the settings, one section per feature. The full key      ║
+# ║  list is schemas/settings.schema.json (bin/validate-settings.py).             ║
+# ║  Copy sections you need into your workspace file (dev/stg/pro.yaml).          ║
 # ║  Parameters marked [MANDATORY] are required. Others are optional.             ║
 # ║  Default values (from default.yaml or terraform) are noted where applicable.  ║
 # ╚═══════════════════════════════════════════════════════════════════════════════╝
@@ -14,12 +15,13 @@
 # │  #  │ Section                          │ GCP Resources Created                                       │
 # ├─────┼──────────────────────────────────┼─────────────────────────────────────────────────────────────┤
 # │  1  │ project                          │ (reference only - project must exist)                       │
-# │  2  │ bitbucket_workspace              │ Cloud Build Repository Connection, Bitbucket secrets        │
+# │  2  │ repo_providers                   │ Cloud Build repository connection (GitHub or Bitbucket)     │
 # │  3  │ budget                           │ Billing Budget, Pub/Sub Topic, Cloud Function (auto-stop),  │
 # │     │                                  │ Service Account, IAM bindings                               │
 # │  4  │ lb                               │ Global HTTPS Load Balancer, SSL Certificate, URL Map,       │
-# │     │                                  │ Target HTTPS Proxy, Forwarding Rule, IP Address             │
-# │  5  │ iap                              │ IAP Brand, IAP Client, IAM Policy Bindings                  │
+# │     │                                  │ Target HTTPS Proxy, Forwarding Rule, IP Address,            │
+# │     │                                  │ Cloud Armor WAF Security Policy                             │
+# │  5  │ iap                              │ IAM bindings (roles/iap.httpsResourceAccessor)              │
 # │  6  │ app.service                      │ Cloud Run Service, Service Account, Artifact Registry,      │
 # │     │                                  │ Cloud Build Trigger, NEG, Backend Service, URL Map rules,   │
 # │     │                                  │ Secrets (secret_env/secret_volume), IAM bindings             │
@@ -34,23 +36,25 @@
 # │     │                                  │ Monitoring Alert Policies, Private IP                       │
 # │ 14  │ pubsub                           │ Pub/Sub Topics, Subscriptions, IAM bindings                 │
 # │ 15  │ monitoring                       │ Alert Policies (Cloud Run, LB, audit log events),           │
-# │     │                                  │ Notification Channels,                                      │
-# │     │                                  │ Cloud Armor WAF Security Policy                             │
+# │     │                                  │ uptime checks, secret read alert                            │
 # │ 16  │ elastic_psc                      │ Private Service Connect Endpoint, Forwarding Rule,          │
 # │     │                                  │ DNS Zone, DNS Record                                        │
 # │ 17  │ project_access                   │ Project IAM Bindings (Viewer, Operator roles)               │
-# │ 18  │ billing                          │ (reference only - BigQuery export table)                    │
-# │ 19  │ access_policy                    │ (reference only - org-level Access Context Manager)         │
-# │ 20  │ security                         │ Monitoring Notification Channel (alerts email)              │
+# │ 18  │ dns_zones                        │ Cloud DNS managed zones and their record sets               │
+# │ 19  │ sops                             │ Cloud KMS key ring and key, secret versions from SOPS files │
+# │ 20  │ security                         │ Notification channel, security baseline, org policies,      │
+# │     │                                  │ Essential Contacts                                          │
 # │ 21  │ logging                          │ _Default/_Required retention, audit archive bucket and sink │
+# │ 21b │ binary_authorization             │ Attestor, KMS signing key, project policy                   │
 # │ 22  │ wif                              │ Workload Identity Pools and Providers, CI Service Accounts, │
 # │     │                                  │ workloadIdentityUser and project role bindings              │
+# │ 23  │ other top-level keys             │ Short list with the root file that reads each one           │
 # └─────┴──────────────────────────────────┴─────────────────────────────────────────────────────────────┘
 #
 # ARCHITECTURE OVERVIEW:
 # ──────────────────────
 # 1. Settings Hierarchy: default.yaml → {env}.yaml (environment overrides defaults)
-# 2. Terraform Workspaces: Each environment (dev/pre/pro) uses its own workspace
+# 2. Terraform Workspaces: Each environment (dev/stg/pro) uses its own workspace
 # 3. Resource Naming Convention: {client.name}-{resource-identifier}
 #    Example: "app-my-service", "app-my-bucket--xxxx"
 # 4. Dynamic Generation: Services auto-create service accounts, NEGs, secrets, etc.
@@ -90,11 +94,21 @@ project:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 2. BITBUCKET WORKSPACE CONFIGURATION
+# 2. REPOSITORY PROVIDERS (CLOUD BUILD CONNECTIONS)
 # ═══════════════════════════════════════════════════════════════════════════════
-# Bitbucket workspace for repository connections and Cloud Build triggers.
-# All repository names in cloudbuild sections reference repos in this workspace.
-bitbucket_workspace: "my-workspace"                 # [MANDATORY] Bitbucket workspace slug
+# Where the repo_name of every cloudbuild block lives (gcp.repository.*.tf). A
+# build picks one with cloudbuild.provider; default names the one used otherwise.
+# The connection reads its token from Secret Manager: Terraform creates the
+# secret with no version, and the token is added by hand after the first apply.
+repo_providers:
+  default: github                                   # [OPTIONAL] github | bitbucket (default: github)
+  github:
+    owner: "example-org"                            # [MANDATORY for GitHub] Organization or user that owns the repos
+    app_installation_id: 1                          # [MANDATORY for GitHub] Cloud Build GitHub App installation id
+    connection_name: "github-repo-connection"       # [OPTIONAL] Default: github-repo-connection
+  # bitbucket:
+  #   workspace: "example-workspace"                # [MANDATORY for Bitbucket] Bitbucket workspace slug
+# bitbucket_workspace: "example-workspace"          # [LEGACY] Read only when repo_providers is absent
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -102,7 +116,8 @@ bitbucket_workspace: "my-workspace"                 # [MANDATORY] Bitbucket work
 # ═══════════════════════════════════════════════════════════════════════════════
 # Automated cost control. If this section exists, a billing budget is created.
 # If enable_auto_stop is true, a Cloud Function is deployed that disables
-# billing when the budget is exceeded (requires a "stop-billing-code" bucket).
+# billing when the budget is exceeded, with the topic, bucket and service
+# account it needs (docs/billing-budget-control.md).
 #
 # NOTE: Omit this entire section if you don't want budget management.
 budget:
@@ -151,9 +166,9 @@ lb:
 iap:
   admin_access:
     members:                                        # [MANDATORY if any service uses IAP]
-      - "domain:mydomain.com"                       # Domain-wide access (all users in domain)
-      - "group:admins@mydomain.com"                 # Google Group access
-      - "user:admin@mydomain.com"                   # Individual user access
+      - "domain:example.com"                       # Domain-wide access (all users in domain)
+      - "group:admins@example.com"                 # Google Group access
+      - "user:admin@example.com"                   # Individual user access
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -194,7 +209,7 @@ app:
               enabled: true                         # [OPTIONAL] Enable IAP for this path (default: false)
               use_default_members: true             # [OPTIONAL] Use iap.admin_access.members (default: false)
               # members:                            # [OPTIONAL] Rule-specific IAP members
-              #   - "user:special@mydomain.com"     #   (only if use_default_members is false)
+              #   - "user:special@example.com"     #   (only if use_default_members is false)
 
           - path: "/my-service/*"                   # Second rule (less specific, evaluated after admin)
             rewrite: "/my-service/"
@@ -247,11 +262,18 @@ app:
                                                     #   Default: "^{workspace}-[0-9]{8}[0-9]{2}$"
         # branch_pattern: "^main$"                  # [OPTIONAL] Git branch pattern to trigger builds
                                                     #   Overrides tag_pattern if set
+        # build_filter_paths: ["src/**"]            # [OPTIONAL] Only build when these paths changed
+                                                    #   (branch triggers; a tag carries no diff)
         # substitutions:                            # [OPTIONAL] Raw Cloud Build substitutions. For a pipeline
         #   _MY_VAR: "my-value"                     #   this repository cannot see (inline: false), the shared
                                                     #   pipeline reads build_args, not these
-        # artifact_format: "PYTHON"                 # [OPTIONAL] Artifact format (for library builds)
-                                                    #   Values: DOCKER, MAVEN, NPM, PYTHON, GO, APT, YUM
+        # scan:                                     # [OPTIONAL] Scan steps before docker build, inline only
+        #   secrets: true                           #   gitleaks, report only (default: false)
+        #   secrets_blocking: true                  #   gitleaks, fail the build (wins over secrets)
+        #   sast: true                              #   semgrep p/default, report only
+        #   sast_blocking: false                    #   semgrep, fail the build
+        #   deps: true                              #   trivy fs HIGH and CRITICAL, report only
+        #   deps_blocking: false                    #   trivy fs, fail the build (docs/SCANNING.md)
 
       # ── Cloud Run Service Configuration ──
       # Defines the runtime behavior of the Cloud Run service.
@@ -296,9 +318,26 @@ app:
           - "roles/aiplatform.user"                 #   Example: Vertex AI access for AI services
           - "roles/bigquery.dataViewer"             #   Example: BigQuery read access
 
-        # Cloud Run annotations (for advanced features)
-        annotations:                                # [OPTIONAL] Annotations on the Cloud Run service
-          "run.googleapis.com/binary-authorization": "default"  # Example: Enable binary authorization
+        # ── Less common service keys ──
+        # region: "us-east1"                        # [OPTIONAL] Region of this service (default: region_name)
+        # external_sa: "my-sa@my-project.iam.gserviceaccount.com"  # [OPTIONAL] Run as an existing account;
+                                                    #   no account is created and its owner grants actAs
+        # execution_environment: "EXECUTION_ENVIRONMENT_GEN2"  # [OPTIONAL] Default: GEN2
+        # startup_cpu_boost: true                   # [OPTIONAL] Default: true
+        # cpu_limit: "1"                            # [OPTIONAL] Exact CPU string, wins over cpu (default: "<cpu>000m")
+        # command: ["/bin/sh", "-c"]                # [OPTIONAL] Overrides the image ENTRYPOINT
+        # args: ["exec ./server"]                   # [OPTIONAL] Overrides the image CMD
+        # startup_probe: {}                         # [OPTIONAL] Passed as is to the Cloud Run module
+        # liveness_probe: {}                        # [OPTIONAL] Passed as is to the Cloud Run module
+        # iap:
+        #   enabled: true                           # [OPTIONAL] IAP on the run.app URL itself (default: false)
+        # db_host_from_database: "main"             # [OPTIONAL] Fill the DB_HOST env value with the private IP
+                                                    #   of database.<key>
+        # domain: "api.example.com"                 # [OPTIONAL] Cloud Run domain mapping, a string or a list
+        # domain_certificate_mode: "AUTOMATIC"      # [OPTIONAL] Default: AUTOMATIC
+        # domain_force_override: false              # [OPTIONAL] Default: false
+        # Binary Authorization is not set here: binary_authorization.enabled turns it
+        # on for every service and job (section 21b).
 
         # Cloud SQL connection (mounts Cloud SQL Auth Proxy sidecar). Also enables
         # sqladmin.googleapis.com, with or without a database section.
@@ -332,15 +371,14 @@ app:
         # You must then set the actual value in Secret Manager manually.
         secret_env:                                 # [OPTIONAL] List of secrets as env vars
           - name: DATABASE_PASSWORD                 # [MANDATORY] Secret name in Secret Manager
-                                                    #   Default naming: "{client.name}-{service-name}-{name}"
-                                                    #   With raw_name: true → uses name as-is
+                                                    #   A created secret is "{client.name}-{service-name}-{name}"
             var_name: DATABASE_PASSWORD              # [MANDATORY] Environment variable name in container
             version: latest                         # [OPTIONAL] Secret version (default: "latest")
-            create_secret: true                     # [OPTIONAL] Create secret if missing (default: true)
+            create_secret: true                     # [OPTIONAL] Create the secret (default: true)
                                                     #   false = secret must already exist (e.g., managed by SQL module)
-            raw_name: false                         # [OPTIONAL] Use literal secret name (default: false)
-                                                    #   false = name gets prefixed: "{client.name}-{service}-{name}"
-                                                    #   true = use exact name as specified
+            raw_name: false                         # [OPTIONAL] Only with create_secret: false (default: false)
+                                                    #   false = the existing secret is "{client.name}-{service}-{name}"
+                                                    #   true = the existing secret is named exactly as specified
 
           - name: my-project-redis-auth             # Example: existing secret with raw name
             var_name: REDIS_PASSWORD
@@ -351,26 +389,34 @@ app:
         # ── Secret Volume Mounts ──
         # Secrets mounted as files inside the container (for certificates, keys, etc.)
         secret_volume:                              # [OPTIONAL] List of secrets mounted as files
-          - name: "my-service-private-key"          # [MANDATORY] Secret name in Secret Manager
-                                                    #   Same naming rules as secret_env
+          - name: "my-service-private-key"          # [MANDATORY] Always created as
+                                                    #   "{client.name}-{service-name}-{name}"; an existing
+                                                    #   secret goes in existing_secret_volume below
             file_name: "private.key"                # [MANDATORY] File name inside the mount path
             version: latest                         # [OPTIONAL] Secret version (default: "latest")
             mount_path: "/etc/secrets"              # [MANDATORY] Directory where the secret file is mounted
                                                     #   Full path in container: {mount_path}/{file_name}
             # default_mode: "0444"                  # [OPTIONAL] File permissions (default: "0444" = read-only)
-            create_secret: true                     # [OPTIONAL] Create secret if missing (default: true)
-            raw_name: true                          # [OPTIONAL] Use literal secret name (default: false)
 
         # ── GCS Volume Mounts ──
         # Mount Google Cloud Storage buckets as local directories in the container.
         gcs_volume:                                 # [OPTIONAL] List of GCS volumes to mount
           - name: "data"                            # [MANDATORY] Volume name (also bucket suffix if create_gcs=true)
-                                                    #   Bucket created: "{client.name}-{service}-{name}"
+                                                    #   Bucket: "{client.name}-{workspace}-{service}-{name}",
+                                                    #   plus "--<random hex>" when create_gcs creates it
+            # bucket_name: "existing-bucket"        # [OPTIONAL] Mount this existing bucket instead
             mount_path: "/app/data"                 # [MANDATORY] Directory mount point in container
             create_gcs: true                        # [OPTIONAL] Create the GCS bucket (default: false)
                                                     #   true = Terraform creates the bucket
                                                     #   false = bucket must already exist
             read_only: false                        # [OPTIONAL] Mount as read-only (default: false)
+
+        # ── Existing secrets mounted as files ──
+        # existing_secret_volume:                   # [OPTIONAL] A secret this stack does not create
+        #   - name: "config-secret"                 #   Volume name
+        #     secret_id: "my-secret-id"             #   [MANDATORY] Secret Manager id, used as is
+        #     mount_path: "/etc/config"
+        #     file_name: "config.json"
 
 
   # ═════════════════════════════════════════════════════════════════════════════
@@ -408,8 +454,10 @@ app:
         # Container command and arguments
         # command: ["python", "manage.py", "migrate"]  # [OPTIONAL] Container entrypoint command
         # args: ["--noinput"]                          # [OPTIONAL] Arguments to the command
+        # working_dir: "/app"                          # [OPTIONAL] Working directory of the container
 
-        enable_vpc_access: true                     # [OPTIONAL] Enable VPC access (default: true)
+        enable_vpc_access: true                     # [OPTIONAL] Direct VPC egress onto the shared VPC
+                                                    #   (default: true when network.services_cidr is set)
 
         # Cloud SQL connection
         cloud_sql_instances_mount:                  # [OPTIONAL] Same as service cloud_sql_instances_mount
@@ -503,10 +551,10 @@ cloudbuild:
   # ─── EXAMPLE: Python library build ───
   my-shared-library:
     name: "my-shared-library"                       # [MANDATORY] Build trigger name
-    repo_name: "my-shared-library"                  # [MANDATORY] Bitbucket repository name
-    inline: true                                    # [OPTIONAL] Use cloudbuild.yaml from repo (default: false)
+    repo_name: "my-shared-library"                  # [MANDATORY] Repository name (repo_providers)
+    inline: false                                   # [OPTIONAL] false: the pipeline file lives in the library repo
+                                                    #   true: cloudbuild_files/<cloudbuild_file_path> here (default: false)
     cloudbuild_file_path: "library-cloudbuild.yaml" # [OPTIONAL] Path to build config (default: "cloudbuild.yaml")
-    artifact_format: "PYTHON"                       # [OPTIONAL] Artifact type (DOCKER, MAVEN, NPM, PYTHON, GO)
     # tag_pattern: "^v[0-9]+$"                      # [OPTIONAL] Tag pattern trigger
     # branch_pattern: "^main$"                      # [OPTIONAL] Branch pattern (overrides tag_pattern)
     # substitutions:                                # [OPTIONAL] Custom build substitutions
@@ -515,8 +563,8 @@ cloudbuild:
   # ─── EXAMPLE: Base Docker image build ───
   my-base-image:
     name: "my-base-image"                           # [MANDATORY] Build trigger name
-    repo_name: "my-base-image"                      # [MANDATORY] Bitbucket repository name
-    inline: true
+    repo_name: "my-base-image"                      # [MANDATORY] Repository name (repo_providers)
+    inline: false
     cloudbuild_file_path: "base-cloudbuild.yaml"
     image_base: "my-deps/deps:latest"               # [OPTIONAL] Parent base image reference
     # dockerfile_path: "Dockerfile.custom"          # [OPTIONAL] Custom Dockerfile name
@@ -618,7 +666,7 @@ bucket:
     permissions:                                    # [OPTIONAL] Map of permission groups
       admin:                                        #   Permission group identifier (descriptive name)
         members:                                    #   [MANDATORY per group] List of IAM members
-          - "group:ops-team@mydomain.com"           #   Google Group
+          - "group:ops-team@example.com"           #   Google Group
         roles:                                      #   [MANDATORY per group] List of IAM roles
           - "roles/storage.admin"                   #   Full bucket management
       creator:
@@ -629,7 +677,7 @@ bucket:
           - "roles/storage.objectAdmin"             # Create, read, delete objects
       viewer:
         members:
-          - "domain:mydomain.com"                   # Domain-wide read access
+          - "domain:example.com"                   # Domain-wide read access
         roles:
           - "roles/storage.objectViewer"            # Read-only access
       # public_viewers:                             # Example: public read access (use with caution!)
@@ -652,15 +700,16 @@ bucket:
 # Creates: VPC, services subnet, Private Service Access for Cloud SQL, optional NAT.
 # Cloud Run uses direct VPC egress onto this network when the section exists.
 network:
-  network_tier: PREMIUM                             # [MANDATORY] Network tier for NAT IPs
+  network_tier: PREMIUM                             # [OPTIONAL] Network tier of the NAT addresses (default: PREMIUM)
                                                     #   "PREMIUM" = Google's premium backbone (recommended)
                                                     #   "STANDARD" = standard internet routing (cheaper)
-  internal_connection: true                         # [MANDATORY] Create VPC connector for Cloud Run
-                                                    #   Required for Cloud Run → VPC communication
-  services_cidr: "10.10.1.0/24"                     # [MANDATORY] IP range for services subnet (256 IPs)
-                                                    #   Must not overlap with other subnets
-  private_google_access: true                       # [MANDATORY] Access Google APIs without external IP
-                                                    #   Must be true for serverless VPC access
+  internal_connection: true                         # [OPTIONAL] Passed to the networking module, which does not
+                                                    #   use it: no Serverless VPC Access connector is created.
+                                                    #   Cloud Run reaches the VPC with direct VPC egress
+  services_cidr: "10.10.1.0/24"                     # [MANDATORY] IP range of the services subnet. Without it
+                                                    #   no network is created. Must not overlap other subnets
+  private_google_access: true                       # [OPTIONAL] Reach Google APIs from the subnet without an
+                                                    #   external IP (default: true)
 
   # Private Service Access (PSA). A Cloud SQL instance with ipv4_enabled false and a
   # redis with connect_mode PRIVATE_SERVICE_ACCESS take their IP from these ranges,
@@ -1122,12 +1171,6 @@ monitoring:
     notification_rate_limit: "300s"                 # [OPTIONAL] At most one email per period (default: 300s)
     auto_close: "1800s"                             # [OPTIONAL] Incident auto close, at least 1800s (default: 1800s)
 
-  # ── Cloud Armor IP Ban List ──
-  # cloud-armor:                                    # [OPTIONAL] WAF IP blocking
-  #   ban-ip:                                       #   List of IPs/CIDRs to block
-  #     - "1.2.3.4/32"                              #   Single IP
-  #     - "10.0.0.0/8"                              #   CIDR range
-
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # 16. ELASTIC CLOUD PRIVATE SERVICE CONNECT
@@ -1156,27 +1199,55 @@ monitoring:
 # for a service or a job (never project-wide). docs/CONFIGURATION_GUIDE.md.
 # project_access:
 #   viewers:                                        # [OPTIONAL] Users with project viewer access
-#     - "user:viewer@mydomain.com"
-#     - "user:another.viewer@mydomain.com"
+#     - "user:viewer@example.com"
+#     - "user:another.viewer@example.com"
 #   operators:                                      # [OPTIONAL] Users with project operator access
-#     - "user:operator@mydomain.com"
-#     - "user:devops@mydomain.com"
+#     - "user:operator@example.com"
+#     - "user:devops@example.com"
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 18. BILLING EXPORT CONFIGURATION
+# 18. CLOUD DNS ZONES (gcp.dns.tf)
 # ═══════════════════════════════════════════════════════════════════════════════
-# BigQuery billing export table reference (for cost analysis dashboards).
-# billing:
-#   export_table_name: "gcp_billing_export_resource_v1_XXXXXX_XXXXXX_XXXXXX"
+# One managed zone per key, with its records. Omit dns_zones and nothing is
+# created. A zone answers nothing until the parent domain delegates to it: set
+# the name servers of the dns_zone_name_servers output at the registrar.
+# Each zone is billed monthly. The apex NS and SOA belong to Cloud DNS: do not
+# declare them. Import an existing zone with
+#   terraform import 'google_dns_managed_zone.zone["<key>"]' projects/<project>/managedZones/<zone-name>
+# dns_zones:
+#   example-com:                                    # Zone name in Cloud DNS (the key)
+#     dns_name: "example.com"                       # [MANDATORY] Trailing dot optional
+#     description: "Public zone of example.com"     # [OPTIONAL] Default: "Managed by Terraform"
+#     visibility: "public"                          # [OPTIONAL] Default: public
+#     dnssec: "off"                                 # [OPTIONAL] off | on | transfer (default: off)
+#     default_ttl: 300                              # [OPTIONAL] TTL of records without one (default: 300)
+#     records:                                      # [OPTIONAL] One record set per name and type
+#       - name: "www.example.com"
+#         type: "CNAME"
+#         values: ["example.com."]
+#         ttl: 3600                                 #   [OPTIONAL] Default: default_ttl
+#       - name: "example.com"
+#         type: "A"
+#         values: ["203.0.113.10"]
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 19. ACCESS CONTEXT MANAGER (VPC SERVICE CONTROLS)
+# 19. SOPS SEALED SECRETS (gcp.sops.tf)
 # ═══════════════════════════════════════════════════════════════════════════════
-# Organization-level access policy for VPC Service Controls.
-# access_policy:
-#   policy_id: "123456789"                          # Access Context Manager policy ID
+# enabled: true creates a KMS key ring <client.name>-<workspace>-sops with a key
+# sops (prevent_destroy; a key ring can never be deleted), unless kms_key names
+# an existing key. A top-level key of secrets/<workspace>/<service>.enc.yaml that
+# matches a secret_env or secret_volume name of that service becomes the
+# secret's version instead of the placeholder. terraform output sops_kms_key is
+# the id for .sops.yaml (start from .sops.yaml.example). Guide: docs/SOPS.md.
+# COST: one software KMS key version and its calls, cents a month.
+# sops:
+#   enabled: true                                   # [OPTIONAL] Default: false
+#   kms_key: "projects/example-app-dev/locations/europe-west1/keyRings/example/cryptoKeys/sops"  # [OPTIONAL]
+#                                                   #   Existing key: none is created and nothing is granted
+#   decrypters:                                     # [OPTIONAL] cryptoKeyEncrypterDecrypter on the created key
+#     - "user:name@example.com"
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1329,3 +1400,30 @@ wif:
             - "roles/artifactregistry.writer"
         # - service_account: "existing-sa@example-app-dev.iam.gserviceaccount.com"
         #   principal_set: "attribute.ref/refs/heads/main"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 23. OTHER TOP-LEVEL KEYS
+# ═══════════════════════════════════════════════════════════════════════════════
+# Set in settings/default.yaml for every workspace (all required):
+#   client.name      Short prefix of every resource name ("app")
+#   iac.repo         Repository name, used in the repo label and alert texts
+#   region_name      Region of every regional resource ("europe-west1")
+#   zones_name       Zones; the first hosts zonal Cloud SQL and Redis
+#   active-apis      Base APIs. Never repeat it in a workspace file (section 1)
+#
+# Rarely needed. Each root file documents its own entries in its header comment,
+# and schemas/settings.schema.json types them:
+#   artifact_repos               gcp.artifact.standalone.tf  Standalone Artifact Registry repositories (adopt existing ones)
+#   artifact_cleanup             gcp.artifact.tf             Cleanup policy merged over the registry defaults
+#   build_submitter              gcp.artifact.standalone.tf  An existing identity allowed to run gcloud builds submit
+#   cloudbuild_artifacts_admins  gcp.cloudbuild.tf           Members with storage.admin on the build artifacts bucket
+#   cloudbuild_sa_self_sign_jwt  gcp.cloudbuild.tf           Let the build account sign a JWT as itself (default: false)
+#   cloud_tasks                  gcp.cloudtasks.tf           Cloud Tasks queues that call an app.service
+#   service_scheduler            gcp.scheduler.tf            Cloud Scheduler jobs that call a path of an app.service
+#   compute_instances            gcp.compute.tf              Compute Engine VMs (docs/CONFIGURATION_GUIDE.md)
+#   compute_nats                 gcp.compute.nat.tf          Cloud NAT for VMs on the default network
+#   domain_mappings              gcp.cloudrun.domain_mappings.tf  Older form of cloudrun.domain
+#   secrets                      gcp.secrets.standalone.tf   Standalone Secret Manager secrets and their accessors
+#   external_secret_access       gcp.secrets.external_access.tf  Read access to existing secrets this stack does not create
+#   oracle                       oracle.*.tf                 Optional Oracle Cloud networks, NSGs and VMs

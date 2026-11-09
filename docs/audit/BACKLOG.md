@@ -4,7 +4,7 @@ The list of work that takes this template to a public, production-grade
 release: dev and stg cheap, pro ready for a security, backup and
 data-retention audit. Each item has a check in `bin/audit-terraform.py`.
 
-Open: 4. Done: 60. Accepted, not a gap: 22.
+Open: 3. Done: 61. Accepted, not a gap: 22.
 
 Regenerate with `python3 bin/audit-terraform.py --write` in the pull request
 that closes an item. `--next` names the item to take. How a session works an
@@ -18,12 +18,6 @@ item: `docs/audit/OPERATING.md`.
 A public project needs to say how to contribute, how to report a vulnerability and what changed.
 
 Next change: Add CONTRIBUTING.md, SECURITY.md, CHANGELOG.md, a pull request template and issue templates.
-
-### AUD-DOC-STALE (p1) Several docs describe files, keys and names that changed
-
-cloudbuild-tag-patterns.md names project.cloudbuild.tf, example.yaml lacks dns_zones and sops, the Cloud Run doc states one egress default and a pre tag, CONFIGURATION_GUIDE keeps a one-off migration note, PROJECT_STRUCTURE lists only pre and pro, AGENTS.md talks about a production baseline, SOPS.md and SCANNING.md use old wording.
-
-Next change: Rewrite each passage against the current code.
 
 ### AUD-DOC-COMPLIANCE (p1) Nothing maps the pro settings to audit controls
 
@@ -237,3 +231,4 @@ Next change: Keep it equal to stg.
 - AUD-ESSENTIAL-CONTACTS (p2) Google has nobody to tell about security, legal or billing notices
 - AUD-DEV-SQL-DISPOSABLE (p3) dev keeps Cloud SQL deletion protection on
 - AUD-FIRESTORE-PRO (p3) Firestore in pro starts without PITR or delete protection
+- AUD-DOC-STALE (p1) Several docs describe files, keys and names that changed
