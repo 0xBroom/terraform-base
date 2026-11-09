@@ -49,6 +49,7 @@ get a database, or when the names should differ.
 
 ## What this is not
 
-These files are not a Tools Hub project. There is one VPC, not one per
-service. There is no Shieldcode, no CMEK, and no separate system project.
-`docs/audit/BACKLOG.md` lists what is still open and what was left out.
+These files describe one application in one project per environment. There
+is one VPC, not one per service. There is no external scanner instance, no
+CMEK programme, and no separate monitoring project. `docs/audit/BACKLOG.md`
+lists what is still open and what was left out on purpose.

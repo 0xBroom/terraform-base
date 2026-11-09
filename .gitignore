@@ -32,6 +32,9 @@ override.tf.json
 # Include tfplan files to ignore the plan output of command: terraform plan -out=tfplan
 # example: *tfplan*
 
+# Private leak denylist read by bin/audit-terraform.py. Each fork keeps its own.
+.audit-denylist
+
 *.swp
 *~
 __pycache__/

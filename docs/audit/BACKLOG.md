@@ -1,354 +1,363 @@
 # Audit backlog
 
-Compared on 2026-11-09 with a production YAML-driven GCP stack (its
-settings, locals, network, security, SQL, KMS and provider pins). This
-repository is that template: root files `gcp.*.tf`, vendored `tf_gcp_*`
-modules, one workspace file per environment.
+The list of work that takes this template to a public, production-grade
+release: dev and stg cheap, pro ready for a security, backup and
+data-retention audit. Each item has a check in `bin/audit-terraform.py`.
 
-Open: 0. Done: 21. Accepted, do not port: 19.
+Open: 29. Done: 22. Accepted, not a gap: 22.
 
-Regenerate this file with `python3 bin/audit-terraform.py --write` in the same
-pull request that closes an item. The status comes from the code, not from
-this prose. How a session picks the next item: `docs/audit/OPERATING.md`.
+Regenerate with `python3 bin/audit-terraform.py --write` in the pull request
+that closes an item. `--next` names the item to take. How a session works an
+item: `docs/audit/OPERATING.md`.
 
 
 ## Open
 
-None.
+### AUD-PUB-ELASTIC (p1) The Elastic Private Service Connect target is a literal project path
 
-## Done
+gcp.elastic.psc.tf hardcodes a provider-side service attachment. A different region or deployment cannot use it, and the template should not ship a third party's project id as a default.
 
-### AUD-NET (p0) The shared VPC is created even when the workspace has no network section
+Next change: Read the attachment, region and name from settings.elastic_psc. Create nothing when the key is absent. Document it in settings/example.yaml.
 
-gcp.network.tf reads local.settings.network.* with no guard, and the firewall, Cloud SQL private IP and Cloud Run VPC attachment all assume that module exists. A workspace that only needs Cloud Run behind a load balancer cannot plan. Tools Hub creates networks with for_each and skips a product that has none. This template needs the same switch, for one VPC, not one VPC per service.
+### AUD-SQL-PITR (p1) Point-in-time recovery in the YAML never reaches Cloud SQL
 
-Evidence: gcp.network.tf module.network has no count. gcp.firewall.tf always binds to it.
+settings/pro.yaml sets backup.point_in_time_recovery_enabled, but the vendored Cloud SQL module has no such argument, so pro restores only from the nightly backup. Any audit asks for an RPO measured in minutes.
 
-Next change: Create the VPC only when settings.network.services_cidr is set. Point every consumer at module.network[0] through that flag.
+Next change: Copy the module to a new version directory, add point_in_time_recovery_enabled and transaction_log_retention_days to backup_configuration, and point gcp.sql.tf at it.
 
-### AUD-VPC-DEFAULT (p0) Cloud Run and jobs attach to the VPC by default
+### AUD-SQL-HARDEN (p1) Pro PostgreSQL has no connection or statement audit trail
 
-gcp.cloudrun.tf defaults vpc_access_enabled to true, and gcp.jobs.tf defaults enable_vpc_access to true. With the VPC made optional, those defaults would still name a network that does not exist. Direct VPC egress is the right default only when this project actually has the shared VPC. Tools Hub does the same kind of gating with feature flags.
+Auditors ask who connected and what ran. Pro sets only max_connections, and generated passwords have no special characters.
 
-Evidence: gcp.cloudrun.tf vpc_access_enabled default true. gcp.jobs.tf enable_vpc_access default true.
+Next change: In settings/pro.yaml add log_connections, log_disconnections, log_min_duration_statement, cloudsql.enable_pgaudit and pgaudit.log flags, and special_password enabled. Keep dev and stg without them.
 
-Next change: Default both to local.network_enabled. A service can still opt in or out in YAML.
+After: AUD-SQL-PITR
 
-### AUD-FW-CIDR (p1) The internal firewall allows two CIDRs the VPC does not have
+### AUD-AUDIT-ARCHIVE (p1) Audit logs are not archived in a locked bucket
 
-allow_internal_vpc permits 10.10.1.0/24, 10.20.0.0/24 and 10.20.1.0/24. Only the first is the services subnet in settings/example.yaml. The other two match nothing this stack creates: Cloud SQL and Redis use Private Service Access, not those ranges. A project that picks a different services_cidr gets a firewall for the wrong subnet.
+Admin activity stays 400 days in _Required, but data access and policy-denied logs follow _Default, which a project owner can shorten or delete. Retention evidence needs a sink an admin cannot quietly purge.
 
-Evidence: gcp.firewall.tf source_ranges.
+Next change: Add logging.audit_archive (retention_days, locked) and a sink of cloudaudit.googleapis.com logs to a dedicated log bucket. Pro: 365 days, locked. Dev and stg: absent.
 
-Next change: Use settings.network.services_cidr plus an optional extra_internal_cidrs list.
+### AUD-GCS-RETENTION (p2) Buckets cannot set a retention policy or access logs, and pro keeps old versions forever
 
-### AUD-BUCKET (p0) A workspace with no bucket key cannot plan
+Versioning without a lifecycle keeps every deleted object, which breaks data minimisation. A regulated bucket also needs an optional retention policy and access logs.
 
-gcp.storage.tf iterates local.settings.bucket directly. Every other map in this repo uses try(..., {}). The README says a missing section creates nothing. Buckets are the exception, so the first plan of a new project fails before it creates anything.
+Next change: Copy the storage module to a new version with retention_policy and logging. In pro, delete noncurrent versions after a set number of days.
 
-Evidence: gcp.storage.tf for_each = local.settings.bucket.
+### AUD-REDIS (p2) Redis blocks destroy in every workspace and has no persistence option
 
-Next change: Guard the map with try(local.settings.bucket, {}).
+prevent_destroy = true is a literal, so dev cannot be torn down, while pro has no RDB snapshot.
 
-### AUD-AUDIT (p0) Admin-read audit logs are off
+Next change: Replace prevent_destroy with deletion_protection from the YAML (true in pro) and add persistence_config.
 
-gcp.security.tf sets admin_read, data_read and data_write to false. Tools Hub turns admin_read on and leaves data_read and data_write off, because data access logs are expensive and admin activity is the trail you need when someone changes IAM or firewalls. A production project without admin-read logs cannot answer who changed what.
+### AUD-MON-LOG-ALERTS (p1) No alert fires on IAM, firewall, service account key or audit config changes
 
-Evidence: gcp.security.tf audit_logging block, all three flags false.
+These are the controls an auditor samples first. The security module covers only part of them.
 
-Next change: Default admin_read to true. Allow settings.security.audit_logging to override each flag. Keep data_read and data_write off unless a workspace asks.
+Next change: Add gcp.monitoring.tf with log-based alert policies driven by monitoring.log_alerts. Enable them in pro.
 
-### AUD-DELETE (p0) Cloud Run services and jobs can be destroyed with deletion_protection left false
+### AUD-MON-LB (p2) Pro has no load balancer error alerts and no uptime check
 
-gcp.cloudrun.tf and gcp.jobs.tf hardcode deletion_protection = false. Cloud SQL already defaults it to true inside its module. A pro workspace should have to opt out of protecting the service and the job, the same way it has to opt out of protecting the database. Tools Hub still hardcodes false too; this template should not copy that.
+The LB monitoring module exists, but pro sets no monitoring.lb block, and nothing probes the public domain.
 
-Evidence: gcp.cloudrun.tf line deletion_protection = false. gcp.jobs.tf the same.
+Next change: Set monitoring.lb (5xx, latency, Cloud Armor 403) in pro and add google_monitoring_uptime_check_config driven by monitoring.uptime.
 
-Next change: Read the YAML key, and default it to true when terraform.workspace is pro.
+After: AUD-MON-LOG-ALERTS
 
-### AUD-INSIGHTS (p1) Cloud SQL Query Insights cannot be turned on
+### AUD-SECRET-ACCESS (p2) Nobody is alerted when a secret is read by an unexpected principal
 
-gcp.sql.tf hardcodes query_insights_enabled = false. Pre can live without it. Pro should be able to record slow queries without a module edit. The SQL module already accepts an insights_config object.
+Secret reads are invisible without data access logs for Secret Manager and an alert on them.
 
-Evidence: gcp.sql.tf insights_config block.
+Next change: Add monitoring.secret_access: data access audit logs on secretmanager.googleapis.com and a log alert excluding the expected service accounts. Enable it in pro.
 
-Next change: Map settings.database.<id>.sql.insights over that object. Default stays off.
+After: AUD-MON-LOG-ALERTS
 
-### AUD-PRE (p1) There is no pre workspace
+### AUD-WIF (p1) External CI can only authenticate with a service account key
 
-settings/ holds default.yaml and a commented example. Tools Hub keeps a real pre.yaml: smaller machines, zonal SQL, scale-to-zero, backups on, private IP, a budget. A new project needs that file so pre is a workspace someone can fill in, not a copy-paste from a 900 line example.
+Long-lived keys are the first finding in any cloud audit. Workload Identity Federation removes them.
 
-Evidence: settings/ has no pre.yaml.
+Next change: Add gcp.wif.tf driven by settings.wif (pool, providers for GitHub Actions or another OIDC issuer, attribute_condition, bound service account). Document it in settings/example.yaml.
 
-Next change: Add settings/pre.yaml with one service, one database, the shared VPC, the load balancer, the budget and placeholder project ids.
+### AUD-BINAUTH-PRO (p2) Pro turns Binary Authorization on but never blocks
 
-### AUD-PRO (p1) There is no pro workspace
+Dry-run records violations and deploys them anyway. Pro should enforce once the pipeline signs images.
 
-Pro is where deletion protection, regional SQL, a warm instance, longer backups, TLS to Redis and a higher budget stop being comments. Tools Hub has settings/pro.yaml for this. The file here should be complete and obviously full of placeholders, so applying it unchanged fails on purpose until the project ids are real.
+Next change: Sign images in the Cloud Build pipeline when binary_authorization.enabled, then set pro to ENFORCED_BLOCK_AND_AUDIT_LOG.
 
-Evidence: settings/ has no pro.yaml.
+### AUD-TLS (p2) The TLS profile is hardcoded
 
-Next change: Add settings/pro.yaml. Regional SQL, min_instances 1, deletion protection on, encrypted SQL, HA Redis with in-transit encryption.
+Pro should be able to require RESTRICTED without a code change.
 
-### AUD-LOCK (p1) The provider lock file is gitignored
+Next change: Read lb.ssl_policy.profile and min_tls_version, MODERN by default, RESTRICTED in pro.
 
-.gitignore lists *.lock.hcl. Two applies on different days can pick different provider builds inside the same pessimistic pin. Tools Hub commits the lock. A template that others clone should too.
+### AUD-TF-GUARDS (p1) A minimal workspace still fails on missing keys and wrong defaults
 
-Evidence: .gitignore contains *.lock.hcl. No .terraform.lock.hcl in the tree.
+security.alerts_email and active-apis are read without try(), SQL depends on module.network even when there is none, and Cloud Run ingress defaults to the load balancer when the workspace has no lb.
 
-Next change: Stop ignoring the lock file, generate it with terraform init -backend=false, and commit it.
+Next change: Guard both keys (a check block with a clear message is fine for the email), drop the unconditional depends_on, and default ingress from local.lb_enabled.
 
-### AUD-CI (p1) Nothing checks fmt or validate on a pull request
+### AUD-TF-ALWAYS-ON (p2) Some resources are created in every workspace whether used or not
 
-There is no .github/workflows. A bad merge reaches main and the next person finds it at plan time, against a real project. The check is init -backend=false and validate. It does not need a GCP login.
+The Cloud Build service account and artifacts bucket exist without triggers, and the IAP identity with a 60 second sleep exists without IAP rules. That costs plan time and clutters a small project.
 
-Evidence: No .github/workflows directory.
+Next change: Count each on the settings that need it.
 
-Next change: Add a workflow that runs fmt on the root files (not the vendored modules), init -backend=false, and validate.
+### AUD-TF-LABELS (p2) common_labels are not applied by the providers
 
-### AUD-SOPS (p1) Secret values have no sealed path into the plan
+Only some resources pass labels by hand.
 
-The template creates Secret Manager containers and a placeholder version, which is the right default, and then stops. Tools Hub also decrypts secrets/<workspace>/<service>.enc.yaml with SOPS and a Cloud KMS key at plan time, so a rotation is a commit instead of a console edit. This repo has no sops provider, no .sops.yaml and no secrets/ tree.
+Next change: Set default_labels = local.common_labels on google and google-beta.
 
-Evidence: versions.tf has no carlpett/sops provider.
+### AUD-TF-OUTPUTS (p2) The root module has no outputs
 
-Next change: Add an optional SOPS path: a KMS key the workspace opts into, .sops.yaml, and secret versions read from an encrypted file when it exists. Keep the placeholder when the file is absent. Do not copy the Tools Hub key ring.
+A user has to dig in state to find the LB IP, service URLs, SQL connection names or the registry.
 
-### AUD-PROVIDER (p2) The Google provider is pinned to 6.42 while Tools Hub is on 7.42
+Next change: Add outputs.tf with at least those four, nothing sensitive.
 
-versions.tf asks for hashicorp/google ~> 6.42.0 and Terraform >= 1.10. Tools Hub is on ~> 7.42 and Terraform >= 1.14. The vendored modules in this repo were written against the 6.x provider. A major bump is a review of those modules, not a one-line edit.
+### AUD-TF-BACKEND (p2) The state bucket is a literal in versions.tf
 
-Evidence: versions.tf required_providers.google version ~> 6.42.0.
+Every clone has to edit a tracked file, and a forgotten edit points at the wrong bucket.
 
-Next change: Open one PR that bumps Terraform and both Google providers, runs validate, and notes every module argument the new provider rejects.
+Next change: Use backend "gcs" {} with backend.hcl.example and terraform init -backend-config.
 
-### AUD-PAP (p2) Buckets cannot set public access prevention
+### AUD-TF-SCHEMA (p2) Nothing validates the settings files before a plan
 
-The storage module (v2.5, June 2024) exposes uniform_bucket_level_access and defaults it to true, which Tools Hub also does. It has no public_access_prevention argument. Uniform access stops ACLs. Public access prevention stops a later allUsers binding from making the bucket public. Both belong on a production bucket.
+A typo in a YAML key is silently ignored by try(). example.yaml can drift from the code.
 
-Evidence: modules/tf_gcp_storage_v2.6-202611091700/vars.tf defaults public_access_prevention to enforced.
+Next change: Add schemas/settings.schema.json and bin/validate-settings.py (stdlib or PyYAML), checking every settings/*.yaml including example.yaml, and run it in CI.
 
-Next change: Add the argument to the vendored module, default it to enforced, and thread a YAML override through gcp.storage.tf. Bump the directory version suffix so the edit is visible.
+### AUD-TF-TESTS (p3) There are no terraform tests
 
-### AUD-LABELS (p2) Resources do not share an environment label
+The settings merge and the feature toggles have no regression test.
 
-Redis sets workspace, client and managed_by. Most other resources set nothing. A bill filtered by environment, or an asset search for this stack, cannot see the VPC, the database or the service. Tools Hub labels are not a module-level scheme this repo should copy. One local map is enough.
+Next change: Add tests/*.tftest.hcl with mock_provider for the empty, dev and pro shapes, and run terraform test in CI.
 
-Evidence: locals.tf defines base_name and the registry host, and no common_labels.
+After: AUD-CI-MATRIX
 
-Next change: Add local.common_labels (workspace, client, managed_by, repo) and pass it to every resource that accepts labels.
+### AUD-CI-MATRIX (p1) CI validates only the default workspace
 
-### AUD-SQL-SCHEMA (p2) Every Cloud Run service gets a database on every SQL instance
+dev, stg and pro read different files. One of them can break while default stays green. The Cloud Build render test exists and does not run.
 
-gcp.sql.tf builds the database and user lists from keys(local.app_services) and passes that list to every instance. A second database, or a service that does not use SQL, still receives a database and a user. Tools Hub declares databases on the instance entry. This template should too.
+Next change: Validate a matrix of default, dev, stg and pro with TF_WORKSPACE and a local backend override, and run bin/cloudbuild-render-test.py.
 
-Evidence: gcp.sql.tf local.schema.databases is a for over service_names.
+### AUD-LINT (p3) No tflint or pre-commit configuration
 
-Next change: Read databases and users from the database YAML. Keep generating one database per service only as a default when the YAML omits the lists.
+Contributors get fmt and lint errors only after a push.
 
-### AUD-PUBSUB-AGENT (p3) The Pub/Sub service identity is created in every workspace
+Next change: Add .tflint.hcl with the google ruleset, .pre-commit-config.yaml (fmt, validate, tflint, the auditor) and a tflint step in CI.
 
-google_project_service_identity.pubsub_agent has no count. A project with no topics still needs the Pub/Sub API identity, and the API is in the default list. Low impact. It breaks the rule that a missing section creates nothing.
+After: AUD-CI-MATRIX
 
-Evidence: gcp.pubsub.tf resource google_project_service_identity.pubsub_agent.
+### AUD-COST-DEFAULTS (p1) Two code defaults cost money when a key is left out
 
-Next change: Give it a count tied to length(local.topic_config) > 0, and keep the topic resources depending on it.
+budget.enable_auto_stop defaults to true, which deploys a function that disables billing and takes the project down. cpu_idle defaults to false, so every non-pro service pays for CPU between requests.
 
-### AUD-BINAUTH (p2) Binary Authorization, when turned on, only dry-runs an allow-all rule
+Next change: Default enable_auto_stop to false and cpu_idle to true outside pro.
 
-gcp.binary_auth.tf sets evaluation_mode ALWAYS_ALLOW and enforcement_mode DRYRUN_AUDIT_LOG_ONLY. Switching binary_authorization.enabled to true does not reject an unsigned image. Tools Hub pairs Binary Authorization with a signer key and a real policy. A dry-run allow-all is a useful first step and a bad place to stop for pro.
+### AUD-COST-PROFILES (p1) dev is a copy of stg and stg a copy of pre
 
-Evidence: gcp.binary_auth.tf default_admission_rule.
+dev runs NAT, Redis and a custom SQL tier, so the cheapest workspace is not cheap. stg and pre are the same file. The header of dev.yaml still says pre.
 
-Next change: Let the YAML choose ALWAYS_ALLOW or REQUIRE_ATTESTATION, and default pro to dry-run only until an attestor exists. Do not pretend the current policy enforces anything.
+Next change: dev: shared-core SQL, no Redis, no NAT, at most 7 backups, scale to zero. stg: one step up. pro: HA. Fix the headers and the matrix in docs/ENVIRONMENTS.md.
 
-### AUD-LOGS (p3) Log buckets keep the Google default retention
+After: AUD-COST-DEFAULTS
 
-There is no google_logging_project_bucket_config. Admin activity is on once AUD-AUDIT lands, and then expires on Google's default. A production project usually wants _Default and _Required retention written down.
+### AUD-COST-APIS (p3) APIs for SQL, Redis, Firestore and other features are enabled when unused
 
-Evidence: No gcp.logging.tf. gcp.security.tf creates the notification channel and the security module only.
+default.yaml lists every API, so a Cloud Run only project enables the SQL Admin and Redis APIs.
 
-Next change: Add a small logging file driven by settings.logging.retention_days, with a sane default of 30 for pre and 90 for pro.
+Next change: Keep base APIs in default.yaml and add a feature_apis map in locals that turns on an API when its section exists.
 
-### AUD-CODEOWNERS (p3) No CODEOWNERS file
+### AUD-NAMES (p2) Module directories carry build timestamps and some root files break the naming pattern
 
-Anyone with write access can change a pro setting and a module in the same review with nobody named. A one-line CODEOWNERS is enough until the project has a team.
+modules/tf_gcp_x_v1.8-202405071510 reads like a build export, not a version. gcp.compute-nat.tf and gcp.repository.github-extra.tf mix hyphens into a dotted pattern.
 
-Evidence: No CODEOWNERS at the repo root or under .github/.
+Next change: Rename modules to modules/gcp_<name>_v<major.minor> and update every source. Rename the two root files with dots. Module addresses in state do not change.
 
-Next change: Add CODEOWNERS when the project has a GitHub team or user to name. Do not invent an owner.
+### AUD-LANG (p1) Docs and comments mix Spanish with English
 
-### AUD-AGENTS (p1) A session that opens this repo has no operating rules
+A public template has one language. docs/cloudrun-service-resources.md and several comments are Spanish.
 
-The README explains the YAML pattern. It does not tell an agent which gaps are real, which Tools Hub ideas to leave alone, or that each fix is its own pull request. Without that, the next session re-introduces a VPC per service or copies Shieldcode.
+Next change: Translate to English.
 
-Evidence: No AGENTS.md. No skill next to the audit.
+### AUD-DOC-OSS (p2) The repository has no contributor, security or change files
 
-Next change: Add AGENTS.md and docs/audit/OPERATING.md. Point both at this script.
+A public project needs to say how to contribute, how to report a vulnerability and what changed.
 
-## Accepted, do not port
+Next change: Add CONTRIBUTING.md, SECURITY.md, CHANGELOG.md, a pull request template and issue templates.
 
-### AUD-MOD-SEC (p2) The security baseline module is the May 2024 snapshot
+### AUD-DOC-COMPLIANCE (p1) Nothing maps the pro settings to audit controls
 
-modules/tf_gcp_basic_project_security_v1.8-202405071510 is what this repo vendors. A newer snapshot exists in a private registry. Copying that source into this public repository is not allowed. Upgrade when a republishable module exists. Until then this is a decision, not an open task.
+An auditor or a buyer asks which control covers backups, retention, logging, encryption and access.
 
-Evidence: gcp.security.tf source = ./modules/tf_gcp_basic_project_security_v1.8-202405071510.
+Next change: Add docs/COMPLIANCE.md mapping each pro setting to ISO 27001 Annex A, SOC 2 and GDPR article 32, with the gaps a user still owns, and link it from the README.
 
-Next change: Leave the vendored snapshot. Vendor a newer module only if it can be republished.
+After: AUD-SQL-HARDEN, AUD-AUDIT-ARCHIVE, AUD-MON-LOG-ALERTS, AUD-WIF
 
-### AUD-MOD-NET (p2) The networking module is the March 2025 snapshot
+### AUD-DOC-README (p1) The README does not explain the project at a glance
 
-modules/tf_gcp_networking_v3.5-202503101237. A newer snapshot exists in a private registry. Same rule as the security module: do not copy it into this public repository.
+A first-time visitor needs what it is, a diagram, a quick start, the environment and cost matrix, the security posture and where the docs are, in one screen.
 
-Evidence: gcp.network.tf source path contains tf_gcp_networking_v3.5.
+Next change: Rewrite README.md with badges, a mermaid diagram, quick start, an environment matrix for dev, stg and pro, cost and security sections, and a docs index in docs/README.md that lists every docs page.
 
-Next change: Leave the vendored snapshot. Vendor a newer module only if it can be republished.
+After: AUD-DOC-COMPLIANCE, AUD-COST-PROFILES, AUD-NAMES, AUD-LANG, AUD-DOC-OSS
 
-### AUD-MOD-RUN (p2) The Cloud Run module is the February 2025 snapshot
-
-modules/tf_gcp_cloudrun_v2_v6.5-202502191120. A newer snapshot exists in a private registry and cannot be copied here. Root files already pass command, args, probes and direct VPC egress, so the YAML is not missing those features.
-
-Evidence: gcp.cloudrun.tf source path contains tf_gcp_cloudrun_v2_v6.5.
-
-Next change: Leave the vendored snapshot. Upgrade when a republishable module is available. Do not fork the copy in place.
+## Accepted, not a gap
 
 ### OK-MODULE-VPC (p1) Do not create one VPC per service or per module
 
-Tools Hub does. network.tf there loops local.all_networks and gives every product a VPC whose CIDR is an md5 slice of 10.0.0.0/8, plus a NAT and Private Service Access range each. That isolates products that share one GCP project. This template is one project and one application. A second network adds peering and a second NAT for an isolation boundary the project does not have. One shared VPC, created only when the YAML asks for it, is the whole network model.
+One project, one application, one shared VPC created only when the YAML asks for it. A network per service adds peering and NAT for an isolation boundary this template does not have.
 
-Evidence: Tools Hub network.tf module.network for_each = local.all_networks. This repo has a single module.network.
-
-Next change: Leave it. If a later project truly needs a second network, add a map under settings.network and a for_each of one module, still not one network per Cloud Run service.
+Next change: Leave it.
 
 ### OK-APP-SHAPE (p1) Do not nest services under a module map
 
-Tools Hub uses module.<product>.service because one project hosts many products, and locals.tf flattens that into all_services. This repo uses app.service and app.job. The flat shape is what a single application wants. Introducing the module map would make every example and every IAM shorthand lie.
+app.service and app.job are the flat shape a single application wants.
 
-Evidence: locals in gcp.cloudrun.tf: app_services = try(local.settings.app.service, {}).
+Next change: Keep app.service.
 
-Next change: Keep app.service. Document the difference in AGENTS.md so nobody ports the hub's module key.
+### OK-SCANNER-INSTANCE (p2) Do not add a scanner that needs its own instance
 
-### OK-SHIELDCODE (p2) Do not port Shieldcode, Harbor or the Sonar quality gate
+Harbor or SonarQube need a server, robots and tokens. In-build scanners (gitleaks, semgrep, trivy fs) and Artifact Registry scanning are opt-in and need none.
 
-Harbor and SonarQube need a separate instance, with robots, tokens and a proxy repository. This template does not port them. Scans that run inside Cloud Build (gitleaks, semgrep, trivy fs) and Artifact Registry vulnerability scanning are opt-in and do not need that instance.
+Next change: Use cloudbuild.scan and security.artifact_scanning.
 
-Evidence: No harbor or sonar resources. cloudbuild.scan and security.artifact_scanning cover the in-build scanners.
+### OK-RETENTION-JOB (p3) Do not ship a row-deletion job
 
-Next change: Leave Harbor and Sonar out. Turn scanners on with cloudbuild.scan and security.artifact_scanning.
-
-### OK-RETENTION (p3) Do not port the data-retention sweeper
-
-Tools Hub injects a job and a scheduler into one chosen module to delete expired rows. That is an application job. When this project needs it, it is an app.job entry, not a hidden merge in locals.tf.
-
-Evidence: Tools Hub data_retention.tf and the merge into module_configs in locals.tf.
+Deleting expired rows is application logic. When a project needs it, it is an app.job entry.
 
 Next change: Leave it out.
 
-### OK-SQL-RESIZER (p3) Do not port the nightly Cloud SQL stop/start
+### OK-SQL-RESIZER (p3) Do not stop Cloud SQL at night
 
-Tools Hub scales SQL down at night in non-prod with two Cloud Functions. Pre and pro in this template are meant to stay up. A scale-to-zero database is a later cost decision, with its own ticket, not part of becoming production-ready.
-
-Evidence: Tools Hub sql.tf sql_resizer functions and schedulers.
+A night stop needs functions and schedulers. dev gets a shared-core tier instead.
 
 Next change: Leave it out.
 
-### OK-RENOVATE (p3) Do not port Renovate or the Docker Hub pull-through proxy
+### OK-RENOVATE (p3) Do not ship a dependency bot
 
-Both are Tools Hub CI hygiene for a fleet of repositories. Dependency updates for one application live in that application's repository.
-
-Evidence: Tools Hub renovate.tf.
+Dependency updates are the adopter's choice.
 
 Next change: Leave it out.
 
-### OK-VPCSC (p2) Do not add VPC Service Controls in this stack
+### OK-VPCSC (p2) Do not manage VPC Service Controls here
 
-A service perimeter is an organization policy. Tools Hub has vpc_sc.tf because the platform sits inside one. This template cannot own the perimeter. example.yaml already leaves access_policy commented, which is the right call.
+A perimeter is an organization policy a project stack cannot own.
 
-Evidence: settings/example.yaml access_policy block, commented. No vpc_sc.tf here.
-
-Next change: Leave it out. If the org later puts the project in a perimeter, document the perimeter id in the workspace file as a comment, do not manage it from here.
+Next change: Leave it out.
 
 ### OK-MODEL-ARMOR (p3) Do not enable Model Armor or DLP by default
 
-Tools Hub enables modelarmor.googleapis.com and dlp.googleapis.com because several products call them. Turning them on in every new project adds APIs nobody calls. Add the API in the workspace that needs it, and remember active-apis is replaced wholesale on a shallow merge.
-
-Evidence: settings/default.yaml has those APIs commented or absent. Tools Hub default.yaml lists both.
+Add the API where it is called.
 
 Next change: Leave them commented.
 
-### OK-PULUMI (p3) Do not add the Pulumi KMS key
-
-Tools Hub keeps a key ring some workloads still encrypt with Pulumi. This repository is Terraform. A KMS key for SOPS is AUD-SOPS. A key for Pulumi is not.
-
-Evidence: Tools Hub kms.pulumi.tf.
-
-Next change: Leave it out.
-
 ### OK-GROUPS (p3) Do not create Google groups from Terraform
 
-Tools Hub has cloud_identity.tf for platform groups. Group creation is an organization process, and the identity API is easy to get wrong from a project stack. Membership in this template is a list of members on project_access and iap.
-
-Evidence: No cloud_identity.tf in this repo.
+Group creation is an organization process. Membership is a list on project_access and iap.
 
 Next change: Leave it out.
 
-### OK-HUB-IAM (p2) Do not copy the Tools Hub viewer and admin role matrix
+### OK-IAM-MATRIX (p2) Keep the two access lists
 
-Tools Hub binds toolshub.viewer and toolshub.admin, plus a long custom role of datastore permissions and external_project_access into other projects. This template's project_access.viewers and operators lists match a single team. Operators currently also receive roles/cloudbuild.connectionAdmin and roles/iam.serviceAccountUser, which is broad, and tightening that is a separate small review. It is not a reason to import the hub matrix.
+viewers and operators fit one team. A large custom role matrix belongs to a platform.
 
-Evidence: gcp.iam.tf viewers and operators. Tools Hub settings/pro.yaml project_access groups.
+Next change: Put group emails in the workspace files.
 
-Next change: Keep the two lists. When the project has real groups, put the group emails in settings/pre.yaml and settings/pro.yaml.
+### OK-BUILD-CHAT (p3) Do not ship a build-failure chat notifier
 
-### OK-BUILD-CHAT (p3) Do not port the build-failure Chat notifier
-
-Tools Hub posts a card to a Google Chat space for every failed build. That needs a webhook secret and a space the project does not have yet. Add it when someone names the space.
-
-Evidence: Tools Hub cloudbuild.notifications.tf.
+It needs a webhook and a space the adopter may not have.
 
 Next change: Leave it out.
 
-### OK-SYS-PROJECT (p2) Do not require a separate system project
+### OK-SYS-PROJECT (p2) Do not require a separate monitoring project
 
-Tools Hub sends NAT and SQL monitoring at a shared ms-tool-sys project. A new stack can set project_sys to the same project as the workspace. Pre and pro should do that until a shared monitoring project exists.
+project_sys can be the workspace project until several apps share one.
 
-Evidence: settings/default.yaml project_sys is a placeholder. The network module wants the id for NAT alerts only.
-
-Next change: Set project_sys.id to the workspace project in pre and pro. Split it out later if several projects share one monitoring project.
+Next change: Leave it.
 
 ### OK-SHALLOW-MERGE (p1) Keep the shallow settings merge
 
-locals.tf uses merge(), so a map key in the workspace file replaces the whole map from default.yaml. Tools Hub has the same merge and the same rule: environment files are complete, and default.yaml holds scalars plus empty maps. A deep-merge provider would change every existing workspace in silence. The footgun to document is active-apis: do not set it in an environment file or you drop the default list.
+A deep merge would change every existing workspace in silence. Environment files are complete and do not set active-apis.
 
-Evidence: locals.tf settings = merge(yamldecode(defaults), yamldecode(workspace)).
+Next change: Document it.
 
-Next change: Document it in AGENTS.md. Edit default.yaml when every workspace needs one more API.
+### OK-CMEK (p2) Do not encrypt every resource with CMEK by default
 
-### OK-CMEK (p2) Do not encrypt every resource with CMEK yet
+Google-managed encryption is the starting point. CMEK follows the data classification, one resource family per change.
 
-Tools Hub has key rings for SQL, secrets, buckets, Pub/Sub, Artifact Registry, BigQuery and disks, behind a feature flag that is still off in pro. That programme is compliance work for a platform. A new project starts on Google-managed encryption. CMEK is the right follow-up when the data classification says so, and it should land as one resource family per PR, not as a copy of kms.tf.
-
-Evidence: Tools Hub kms.tf. This repo has no google_kms_key_ring.
-
-Next change: Leave it out until the project needs customer-managed keys. AUD-SOPS may add one key for secret files. That key does not have to wrap SQL.
+Next change: Leave it out. SOPS has its own key.
 
 ### OK-HELLO-IMAGE (p3) The first Cloud Run image stays the public hello image
 
-gcp.cloudrun.tf deploys us-docker.pkg.dev/cloudrun/container/hello and the job resource ignores later image changes. The first apply boots a placeholder. Cloud Build replaces the digest and Terraform leaves it alone. That is the same idea Tools Hub uses. Do not pin a project image in Terraform.
+The first apply boots a placeholder and Cloud Build replaces it. Terraform ignores later image changes.
 
-Evidence: gcp.cloudrun.tf image = hello. gcp.jobs.tf lifecycle.ignore_changes includes the container image.
+Next change: Leave it.
 
-Next change: Leave it. Document it next to the pre and pro services so nobody 'fixes' the hello image in YAML.
+### OK-MODULE-SNAPSHOTS (p2) Vendored modules stay snapshots
 
-## Already in place
+A module changes only through a new version directory. Newer private modules are not copied in.
 
-These match the Tools Hub pattern and are not gaps. Do not reopen them.
+Next change: Upgrade one module per change, with a new directory.
 
-- One settings YAML per workspace, loaded in locals.tf and merged over settings/default.yaml.
-- google and google-beta set user_project_override and billing_project, so API quota is billed to this project.
-- Secret Manager containers with a placeholder version and ignore_changes on the payload. Real values stay out of git.
-- A budget, with the billing-shutdown function only when the workspace asks for it.
-- One service account per Cloud Run service, ingress defaulting to the load balancer, and direct VPC egress when a VPC exists.
-- Private Cloud SQL as the example default, Cloud Armor on the load balancer, and IAP on the paths that opt in.
-- A GCS backend. Workspaces share the bucket and Terraform separates them by prefix.
-- Provider versions are pinned. The pin is old (see AUD-PROVIDER), but it is a pin.
+### OK-OCI (p3) The optional Oracle Cloud files stay
+
+oracle.*.tf create nothing without an oracle section. The provider is required at init only.
+
+Next change: Leave it. Document it as optional.
+
+### OK-OWNER (p3) CODEOWNERS and LICENSE name the repository owner
+
+That is the owner of this repository, not a leak. A fork replaces it.
+
+Next change: Leave it.
+
+### OK-ACTIVE-APIS-KEY (p3) Keep the active-apis key name
+
+Renaming it breaks every existing workspace for a style gain.
+
+Next change: Leave it.
+
+### OK-SOPS-OPTIONAL (p2) SOPS stays opt-in, also in pro
+
+It needs a KMS key and encrypted files the adopter creates. The placeholder path is safe by default.
+
+Next change: Document it in docs/SOPS.md.
+
+### OK-SQL-REPLICA (p3) No read replica by default in pro
+
+REGIONAL availability already gives a standby. A replica is a read scaling choice.
+
+Next change: Leave it.
+
+### OK-PRE-ALIAS (p3) settings/pre.yaml stays as the older name of stg
+
+Existing users have a pre workspace. New projects use stg.
+
+Next change: Keep it equal to stg.
+
+## Done
+
+- AUD-NET (p0) The shared VPC is created even when the workspace has no network section
+- AUD-VPC-DEFAULT (p0) Cloud Run and jobs attach to the VPC by default
+- AUD-FW-CIDR (p1) The internal firewall allows two CIDRs the VPC does not have
+- AUD-BUCKET (p0) A workspace with no bucket key cannot plan
+- AUD-AUDIT (p0) Admin-read audit logs are off
+- AUD-DELETE (p0) Cloud Run services and jobs can be destroyed with deletion_protection left false
+- AUD-INSIGHTS (p1) Cloud SQL Query Insights cannot be turned on
+- AUD-PRE (p1) There is no stg workspace
+- AUD-PRO (p1) There is no pro workspace
+- AUD-LOCK (p1) The provider lock file is gitignored
+- AUD-CI (p1) Nothing checks fmt or validate on a pull request
+- AUD-SOPS (p1) Secret values have no sealed path into the plan
+- AUD-PROVIDER (p2) The Google provider is pinned to 6.x
+- AUD-PAP (p2) Buckets cannot set public access prevention
+- AUD-LABELS (p2) Resources do not share an environment label
+- AUD-SQL-SCHEMA (p2) Every Cloud Run service gets a database on every SQL instance
+- AUD-PUBSUB-AGENT (p3) The Pub/Sub service identity is created in every workspace
+- AUD-BINAUTH (p2) Binary Authorization, when turned on, only dry-runs an allow-all rule
+- AUD-LOGS (p3) Log buckets keep the Google default retention
+- AUD-CODEOWNERS (p3) No CODEOWNERS file
+- AUD-AGENTS (p1) A session that opens this repo has no operating rules
+- AUD-PUB-LEAKS (p0) Tracked files name private companies, products, people or real addresses

@@ -1,15 +1,22 @@
 #!/usr/bin/env python3
-"""Audit this Terraform template against the Tools Hub production pattern.
+"""Audit this Terraform template for a public, production-grade release.
 
-The baseline is the YAML-driven stack in ms_tool_hub_iac (one settings file per
-workspace, generic resources, private data stores, a security baseline). This
-template was cut from an older copy of that pattern. The audit lists what is
-still missing for a project that has to run in pre and pro, and what must stay
-out because it only exists to host many products in one platform project.
+Every backlog item has a mechanical check that reads the repository. The
+status in docs/audit/BACKLOG.md comes from those checks, never from a tick by
+hand. Two goals drive the list:
 
-    python3 bin/audit-terraform.py            # print the backlog
-    python3 bin/audit-terraform.py --write    # refresh docs/audit/BACKLOG.md
+- dev and stg stay cheap: zonal, small, scale to zero, short retention;
+- pro passes a security, backup and data-retention audit.
+
+    python3 bin/audit-terraform.py              # print the backlog
+    python3 bin/audit-terraform.py --next       # the next item to work on
+    python3 bin/audit-terraform.py --id AUD-X   # one item, exit 1 while open
+    python3 bin/audit-terraform.py --write      # refresh docs/audit/BACKLOG.md
     python3 bin/audit-terraform.py --fail-on p0
+
+The leak scan reads extra forbidden terms, one regular expression per line,
+from the file named by AUDIT_DENYLIST or from .audit-denylist at the repo
+root. That file is gitignored: a fork keeps its own private names in it.
 
 Exit 0 unless --fail-on is set and an open item is at that severity or above.
 """
@@ -17,23 +24,142 @@ Exit 0 unless --fail-on is set and an open item is at that severity or above.
 from __future__ import annotations
 
 import argparse
+import os
+import re
+import subprocess
 import sys
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Callable
 
 ROOT = Path(__file__).resolve().parents[1]
 
 SEVERITY_RANK = {"p0": 0, "p1": 1, "p2": 2, "p3": 3}
+
+TEXT_SUFFIXES = {".tf", ".hcl", ".md", ".yaml", ".yml", ".py", ".json", ".svg", ".sh", ".txt", ""}
+
+
+# ---------------------------------------------------------------- helpers
 
 
 def read(rel: str) -> str:
     path = ROOT / rel
     if not path.is_file():
         return ""
-    return path.read_text(encoding="utf-8")
+    return path.read_text(encoding="utf-8", errors="replace")
 
 
 def exists(rel: str) -> bool:
-    return (ROOT / rel).is_file()
+    return (ROOT / rel).exists()
+
+
+def globbed(pattern: str) -> list[Path]:
+    return sorted(ROOT.glob(pattern))
+
+
+def read_any(pattern: str) -> str:
+    return "\n".join(p.read_text(encoding="utf-8", errors="replace") for p in globbed(pattern) if p.is_file())
+
+
+def root_tf() -> str:
+    return read_any("*.tf")
+
+
+def workflows() -> str:
+    return read_any(".github/workflows/*.yml") + read_any(".github/workflows/*.yaml")
+
+
+def tracked_files() -> list[str]:
+    try:
+        out = subprocess.run(
+            ["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=True
+        ).stdout
+        return [line for line in out.splitlines() if line]
+    except (OSError, subprocess.CalledProcessError):
+        return [str(p.relative_to(ROOT)) for p in ROOT.rglob("*") if p.is_file() and ".git" not in p.parts]
+
+
+def tracked_text() -> list[tuple[str, str]]:
+    files = []
+    for rel in tracked_files():
+        path = ROOT / rel
+        if path.suffix not in TEXT_SUFFIXES or not path.is_file():
+            continue
+        files.append((rel, path.read_text(encoding="utf-8", errors="replace")))
+    return files
+
+
+def denylist() -> list[re.Pattern]:
+    source = os.environ.get("AUDIT_DENYLIST") or str(ROOT / ".audit-denylist")
+    path = Path(source)
+    if not path.is_file():
+        return []
+    patterns = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line and not line.startswith("#"):
+            patterns.append(re.compile(line, re.IGNORECASE))
+    return patterns
+
+
+REAL_EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Za-z.]{2,}")
+EMAIL_ALLOWED = re.compile(
+    r"@((my|your-?)?(example|domain|company|org)\.(com|org|net)"
+    r"|users\.noreply\.github\.com|project\.iam|.*\.gserviceaccount\.com)$",
+    re.IGNORECASE,
+)
+
+
+def leak_hits() -> list[str]:
+    patterns = denylist()
+    hits = []
+    for rel, text in tracked_text():
+        if rel == ".terraform.lock.hcl":
+            continue
+        for number, line in enumerate(text.splitlines(), 1):
+            for pattern in patterns:
+                if pattern.search(line):
+                    hits.append(f"{rel}:{number}")
+            for match in REAL_EMAIL.finditer(line):
+                address = match.group(0)
+                if "${" in line or EMAIL_ALLOWED.search(address) or address.startswith("git@"):
+                    continue
+                hits.append(f"{rel}:{number}: {address}")
+    return hits
+
+
+SPANISH = re.compile(r"[áéíóúñ¿¡]|\b(para|los|las|una|esta|este|desde|cuando|también)\b", re.IGNORECASE)
+
+
+def spanish_hits() -> list[str]:
+    hits = []
+    for rel, text in tracked_text():
+        if rel.startswith("docs/audit/") or rel == "bin/audit-terraform.py":
+            continue
+        for number, line in enumerate(text.splitlines(), 1):
+            if SPANISH.search(line):
+                hits.append(f"{rel}:{number}")
+    return hits
+
+
+def yaml_has(name: str, *pieces: str) -> bool:
+    text = read(f"settings/{name}.yaml")
+    return bool(text) and all(piece in text for piece in pieces)
+
+
+def block(text: str, start: str, size: int = 600) -> str:
+    index = text.find(start)
+    return text[index : index + size] if index >= 0 else ""
+
+
+def runs_ok(*cmd: str) -> bool:
+    try:
+        return subprocess.run(list(cmd), cwd=ROOT, capture_output=True, timeout=120).returncode == 0
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+
+
+# ------------------------------------------------------- phase 1 checks
 
 
 def network_is_optional() -> bool:
@@ -51,62 +177,39 @@ def firewall_uses_settings_cidr() -> bool:
 
 
 def vpc_follows_network() -> bool:
-    run = read("gcp.cloudrun.tf")
-    jobs = read("gcp.jobs.tf")
-    return "local.network_enabled" in run and "local.network_enabled" in jobs
+    return "local.network_enabled" in read("gcp.cloudrun.tf") and "local.network_enabled" in read("gcp.jobs.tf")
 
 
 def audit_admin_read_on() -> bool:
-    text = read("gcp.security.tf")
-    return "security.audit_logging.admin_read" in text
+    return "security.audit_logging.admin_read" in read("gcp.security.tf")
 
 
 def deletion_protection_from_settings() -> bool:
-    return (
-        "cloudrun.deletion_protection" in read("gcp.cloudrun.tf")
-        and "job-config.deletion_protection" in read("gcp.jobs.tf")
-    )
+    return "cloudrun.deletion_protection" in read("gcp.cloudrun.tf") and "job-config.deletion_protection" in read("gcp.jobs.tf")
 
 
 def insights_from_settings() -> bool:
     return "sql.insights" in read("gcp.sql.tf")
 
 
-def settings_env(name: str, required: tuple[str, ...]) -> bool:
-    text = read(f"settings/{name}.yaml")
-    return bool(text) and all(piece in text for piece in required)
+ENV_KEYS = ("project:", "security:", "network:", "database:", "app:", "budget:", "lb:")
 
 
-def pre_settings() -> bool:
-    return settings_env(
-        "pre",
-        ("project:", "security:", "network:", "database:", "app:", "budget:", "lb:"),
-    )
+def stg_settings() -> bool:
+    return yaml_has("stg", *ENV_KEYS) or yaml_has("pre", *ENV_KEYS)
 
 
 def pro_settings() -> bool:
-    text = read("settings/pro.yaml")
-    return settings_env(
-        "pro",
-        ("project:", "security:", "network:", "database:", "app:", "budget:", "lb:"),
-    ) and 'availability: "REGIONAL"' in text and "min_instances: 1" in text
+    return yaml_has("pro", *ENV_KEYS) and yaml_has("pro", 'availability: "REGIONAL"', "min_instances: 1")
 
 
 def lockfile_committed() -> bool:
-    ignored = any(
-        line.strip() == "*.lock.hcl" for line in read(".gitignore").splitlines()
-    )
+    ignored = any(line.strip() == "*.lock.hcl" for line in read(".gitignore").splitlines())
     return (not ignored) and exists(".terraform.lock.hcl")
 
 
 def ci_validates() -> bool:
-    workflows = ROOT / ".github" / "workflows"
-    if not workflows.is_dir():
-        return False
-    return any(
-        "terraform validate" in path.read_text(encoding="utf-8")
-        for path in workflows.glob("*.yml")
-    )
+    return "terraform validate" in workflows()
 
 
 def sops_provider() -> bool:
@@ -118,23 +221,8 @@ def provider_major_7() -> bool:
     return 'source  = "hashicorp/google"' in versions and "~> 7." in versions
 
 
-def security_module_current() -> bool:
-    text = read("gcp.security.tf")
-    return "tf_gcp_basic_project_security_v1.8" not in text
-
-
-def networking_module_current() -> bool:
-    text = read("gcp.network.tf")
-    return "tf_gcp_networking_v3.5" not in text
-
-
 def storage_module_has_pap() -> bool:
-    paths = sorted((ROOT / "modules").glob("tf_gcp_storage_*/vars.tf"))
-    return any("public_access_prevention" in path.read_text(encoding="utf-8") for path in paths)
-
-
-def cloudrun_module_current() -> bool:
-    return "tf_gcp_cloudrun_v2_v6.5" not in read("gcp.cloudrun.tf")
+    return "public_access_prevention" in read_any("modules/*storage*/vars.tf")
 
 
 def common_labels() -> bool:
@@ -142,25 +230,19 @@ def common_labels() -> bool:
 
 
 def sql_databases_from_yaml() -> bool:
-    text = read("gcp.sql.tf")
-    # Today every Cloud Run service name becomes a database on every instance.
-    return "for service in local.service_names" not in text
+    return "for service in local.service_names" not in read("gcp.sql.tf")
 
 
 def pubsub_agent_optional() -> bool:
-    text = read("gcp.pubsub.tf")
-    return "count " in text.split("google_project_service_identity", 1)[-1][:400]
+    return "count " in read("gcp.pubsub.tf").split("google_project_service_identity", 1)[-1][:400]
 
 
 def binary_auth_can_enforce() -> bool:
-    text = read("gcp.binary_auth.tf")
-    return "ALWAYS_ALLOW" not in text
+    return "ALWAYS_ALLOW" not in read("gcp.binary_auth.tf")
 
 
 def log_retention() -> bool:
-    return "google_logging_project_bucket_config" in read("gcp.security.tf") or exists(
-        "gcp.logging.tf"
-    )
+    return "google_logging_project_bucket_config" in root_tf()
 
 
 def codeowners() -> bool:
@@ -172,745 +254,609 @@ def agents_guide() -> bool:
     return "bin/audit-terraform.py" in text and "BACKLOG.md" in text
 
 
-# Each item: id, severity, title, why, evidence, change, ok, disposition.
-# disposition "fix" flips to done when ok() is true.
-# disposition "accepted" is a decision, not a gap. ok is ignored.
+# ------------------------------------------------------- phase 2 checks
 
-ITEMS: list[dict] = [
-    {
-        "id": "AUD-NET",
-        "severity": "p0",
-        "title": "The shared VPC is created even when the workspace has no network section",
-        "why": (
-            "gcp.network.tf reads local.settings.network.* with no guard, and the "
-            "firewall, Cloud SQL private IP and Cloud Run VPC attachment all assume "
-            "that module exists. A workspace that only needs Cloud Run behind a load "
-            "balancer cannot plan. Tools Hub creates networks with for_each and skips "
-            "a product that has none. This template needs the same switch, for one VPC, "
-            "not one VPC per service."
-        ),
-        "evidence": "gcp.network.tf module.network has no count. gcp.firewall.tf always binds to it.",
-        "change": "Create the VPC only when settings.network.services_cidr is set. Point every consumer at module.network[0] through that flag.",
-        "ok": network_is_optional,
-        "disposition": "fix",
-    },
-    {
-        "id": "AUD-VPC-DEFAULT",
-        "severity": "p0",
-        "title": "Cloud Run and jobs attach to the VPC by default",
-        "why": (
-            "gcp.cloudrun.tf defaults vpc_access_enabled to true, and gcp.jobs.tf "
-            "defaults enable_vpc_access to true. With the VPC made optional, those "
-            "defaults would still name a network that does not exist. Direct VPC "
-            "egress is the right default only when this project actually has the "
-            "shared VPC. Tools Hub does the same kind of gating with feature flags."
-        ),
-        "evidence": "gcp.cloudrun.tf vpc_access_enabled default true. gcp.jobs.tf enable_vpc_access default true.",
-        "change": "Default both to local.network_enabled. A service can still opt in or out in YAML.",
-        "ok": vpc_follows_network,
-        "disposition": "fix",
-    },
-    {
-        "id": "AUD-FW-CIDR",
-        "severity": "p1",
-        "title": "The internal firewall allows two CIDRs the VPC does not have",
-        "why": (
-            "allow_internal_vpc permits 10.10.1.0/24, 10.20.0.0/24 and 10.20.1.0/24. "
-            "Only the first is the services subnet in settings/example.yaml. The other "
-            "two match nothing this stack creates: Cloud SQL and Redis use Private "
-            "Service Access, not those ranges. A project that picks a different "
-            "services_cidr gets a firewall for the wrong subnet."
-        ),
-        "evidence": "gcp.firewall.tf source_ranges.",
-        "change": "Use settings.network.services_cidr plus an optional extra_internal_cidrs list.",
-        "ok": firewall_uses_settings_cidr,
-        "disposition": "fix",
-    },
-    {
-        "id": "AUD-BUCKET",
-        "severity": "p0",
-        "title": "A workspace with no bucket key cannot plan",
-        "why": (
-            "gcp.storage.tf iterates local.settings.bucket directly. Every other map "
-            "in this repo uses try(..., {}). The README says a missing section creates "
-            "nothing. Buckets are the exception, so the first plan of a new project fails "
-            "before it creates anything."
-        ),
-        "evidence": "gcp.storage.tf for_each = local.settings.bucket.",
-        "change": "Guard the map with try(local.settings.bucket, {}).",
-        "ok": bucket_is_guarded,
-        "disposition": "fix",
-    },
-    {
-        "id": "AUD-AUDIT",
-        "severity": "p0",
-        "title": "Admin-read audit logs are off",
-        "why": (
-            "gcp.security.tf sets admin_read, data_read and data_write to false. "
-            "Tools Hub turns admin_read on and leaves data_read and data_write off, "
-            "because data access logs are expensive and admin activity is the trail "
-            "you need when someone changes IAM or firewalls. A production project "
-            "without admin-read logs cannot answer who changed what."
-        ),
-        "evidence": "gcp.security.tf audit_logging block, all three flags false.",
-        "change": "Default admin_read to true. Allow settings.security.audit_logging to override each flag. Keep data_read and data_write off unless a workspace asks.",
-        "ok": audit_admin_read_on,
-        "disposition": "fix",
-    },
-    {
-        "id": "AUD-DELETE",
-        "severity": "p0",
-        "title": "Cloud Run services and jobs can be destroyed with deletion_protection left false",
-        "why": (
-            "gcp.cloudrun.tf and gcp.jobs.tf hardcode deletion_protection = false. "
-            "Cloud SQL already defaults it to true inside its module. A pro workspace "
-            "should have to opt out of protecting the service and the job, the same "
-            "way it has to opt out of protecting the database. Tools Hub still hardcodes "
-            "false too; this template should not copy that."
-        ),
-        "evidence": "gcp.cloudrun.tf line deletion_protection = false. gcp.jobs.tf the same.",
-        "change": "Read the YAML key, and default it to true when terraform.workspace is pro.",
-        "ok": deletion_protection_from_settings,
-        "disposition": "fix",
-    },
-    {
-        "id": "AUD-INSIGHTS",
-        "severity": "p1",
-        "title": "Cloud SQL Query Insights cannot be turned on",
-        "why": (
-            "gcp.sql.tf hardcodes query_insights_enabled = false. Pre can live without "
-            "it. Pro should be able to record slow queries without a module edit. The "
-            "SQL module already accepts an insights_config object."
-        ),
-        "evidence": "gcp.sql.tf insights_config block.",
-        "change": "Map settings.database.<id>.sql.insights over that object. Default stays off.",
-        "ok": insights_from_settings,
-        "disposition": "fix",
-    },
-    {
-        "id": "AUD-PRE",
-        "severity": "p1",
-        "title": "There is no pre workspace",
-        "why": (
-            "settings/ holds default.yaml and a commented example. Tools Hub keeps a "
-            "real pre.yaml: smaller machines, zonal SQL, scale-to-zero, backups on, "
-            "private IP, a budget. A new project needs that file so pre is a workspace "
-            "someone can fill in, not a copy-paste from a 900 line example."
-        ),
-        "evidence": "settings/ has no pre.yaml.",
-        "change": "Add settings/pre.yaml with one service, one database, the shared VPC, the load balancer, the budget and placeholder project ids.",
-        "ok": pre_settings,
-        "disposition": "fix",
-    },
-    {
-        "id": "AUD-PRO",
-        "severity": "p1",
-        "title": "There is no pro workspace",
-        "why": (
-            "Pro is where deletion protection, regional SQL, a warm instance, longer "
-            "backups, TLS to Redis and a higher budget stop being comments. Tools Hub "
-            "has settings/pro.yaml for this. The file here should be complete and "
-            "obviously full of placeholders, so applying it unchanged fails on purpose "
-            "until the project ids are real."
-        ),
-        "evidence": "settings/ has no pro.yaml.",
-        "change": "Add settings/pro.yaml. Regional SQL, min_instances 1, deletion protection on, encrypted SQL, HA Redis with in-transit encryption.",
-        "ok": pro_settings,
-        "disposition": "fix",
-    },
-    {
-        "id": "AUD-LOCK",
-        "severity": "p1",
-        "title": "The provider lock file is gitignored",
-        "why": (
-            ".gitignore lists *.lock.hcl. Two applies on different days can pick "
-            "different provider builds inside the same pessimistic pin. Tools Hub "
-            "commits the lock. A template that others clone should too."
-        ),
-        "evidence": ".gitignore contains *.lock.hcl. No .terraform.lock.hcl in the tree.",
-        "change": "Stop ignoring the lock file, generate it with terraform init -backend=false, and commit it.",
-        "ok": lockfile_committed,
-        "disposition": "fix",
-    },
-    {
-        "id": "AUD-CI",
-        "severity": "p1",
-        "title": "Nothing checks fmt or validate on a pull request",
-        "why": (
-            "There is no .github/workflows. A bad merge reaches main and the next "
-            "person finds it at plan time, against a real project. The check is "
-            "init -backend=false and validate. It does not need a GCP login."
-        ),
-        "evidence": "No .github/workflows directory.",
-        "change": "Add a workflow that runs fmt on the root files (not the vendored modules), init -backend=false, and validate.",
-        "ok": ci_validates,
-        "disposition": "fix",
-    },
-    {
-        "id": "AUD-SOPS",
-        "severity": "p1",
-        "title": "Secret values have no sealed path into the plan",
-        "why": (
-            "The template creates Secret Manager containers and a placeholder version, "
-            "which is the right default, and then stops. Tools Hub also decrypts "
-            "secrets/<workspace>/<service>.enc.yaml with SOPS and a Cloud KMS key at "
-            "plan time, so a rotation is a commit instead of a console edit. This "
-            "repo has no sops provider, no .sops.yaml and no secrets/ tree."
-        ),
-        "evidence": "versions.tf has no carlpett/sops provider.",
-        "change": "Add an optional SOPS path: a KMS key the workspace opts into, .sops.yaml, and secret versions read from an encrypted file when it exists. Keep the placeholder when the file is absent. Do not copy the Tools Hub key ring.",
-        "ok": sops_provider,
-        "disposition": "fix",
-    },
-    {
-        "id": "AUD-PROVIDER",
-        "severity": "p2",
-        "title": "The Google provider is pinned to 6.42 while Tools Hub is on 7.42",
-        "why": (
-            "versions.tf asks for hashicorp/google ~> 6.42.0 and Terraform >= 1.10. "
-            "Tools Hub is on ~> 7.42 and Terraform >= 1.14. The vendored modules in "
-            "this repo were written against the 6.x provider. A major bump is a "
-            "review of those modules, not a one-line edit."
-        ),
-        "evidence": "versions.tf required_providers.google version ~> 6.42.0.",
-        "change": "Open one PR that bumps Terraform and both Google providers, runs validate, and notes every module argument the new provider rejects.",
-        "ok": provider_major_7,
-        "disposition": "fix",
-    },
-    {
-        "id": "AUD-MOD-SEC",
-        "severity": "p2",
-        "title": "The security baseline module is the May 2024 snapshot",
-        "why": (
-            "modules/tf_gcp_basic_project_security_v1.8-202405071510 is what this "
-            "repo vendors. A newer snapshot exists in a private registry. Copying "
-            "that source into this public repository is not allowed. Upgrade when "
-            "a republishable module exists. Until then this is a decision, not an "
-            "open task."
-        ),
-        "evidence": "gcp.security.tf source = ./modules/tf_gcp_basic_project_security_v1.8-202405071510.",
-        "change": "Leave the vendored snapshot. Vendor a newer module only if it can be republished.",
-        "ok": security_module_current,
-        "disposition": "accepted",
-    },
-    {
-        "id": "AUD-MOD-NET",
-        "severity": "p2",
-        "title": "The networking module is the March 2025 snapshot",
-        "why": (
-            "modules/tf_gcp_networking_v3.5-202503101237. A newer snapshot exists "
-            "in a private registry. Same rule as the security module: do not copy "
-            "it into this public repository."
-        ),
-        "evidence": "gcp.network.tf source path contains tf_gcp_networking_v3.5.",
-        "change": "Leave the vendored snapshot. Vendor a newer module only if it can be republished.",
-        "ok": networking_module_current,
-        "disposition": "accepted",
-    },
-    {
-        "id": "AUD-MOD-RUN",
-        "severity": "p2",
-        "title": "The Cloud Run module is the February 2025 snapshot",
-        "why": (
-            "modules/tf_gcp_cloudrun_v2_v6.5-202502191120. A newer snapshot exists "
-            "in a private registry and cannot be copied here. Root files already "
-            "pass command, args, probes and direct VPC egress, so the YAML is not "
-            "missing those features."
-        ),
-        "evidence": "gcp.cloudrun.tf source path contains tf_gcp_cloudrun_v2_v6.5.",
-        "change": "Leave the vendored snapshot. Upgrade when a republishable module is available. Do not fork the copy in place.",
-        "ok": cloudrun_module_current,
-        "disposition": "accepted",
-    },
-    {
-        "id": "AUD-PAP",
-        "severity": "p2",
-        "title": "Buckets cannot set public access prevention",
-        "why": (
-            "The storage module (v2.5, June 2024) exposes uniform_bucket_level_access "
-            "and defaults it to true, which Tools Hub also does. It has no "
-            "public_access_prevention argument. Uniform access stops ACLs. Public "
-            "access prevention stops a later allUsers binding from making the bucket "
-            "public. Both belong on a production bucket."
-        ),
-        "evidence": "modules/tf_gcp_storage_v2.6-202611091700/vars.tf defaults public_access_prevention to enforced.",
-        "change": "Add the argument to the vendored module, default it to enforced, and thread a YAML override through gcp.storage.tf. Bump the directory version suffix so the edit is visible.",
-        "ok": storage_module_has_pap,
-        "disposition": "fix",
-    },
-    {
-        "id": "AUD-LABELS",
-        "severity": "p2",
-        "title": "Resources do not share an environment label",
-        "why": (
-            "Redis sets workspace, client and managed_by. Most other resources set "
-            "nothing. A bill filtered by environment, or an asset search for this "
-            "stack, cannot see the VPC, the database or the service. Tools Hub labels "
-            "are not a module-level scheme this repo should copy. One local map is enough."
-        ),
-        "evidence": "locals.tf defines base_name and the registry host, and no common_labels.",
-        "change": "Add local.common_labels (workspace, client, managed_by, repo) and pass it to every resource that accepts labels.",
-        "ok": common_labels,
-        "disposition": "fix",
-    },
-    {
-        "id": "AUD-SQL-SCHEMA",
-        "severity": "p2",
-        "title": "Every Cloud Run service gets a database on every SQL instance",
-        "why": (
-            "gcp.sql.tf builds the database and user lists from keys(local.app_services) "
-            "and passes that list to every instance. A second database, or a service "
-            "that does not use SQL, still receives a database and a user. Tools Hub "
-            "declares databases on the instance entry. This template should too."
-        ),
-        "evidence": "gcp.sql.tf local.schema.databases is a for over service_names.",
-        "change": "Read databases and users from the database YAML. Keep generating one database per service only as a default when the YAML omits the lists.",
-        "ok": sql_databases_from_yaml,
-        "disposition": "fix",
-    },
-    {
-        "id": "AUD-PUBSUB-AGENT",
-        "severity": "p3",
-        "title": "The Pub/Sub service identity is created in every workspace",
-        "why": (
-            "google_project_service_identity.pubsub_agent has no count. A project "
-            "with no topics still needs the Pub/Sub API identity, and the API is in "
-            "the default list. Low impact. It breaks the rule that a missing section "
-            "creates nothing."
-        ),
-        "evidence": "gcp.pubsub.tf resource google_project_service_identity.pubsub_agent.",
-        "change": "Give it a count tied to length(local.topic_config) > 0, and keep the topic resources depending on it.",
-        "ok": pubsub_agent_optional,
-        "disposition": "fix",
-    },
-    {
-        "id": "AUD-BINAUTH",
-        "severity": "p2",
-        "title": "Binary Authorization, when turned on, only dry-runs an allow-all rule",
-        "why": (
-            "gcp.binary_auth.tf sets evaluation_mode ALWAYS_ALLOW and enforcement_mode "
-            "DRYRUN_AUDIT_LOG_ONLY. Switching binary_authorization.enabled to true does "
-            "not reject an unsigned image. Tools Hub pairs Binary Authorization with "
-            "a signer key and a real policy. A dry-run allow-all is a useful first "
-            "step and a bad place to stop for pro."
-        ),
-        "evidence": "gcp.binary_auth.tf default_admission_rule.",
-        "change": "Let the YAML choose ALWAYS_ALLOW or REQUIRE_ATTESTATION, and default pro to dry-run only until an attestor exists. Do not pretend the current policy enforces anything.",
-        "ok": binary_auth_can_enforce,
-        "disposition": "fix",
-    },
-    {
-        "id": "AUD-LOGS",
-        "severity": "p3",
-        "title": "Log buckets keep the Google default retention",
-        "why": (
-            "There is no google_logging_project_bucket_config. Admin activity is on "
-            "once AUD-AUDIT lands, and then expires on Google's default. A production "
-            "project usually wants _Default and _Required retention written down."
-        ),
-        "evidence": "No gcp.logging.tf. gcp.security.tf creates the notification channel and the security module only.",
-        "change": "Add a small logging file driven by settings.logging.retention_days, with a sane default of 30 for pre and 90 for pro.",
-        "ok": log_retention,
-        "disposition": "fix",
-    },
-    {
-        "id": "AUD-CODEOWNERS",
-        "severity": "p3",
-        "title": "No CODEOWNERS file",
-        "why": (
-            "Anyone with write access can change a pro setting and a module in the "
-            "same review with nobody named. A one-line CODEOWNERS is enough until "
-            "the project has a team."
-        ),
-        "evidence": "No CODEOWNERS at the repo root or under .github/.",
-        "change": "Add CODEOWNERS when the project has a GitHub team or user to name. Do not invent an owner.",
-        "ok": codeowners,
-        "disposition": "fix",
-    },
-    {
-        "id": "AUD-AGENTS",
-        "severity": "p1",
-        "title": "A session that opens this repo has no operating rules",
-        "why": (
-            "The README explains the YAML pattern. It does not tell an agent which "
-            "gaps are real, which Tools Hub ideas to leave alone, or that each fix "
-            "is its own pull request. Without that, the next session re-introduces "
-            "a VPC per service or copies Shieldcode."
-        ),
-        "evidence": "No AGENTS.md. No skill next to the audit.",
-        "change": "Add AGENTS.md and docs/audit/OPERATING.md. Point both at this script.",
-        "ok": agents_guide,
-        "disposition": "fix",
-    },
-    {
-        "id": "OK-MODULE-VPC",
-        "severity": "p1",
-        "title": "Do not create one VPC per service or per module",
-        "why": (
-            "Tools Hub does. network.tf there loops local.all_networks and gives "
-            "every product a VPC whose CIDR is an md5 slice of 10.0.0.0/8, plus a "
-            "NAT and Private Service Access range each. That isolates products that "
-            "share one GCP project. This template is one project and one application. "
-            "A second network adds peering and a second NAT for an isolation boundary "
-            "the project does not have. One shared VPC, created only when the YAML "
-            "asks for it, is the whole network model."
-        ),
-        "evidence": "Tools Hub network.tf module.network for_each = local.all_networks. This repo has a single module.network.",
-        "change": "Leave it. If a later project truly needs a second network, add a map under settings.network and a for_each of one module, still not one network per Cloud Run service.",
-        "ok": lambda: True,
-        "disposition": "accepted",
-    },
-    {
-        "id": "OK-APP-SHAPE",
-        "severity": "p1",
-        "title": "Do not nest services under a module map",
-        "why": (
-            "Tools Hub uses module.<product>.service because one project hosts many "
-            "products, and locals.tf flattens that into all_services. This repo uses "
-            "app.service and app.job. The flat shape is what a single application "
-            "wants. Introducing the module map would make every example and every "
-            "IAM shorthand lie."
-        ),
-        "evidence": "locals in gcp.cloudrun.tf: app_services = try(local.settings.app.service, {}).",
-        "change": "Keep app.service. Document the difference in AGENTS.md so nobody ports the hub's module key.",
-        "ok": lambda: True,
-        "disposition": "accepted",
-    },
-    {
-        "id": "OK-SHIELDCODE",
-        "severity": "p2",
-        "title": "Do not port Shieldcode, Harbor or the Sonar quality gate",
-        "why": (
-            "Harbor and SonarQube need a separate instance, with robots, tokens and "
-            "a proxy repository. This template does not port them. Scans that run "
-            "inside Cloud Build (gitleaks, semgrep, trivy fs) and Artifact Registry "
-            "vulnerability scanning are opt-in and do not need that instance."
-        ),
-        "evidence": "No harbor or sonar resources. cloudbuild.scan and security.artifact_scanning cover the in-build scanners.",
-        "change": "Leave Harbor and Sonar out. Turn scanners on with cloudbuild.scan and security.artifact_scanning.",
-        "ok": lambda: True,
-        "disposition": "accepted",
-    },
-    {
-        "id": "OK-RETENTION",
-        "severity": "p3",
-        "title": "Do not port the data-retention sweeper",
-        "why": (
-            "Tools Hub injects a job and a scheduler into one chosen module to delete "
-            "expired rows. That is an application job. When this project needs it, "
-            "it is an app.job entry, not a hidden merge in locals.tf."
-        ),
-        "evidence": "Tools Hub data_retention.tf and the merge into module_configs in locals.tf.",
-        "change": "Leave it out.",
-        "ok": lambda: True,
-        "disposition": "accepted",
-    },
-    {
-        "id": "OK-SQL-RESIZER",
-        "severity": "p3",
-        "title": "Do not port the nightly Cloud SQL stop/start",
-        "why": (
-            "Tools Hub scales SQL down at night in non-prod with two Cloud Functions. "
-            "Pre and pro in this template are meant to stay up. A scale-to-zero "
-            "database is a later cost decision, with its own ticket, not part of "
-            "becoming production-ready."
-        ),
-        "evidence": "Tools Hub sql.tf sql_resizer functions and schedulers.",
-        "change": "Leave it out.",
-        "ok": lambda: True,
-        "disposition": "accepted",
-    },
-    {
-        "id": "OK-RENOVATE",
-        "severity": "p3",
-        "title": "Do not port Renovate or the Docker Hub pull-through proxy",
-        "why": (
-            "Both are Tools Hub CI hygiene for a fleet of repositories. Dependency "
-            "updates for one application live in that application's repository."
-        ),
-        "evidence": "Tools Hub renovate.tf.",
-        "change": "Leave it out.",
-        "ok": lambda: True,
-        "disposition": "accepted",
-    },
-    {
-        "id": "OK-VPCSC",
-        "severity": "p2",
-        "title": "Do not add VPC Service Controls in this stack",
-        "why": (
-            "A service perimeter is an organization policy. Tools Hub has vpc_sc.tf "
-            "because the platform sits inside one. This template cannot own the "
-            "perimeter. example.yaml already leaves access_policy commented, which "
-            "is the right call."
-        ),
-        "evidence": "settings/example.yaml access_policy block, commented. No vpc_sc.tf here.",
-        "change": "Leave it out. If the org later puts the project in a perimeter, document the perimeter id in the workspace file as a comment, do not manage it from here.",
-        "ok": lambda: True,
-        "disposition": "accepted",
-    },
-    {
-        "id": "OK-MODEL-ARMOR",
-        "severity": "p3",
-        "title": "Do not enable Model Armor or DLP by default",
-        "why": (
-            "Tools Hub enables modelarmor.googleapis.com and dlp.googleapis.com "
-            "because several products call them. Turning them on in every new "
-            "project adds APIs nobody calls. Add the API in the workspace that "
-            "needs it, and remember active-apis is replaced wholesale on a shallow merge."
-        ),
-        "evidence": "settings/default.yaml has those APIs commented or absent. Tools Hub default.yaml lists both.",
-        "change": "Leave them commented.",
-        "ok": lambda: True,
-        "disposition": "accepted",
-    },
-    {
-        "id": "OK-PULUMI",
-        "severity": "p3",
-        "title": "Do not add the Pulumi KMS key",
-        "why": (
-            "Tools Hub keeps a key ring some workloads still encrypt with Pulumi. "
-            "This repository is Terraform. A KMS key for SOPS is AUD-SOPS. A key "
-            "for Pulumi is not."
-        ),
-        "evidence": "Tools Hub kms.pulumi.tf.",
-        "change": "Leave it out.",
-        "ok": lambda: True,
-        "disposition": "accepted",
-    },
-    {
-        "id": "OK-GROUPS",
-        "severity": "p3",
-        "title": "Do not create Google groups from Terraform",
-        "why": (
-            "Tools Hub has cloud_identity.tf for platform groups. Group creation "
-            "is an organization process, and the identity API is easy to get wrong "
-            "from a project stack. Membership in this template is a list of members "
-            "on project_access and iap."
-        ),
-        "evidence": "No cloud_identity.tf in this repo.",
-        "change": "Leave it out.",
-        "ok": lambda: True,
-        "disposition": "accepted",
-    },
-    {
-        "id": "OK-HUB-IAM",
-        "severity": "p2",
-        "title": "Do not copy the Tools Hub viewer and admin role matrix",
-        "why": (
-            "Tools Hub binds toolshub.viewer and toolshub.admin, plus a long custom "
-            "role of datastore permissions and external_project_access into other "
-            "projects. This template's project_access.viewers and operators lists "
-            "match a single team. Operators currently also receive "
-            "roles/cloudbuild.connectionAdmin and roles/iam.serviceAccountUser, "
-            "which is broad, and tightening that is a separate small review. It is "
-            "not a reason to import the hub matrix."
-        ),
-        "evidence": "gcp.iam.tf viewers and operators. Tools Hub settings/pro.yaml project_access groups.",
-        "change": "Keep the two lists. When the project has real groups, put the group emails in settings/pre.yaml and settings/pro.yaml.",
-        "ok": lambda: True,
-        "disposition": "accepted",
-    },
-    {
-        "id": "OK-BUILD-CHAT",
-        "severity": "p3",
-        "title": "Do not port the build-failure Chat notifier",
-        "why": (
-            "Tools Hub posts a card to a Google Chat space for every failed build. "
-            "That needs a webhook secret and a space the project does not have yet. "
-            "Add it when someone names the space."
-        ),
-        "evidence": "Tools Hub cloudbuild.notifications.tf.",
-        "change": "Leave it out.",
-        "ok": lambda: True,
-        "disposition": "accepted",
-    },
-    {
-        "id": "OK-SYS-PROJECT",
-        "severity": "p2",
-        "title": "Do not require a separate system project",
-        "why": (
-            "Tools Hub sends NAT and SQL monitoring at a shared ms-tool-sys project. "
-            "A new stack can set project_sys to the same project as the workspace. "
-            "Pre and pro should do that until a shared monitoring project exists."
-        ),
-        "evidence": "settings/default.yaml project_sys is a placeholder. The network module wants the id for NAT alerts only.",
-        "change": "Set project_sys.id to the workspace project in pre and pro. Split it out later if several projects share one monitoring project.",
-        "ok": lambda: True,
-        "disposition": "accepted",
-    },
-    {
-        "id": "OK-SHALLOW-MERGE",
-        "severity": "p1",
-        "title": "Keep the shallow settings merge",
-        "why": (
-            "locals.tf uses merge(), so a map key in the workspace file replaces the "
-            "whole map from default.yaml. Tools Hub has the same merge and the same "
-            "rule: environment files are complete, and default.yaml holds scalars "
-            "plus empty maps. A deep-merge provider would change every existing "
-            "workspace in silence. The footgun to document is active-apis: do not "
-            "set it in an environment file or you drop the default list."
-        ),
-        "evidence": "locals.tf settings = merge(yamldecode(defaults), yamldecode(workspace)).",
-        "change": "Document it in AGENTS.md. Edit default.yaml when every workspace needs one more API.",
-        "ok": lambda: True,
-        "disposition": "accepted",
-    },
-    {
-        "id": "OK-CMEK",
-        "severity": "p2",
-        "title": "Do not encrypt every resource with CMEK yet",
-        "why": (
-            "Tools Hub has key rings for SQL, secrets, buckets, Pub/Sub, Artifact "
-            "Registry, BigQuery and disks, behind a feature flag that is still off "
-            "in pro. That programme is compliance work for a platform. A new project "
-            "starts on Google-managed encryption. CMEK is the right follow-up when "
-            "the data classification says so, and it should land as one resource "
-            "family per PR, not as a copy of kms.tf."
-        ),
-        "evidence": "Tools Hub kms.tf. This repo has no google_kms_key_ring.",
-        "change": "Leave it out until the project needs customer-managed keys. AUD-SOPS may add one key for secret files. That key does not have to wrap SQL.",
-        "ok": lambda: True,
-        "disposition": "accepted",
-    },
-    {
-        "id": "OK-HELLO-IMAGE",
-        "severity": "p3",
-        "title": "The first Cloud Run image stays the public hello image",
-        "why": (
-            "gcp.cloudrun.tf deploys us-docker.pkg.dev/cloudrun/container/hello and the "
-            "job resource ignores later image changes. The first apply boots a "
-            "placeholder. Cloud Build replaces the digest and Terraform leaves it "
-            "alone. That is the same idea Tools Hub uses. Do not pin a project image "
-            "in Terraform."
-        ),
-        "evidence": "gcp.cloudrun.tf image = hello. gcp.jobs.tf lifecycle.ignore_changes includes the container image.",
-        "change": "Leave it. Document it next to the pre and pro services so nobody 'fixes' the hello image in YAML.",
-        "ok": lambda: True,
-        "disposition": "accepted",
-    },
+
+def no_leaks() -> bool:
+    return not leak_hits()
+
+
+def elastic_from_settings() -> bool:
+    text = read("gcp.elastic.psc.tf")
+    if not text:
+        return True
+    return not re.search(r'"projects/[a-z][a-z0-9-]+-\d+/', text) and "local.settings" in text
+
+
+def sql_module_pitr() -> bool:
+    sql = read("gcp.sql.tf")
+    match = re.search(r'source\s*=\s*"\./(modules/[^"]+)"', sql)
+    if not match:
+        return False
+    module = read_any(f"{match.group(1)}/*.tf")
+    return "point_in_time_recovery_enabled" in module and "transaction_log_retention_days" in module
+
+
+def sql_pro_hardened() -> bool:
+    return yaml_has(
+        "pro",
+        "log_connections",
+        "log_disconnections",
+        "log_min_duration_statement",
+        "cloudsql.enable_pgaudit",
+        "special_password",
+    )
+
+
+def audit_log_archive() -> bool:
+    logging = read("gcp.logging.tf")
+    return (
+        "google_logging_project_sink" in logging
+        and "locked" in logging
+        and "audit_archive" in logging
+        and yaml_has("pro", "audit_archive")
+    )
+
+
+def bucket_retention_options() -> bool:
+    module = read_any("modules/*storage*/*.tf")
+    return (
+        "retention_policy" in module
+        and "logging" in module
+        and ("days_since_noncurrent_time" in read("settings/pro.yaml") or "noncurrent" in read("settings/pro.yaml"))
+    )
+
+
+def redis_protection_from_settings() -> bool:
+    text = read("gcp.redis.tf")
+    return "prevent_destroy = true" not in text and "persistence_config" in text and "deletion_protection" in text
+
+
+def log_based_alerts() -> bool:
+    tf = root_tf()
+    return "condition_matched_log" in tf and "log_alerts" in tf and yaml_has("pro", "log_alerts")
+
+
+def lb_alerts_and_uptime() -> bool:
+    return "google_monitoring_uptime_check_config" in root_tf() and yaml_has("pro", "status_5xx", "uptime")
+
+
+def secret_access_alerts() -> bool:
+    return "secret_access" in root_tf() and yaml_has("pro", "secret_access")
+
+
+def workload_identity() -> bool:
+    text = read("gcp.wif.tf")
+    return "google_iam_workload_identity_pool" in text and "try(local.settings.wif" in text and "wif:" in read("settings/example.yaml")
+
+
+def binauth_pro_enforced() -> bool:
+    pipeline = read_any("cloudbuild_files/*.yaml") + read("gcp.cloudbuild.tf")
+    return yaml_has("pro", "ENFORCED_BLOCK_AND_AUDIT_LOG") and ("attestations" in pipeline or "binauthz" in pipeline)
+
+
+def tls_policy_from_settings() -> bool:
+    return "lb.ssl_policy" in read("gcp.lb.tf") and yaml_has("pro", "RESTRICTED")
+
+
+def plan_guards() -> bool:
+    security = read("gcp.security.tf")
+    apis = read("gcp.enabled.apis.tf")
+    sql = read("gcp.sql.tf")
+    run = read("gcp.cloudrun.tf")
+    ingress_default = re.search(r"ingress\s*=\s*try\([^\n]*\)", run)
+    return (
+        ("try(local.settings.security.alerts_email" in security or 'check "alerts_email"' in root_tf())
+        and "try(local.settings.active-apis" in apis
+        and "depends_on = [module.network]" not in sql
+        and bool(ingress_default)
+        and "lb_enabled" in ingress_default.group(0)
+    )
+
+
+def no_always_on_resources() -> bool:
+    cloudbuild = read("gcp.cloudbuild.tf")
+    sa = block(cloudbuild, 'resource "google_service_account" "cloudbuild"', 300)
+    bucket = block(cloudbuild, 'module "cloudbuild_artifacts_bucket"', 300)
+    iap = block(read("gcp.iam.tf"), "google_project_service_identity", 300)
+    return all(("count" in part or "for_each" in part) for part in (sa, bucket)) and "count = 1" not in iap
+
+
+def provider_default_labels() -> bool:
+    return read("providers.tf").count("default_labels") >= 2
+
+
+def root_outputs() -> bool:
+    return len(re.findall(r'^output "', read("outputs.tf"), re.M)) >= 4
+
+
+def partial_backend() -> bool:
+    versions = read("versions.tf")
+    return re.search(r'backend "gcs" \{\s*\}', versions) is not None and exists("backend.hcl.example")
+
+
+def settings_schema() -> bool:
+    return (
+        exists("schemas/settings.schema.json")
+        and exists("bin/validate-settings.py")
+        and "validate-settings.py" in workflows()
+        and runs_ok(sys.executable, "bin/validate-settings.py")
+    )
+
+
+def terraform_tests() -> bool:
+    tests = read_any("tests/*.tftest.hcl")
+    return "mock_provider" in tests and "terraform test" in workflows()
+
+
+def ci_matrix() -> bool:
+    flows = workflows()
+    return all(ws in flows for ws in ("dev", "stg", "pro")) and "cloudbuild-render-test.py" in flows and "TF_WORKSPACE" in flows
+
+
+def lint_tooling() -> bool:
+    return exists(".tflint.hcl") and exists(".pre-commit-config.yaml") and "tflint" in workflows()
+
+
+def cost_safe_defaults() -> bool:
+    billing = read("gcp.billing.tf")
+    run = read("gcp.cloudrun.tf")
+    cpu_idle = re.search(r"cpu_idle\s*=\s*try\([^\n]*\)", run)
+    return "enable_auto_stop, false)" in billing and bool(cpu_idle) and "pro" in cpu_idle.group(0)
+
+
+def cost_profiles() -> bool:
+    dev = read("settings/dev.yaml")
+    stg = read("settings/stg.yaml")
+    if not dev or not stg:
+        return False
+    dev_tier = re.search(r'tier:\s*"(db-[^"]+)"', dev)
+    stg_tier = re.search(r'tier:\s*"(db-[^"]+)"', stg)
+    retained = re.search(r"retained_backups:\s*(\d+)", dev)
+    return (
+        "\nredis:" not in dev
+        and "nats:" not in dev
+        and bool(dev_tier)
+        and dev_tier.group(1) in ("db-f1-micro", "db-g1-small")
+        and bool(stg_tier)
+        and stg_tier.group(1) != dev_tier.group(1)
+        and bool(retained)
+        and int(retained.group(1)) <= 7
+        and "# Pre workspace" not in dev
+    )
+
+
+def feature_apis() -> bool:
+    text = read("gcp.enabled.apis.tf") + read("locals.tf")
+    return "feature_apis" in text and "sqladmin.googleapis.com" in text
+
+
+def clean_names() -> bool:
+    stamped = [p for p in globbed("modules/*") if re.search(r"-\d{12}$", p.name)]
+    allowed = {"locals.tf", "providers.tf", "versions.tf", "outputs.tf"}
+    bad_files = [
+        p.name
+        for p in globbed("*.tf")
+        if p.name not in allowed and not re.fullmatch(r"(gcp|oracle)(\.[a-z0-9_]+)+\.tf", p.name)
+    ]
+    return not stamped and not bad_files
+
+
+def english_only() -> bool:
+    return not spanish_hits()
+
+
+def readme_showcase() -> bool:
+    readme = read("README.md")
+    lower = readme.lower()
+    return (
+        "img.shields.io" in readme
+        and "```mermaid" in readme
+        and "quick start" in lower
+        and all(ws in readme for ws in ("`dev`", "`stg`", "`pro`"))
+        and "## cost" in lower
+        and "## security" in lower
+        and "docs/README.md" in readme
+        and exists("docs/README.md")
+        and all(p.name in read("docs/README.md") for p in globbed("docs/*.md") if p.name != "README.md")
+    )
+
+
+def oss_files() -> bool:
+    return all(
+        exists(path)
+        for path in (
+            "CONTRIBUTING.md",
+            "SECURITY.md",
+            "CHANGELOG.md",
+            ".github/pull_request_template.md",
+            ".github/ISSUE_TEMPLATE",
+        )
+    )
+
+
+def compliance_doc() -> bool:
+    text = read("docs/COMPLIANCE.md")
+    return all(term in text for term in ("ISO 27001", "SOC 2", "GDPR", "settings/pro.yaml")) and "COMPLIANCE.md" in read("README.md")
+
+
+# ----------------------------------------------------------------- items
+
+
+@dataclass
+class Item:
+    id: str
+    severity: str
+    title: str
+    why: str
+    change: str
+    ok: Callable[[], bool] = lambda: True
+    disposition: str = "fix"
+    after: list[str] = field(default_factory=list)
+
+
+ACCEPTED = "accepted"
+
+ITEMS: list[Item] = [
+    # Phase 1: the template becomes a stack with dev, stg and pro.
+    Item("AUD-NET", "p0", "The shared VPC is created even when the workspace has no network section",
+         "A workspace without network.services_cidr must plan without a VPC.",
+         "Gate module.network on local.network_enabled.", network_is_optional),
+    Item("AUD-VPC-DEFAULT", "p0", "Cloud Run and jobs attach to the VPC by default",
+         "With the VPC optional, the attachment must follow it.",
+         "Default vpc_access_enabled to local.network_enabled.", vpc_follows_network),
+    Item("AUD-FW-CIDR", "p1", "The internal firewall allows two CIDRs the VPC does not have",
+         "Firewall ranges come from the settings, not from hardcoded ranges.",
+         "Read network.services_cidr.", firewall_uses_settings_cidr),
+    Item("AUD-BUCKET", "p0", "A workspace with no bucket key cannot plan",
+         "A missing settings section creates nothing.", "Wrap the map in try().", bucket_is_guarded),
+    Item("AUD-AUDIT", "p0", "Admin-read audit logs are off",
+         "Admin reads are the trail after an IAM change.", "Default admin_read to true.", audit_admin_read_on),
+    Item("AUD-DELETE", "p0", "Cloud Run services and jobs can be destroyed with deletion_protection left false",
+         "Pro must opt out of protection, not opt in.", "Read deletion_protection from the YAML, true in pro.",
+         deletion_protection_from_settings),
+    Item("AUD-INSIGHTS", "p1", "Cloud SQL Query Insights cannot be turned on",
+         "Slow queries need a trace in pro.", "Pass sql.insights to the module.", insights_from_settings),
+    Item("AUD-PRE", "p1", "There is no stg workspace", "A reference staging file shows the cheap shape.",
+         "Add settings/stg.yaml.", stg_settings),
+    Item("AUD-PRO", "p1", "There is no pro workspace", "A reference production file shows the hardened shape.",
+         "Add settings/pro.yaml.", pro_settings),
+    Item("AUD-LOCK", "p1", "The provider lock file is gitignored", "Every clone must use the same provider builds.",
+         "Commit .terraform.lock.hcl.", lockfile_committed),
+    Item("AUD-CI", "p1", "Nothing checks fmt or validate on a pull request", "A broken file must not reach main.",
+         "Add a workflow with fmt and validate.", ci_validates),
+    Item("AUD-SOPS", "p1", "Secret values have no sealed path into the plan",
+         "An optional SOPS path keeps values encrypted in git.", "Add the SOPS provider and gcp.sops.tf.", sops_provider),
+    Item("AUD-PROVIDER", "p2", "The Google provider is pinned to 6.x", "New arguments and fixes land in 7.x.",
+         "Move both Google providers to ~> 7.42.", provider_major_7),
+    Item("AUD-PAP", "p2", "Buckets cannot set public access prevention", "A bucket must not be made public by mistake.",
+         "Add public_access_prevention to the storage module.", storage_module_has_pap),
+    Item("AUD-LABELS", "p2", "Resources do not share an environment label", "Bills and asset searches filter by label.",
+         "Add common_labels in locals.tf.", common_labels),
+    Item("AUD-SQL-SCHEMA", "p2", "Every Cloud Run service gets a database on every SQL instance",
+         "Databases and users come from the instance YAML.", "Read databases and users per instance.",
+         sql_databases_from_yaml),
+    Item("AUD-PUBSUB-AGENT", "p3", "The Pub/Sub service identity is created in every workspace",
+         "Only a workspace with topics needs it.", "Count it on the topics map.", pubsub_agent_optional),
+    Item("AUD-BINAUTH", "p2", "Binary Authorization, when turned on, only dry-runs an allow-all rule",
+         "Turning it on must be able to reject an unsigned image.", "Require an attestation.", binary_auth_can_enforce),
+    Item("AUD-LOGS", "p3", "Log buckets keep the Google default retention", "Retention is a per-workspace decision.",
+         "Set _Default retention from logging.retention_days.", log_retention),
+    Item("AUD-CODEOWNERS", "p3", "No CODEOWNERS file", "A pro change needs a named reviewer.", "Add CODEOWNERS.", codeowners),
+    Item("AUD-AGENTS", "p1", "A session that opens this repo has no operating rules",
+         "Agents and people need the same procedure.", "Add AGENTS.md and docs/audit/OPERATING.md.", agents_guide),
+
+    # Phase 2: public release, cost profile and a pro that passes an audit.
+    Item("AUD-PUB-LEAKS", "p0", "Tracked files name private companies, products, people or real addresses",
+         "The repository is public and generic. A name from the project it was cut from, a real email or a real "
+         "project id tells a reader where it came from and can expose that party. The scan uses the generic email "
+         "check plus the private denylist described in the module docstring.",
+         "Reword every hit generically. Run with AUDIT_DENYLIST pointing at the fork's private list.", no_leaks),
+    Item("AUD-PUB-ELASTIC", "p1", "The Elastic Private Service Connect target is a literal project path",
+         "gcp.elastic.psc.tf hardcodes a provider-side service attachment. A different region or deployment "
+         "cannot use it, and the template should not ship a third party's project id as a default.",
+         "Read the attachment, region and name from settings.elastic_psc. Create nothing when the key is absent. "
+         "Document it in settings/example.yaml.", elastic_from_settings),
+    Item("AUD-SQL-PITR", "p1", "Point-in-time recovery in the YAML never reaches Cloud SQL",
+         "settings/pro.yaml sets backup.point_in_time_recovery_enabled, but the vendored Cloud SQL module has no "
+         "such argument, so pro restores only from the nightly backup. Any audit asks for an RPO measured in minutes.",
+         "Copy the module to a new version directory, add point_in_time_recovery_enabled and "
+         "transaction_log_retention_days to backup_configuration, and point gcp.sql.tf at it.", sql_module_pitr),
+    Item("AUD-SQL-HARDEN", "p1", "Pro PostgreSQL has no connection or statement audit trail",
+         "Auditors ask who connected and what ran. Pro sets only max_connections, and generated passwords have "
+         "no special characters.",
+         "In settings/pro.yaml add log_connections, log_disconnections, log_min_duration_statement, "
+         "cloudsql.enable_pgaudit and pgaudit.log flags, and special_password enabled. Keep dev and stg without them.",
+         sql_pro_hardened, after=["AUD-SQL-PITR"]),
+    Item("AUD-AUDIT-ARCHIVE", "p1", "Audit logs are not archived in a locked bucket",
+         "Admin activity stays 400 days in _Required, but data access and policy-denied logs follow _Default, which "
+         "a project owner can shorten or delete. Retention evidence needs a sink an admin cannot quietly purge.",
+         "Add logging.audit_archive (retention_days, locked) and a sink of cloudaudit.googleapis.com logs to a "
+         "dedicated log bucket. Pro: 365 days, locked. Dev and stg: absent.", audit_log_archive),
+    Item("AUD-GCS-RETENTION", "p2", "Buckets cannot set a retention policy or access logs, and pro keeps old versions forever",
+         "Versioning without a lifecycle keeps every deleted object, which breaks data minimisation. A regulated "
+         "bucket also needs an optional retention policy and access logs.",
+         "Copy the storage module to a new version with retention_policy and logging. In pro, delete noncurrent "
+         "versions after a set number of days.", bucket_retention_options),
+    Item("AUD-REDIS", "p2", "Redis blocks destroy in every workspace and has no persistence option",
+         "prevent_destroy = true is a literal, so dev cannot be torn down, while pro has no RDB snapshot.",
+         "Replace prevent_destroy with deletion_protection from the YAML (true in pro) and add persistence_config.",
+         redis_protection_from_settings),
+    Item("AUD-MON-LOG-ALERTS", "p1", "No alert fires on IAM, firewall, service account key or audit config changes",
+         "These are the controls an auditor samples first. The security module covers only part of them.",
+         "Add gcp.monitoring.tf with log-based alert policies driven by monitoring.log_alerts. Enable them in pro.",
+         log_based_alerts),
+    Item("AUD-MON-LB", "p2", "Pro has no load balancer error alerts and no uptime check",
+         "The LB monitoring module exists, but pro sets no monitoring.lb block, and nothing probes the public domain.",
+         "Set monitoring.lb (5xx, latency, Cloud Armor 403) in pro and add google_monitoring_uptime_check_config "
+         "driven by monitoring.uptime.", lb_alerts_and_uptime, after=["AUD-MON-LOG-ALERTS"]),
+    Item("AUD-SECRET-ACCESS", "p2", "Nobody is alerted when a secret is read by an unexpected principal",
+         "Secret reads are invisible without data access logs for Secret Manager and an alert on them.",
+         "Add monitoring.secret_access: data access audit logs on secretmanager.googleapis.com and a log alert "
+         "excluding the expected service accounts. Enable it in pro.", secret_access_alerts,
+         after=["AUD-MON-LOG-ALERTS"]),
+    Item("AUD-WIF", "p1", "External CI can only authenticate with a service account key",
+         "Long-lived keys are the first finding in any cloud audit. Workload Identity Federation removes them.",
+         "Add gcp.wif.tf driven by settings.wif (pool, providers for GitHub Actions or another OIDC issuer, "
+         "attribute_condition, bound service account). Document it in settings/example.yaml.", workload_identity),
+    Item("AUD-BINAUTH-PRO", "p2", "Pro turns Binary Authorization on but never blocks",
+         "Dry-run records violations and deploys them anyway. Pro should enforce once the pipeline signs images.",
+         "Sign images in the Cloud Build pipeline when binary_authorization.enabled, then set pro to "
+         "ENFORCED_BLOCK_AND_AUDIT_LOG.", binauth_pro_enforced),
+    Item("AUD-TLS", "p2", "The TLS profile is hardcoded", "Pro should be able to require RESTRICTED without a code change.",
+         "Read lb.ssl_policy.profile and min_tls_version, MODERN by default, RESTRICTED in pro.", tls_policy_from_settings),
+    Item("AUD-TF-GUARDS", "p1", "A minimal workspace still fails on missing keys and wrong defaults",
+         "security.alerts_email and active-apis are read without try(), SQL depends on module.network even when "
+         "there is none, and Cloud Run ingress defaults to the load balancer when the workspace has no lb.",
+         "Guard both keys (a check block with a clear message is fine for the email), drop the unconditional "
+         "depends_on, and default ingress from local.lb_enabled.", plan_guards),
+    Item("AUD-TF-ALWAYS-ON", "p2", "Some resources are created in every workspace whether used or not",
+         "The Cloud Build service account and artifacts bucket exist without triggers, and the IAP identity with a "
+         "60 second sleep exists without IAP rules. That costs plan time and clutters a small project.",
+         "Count each on the settings that need it.", no_always_on_resources),
+    Item("AUD-TF-LABELS", "p2", "common_labels are not applied by the providers",
+         "Only some resources pass labels by hand.", "Set default_labels = local.common_labels on google and google-beta.",
+         provider_default_labels),
+    Item("AUD-TF-OUTPUTS", "p2", "The root module has no outputs",
+         "A user has to dig in state to find the LB IP, service URLs, SQL connection names or the registry.",
+         "Add outputs.tf with at least those four, nothing sensitive.", root_outputs),
+    Item("AUD-TF-BACKEND", "p2", "The state bucket is a literal in versions.tf",
+         "Every clone has to edit a tracked file, and a forgotten edit points at the wrong bucket.",
+         'Use backend "gcs" {} with backend.hcl.example and terraform init -backend-config.', partial_backend),
+    Item("AUD-TF-SCHEMA", "p2", "Nothing validates the settings files before a plan",
+         "A typo in a YAML key is silently ignored by try(). example.yaml can drift from the code.",
+         "Add schemas/settings.schema.json and bin/validate-settings.py (stdlib or PyYAML), checking every "
+         "settings/*.yaml including example.yaml, and run it in CI.", settings_schema),
+    Item("AUD-TF-TESTS", "p3", "There are no terraform tests",
+         "The settings merge and the feature toggles have no regression test.",
+         "Add tests/*.tftest.hcl with mock_provider for the empty, dev and pro shapes, and run terraform test in CI.",
+         terraform_tests, after=["AUD-CI-MATRIX"]),
+    Item("AUD-CI-MATRIX", "p1", "CI validates only the default workspace",
+         "dev, stg and pro read different files. One of them can break while default stays green. The Cloud "
+         "Build render test exists and does not run.",
+         "Validate a matrix of default, dev, stg and pro with TF_WORKSPACE and a local backend override, and run "
+         "bin/cloudbuild-render-test.py.", ci_matrix),
+    Item("AUD-LINT", "p3", "No tflint or pre-commit configuration",
+         "Contributors get fmt and lint errors only after a push.", "Add .tflint.hcl with the google ruleset, "
+         ".pre-commit-config.yaml (fmt, validate, tflint, the auditor) and a tflint step in CI.", lint_tooling,
+         after=["AUD-CI-MATRIX"]),
+    Item("AUD-COST-DEFAULTS", "p1", "Two code defaults cost money when a key is left out",
+         "budget.enable_auto_stop defaults to true, which deploys a function that disables billing and takes the "
+         "project down. cpu_idle defaults to false, so every non-pro service pays for CPU between requests.",
+         "Default enable_auto_stop to false and cpu_idle to true outside pro.", cost_safe_defaults),
+    Item("AUD-COST-PROFILES", "p1", "dev is a copy of stg and stg a copy of pre",
+         "dev runs NAT, Redis and a custom SQL tier, so the cheapest workspace is not cheap. stg and pre are the "
+         "same file. The header of dev.yaml still says pre.",
+         "dev: shared-core SQL, no Redis, no NAT, at most 7 backups, scale to zero. stg: one step up. pro: HA. "
+         "Fix the headers and the matrix in docs/ENVIRONMENTS.md.", cost_profiles, after=["AUD-COST-DEFAULTS"]),
+    Item("AUD-COST-APIS", "p3", "APIs for SQL, Redis, Firestore and other features are enabled when unused",
+         "default.yaml lists every API, so a Cloud Run only project enables the SQL Admin and Redis APIs.",
+         "Keep base APIs in default.yaml and add a feature_apis map in locals that turns on an API when its "
+         "section exists.", feature_apis),
+    Item("AUD-NAMES", "p2", "Module directories carry build timestamps and some root files break the naming pattern",
+         "modules/tf_gcp_x_v1.8-202405071510 reads like a build export, not a version. gcp.compute-nat.tf and "
+         "gcp.repository.github-extra.tf mix hyphens into a dotted pattern.",
+         "Rename modules to modules/gcp_<name>_v<major.minor> and update every source. Rename the two root files "
+         "with dots. Module addresses in state do not change.", clean_names),
+    Item("AUD-LANG", "p1", "Docs and comments mix Spanish with English",
+         "A public template has one language. docs/cloudrun-service-resources.md and several comments are Spanish.",
+         "Translate to English.", english_only),
+    Item("AUD-DOC-OSS", "p2", "The repository has no contributor, security or change files",
+         "A public project needs to say how to contribute, how to report a vulnerability and what changed.",
+         "Add CONTRIBUTING.md, SECURITY.md, CHANGELOG.md, a pull request template and issue templates.", oss_files),
+    Item("AUD-DOC-COMPLIANCE", "p1", "Nothing maps the pro settings to audit controls",
+         "An auditor or a buyer asks which control covers backups, retention, logging, encryption and access.",
+         "Add docs/COMPLIANCE.md mapping each pro setting to ISO 27001 Annex A, SOC 2 and GDPR article 32, "
+         "with the gaps a user still owns, and link it from the README.", compliance_doc,
+         after=["AUD-SQL-HARDEN", "AUD-AUDIT-ARCHIVE", "AUD-MON-LOG-ALERTS", "AUD-WIF"]),
+    Item("AUD-DOC-README", "p1", "The README does not explain the project at a glance",
+         "A first-time visitor needs what it is, a diagram, a quick start, the environment and cost matrix, the "
+         "security posture and where the docs are, in one screen.",
+         "Rewrite README.md with badges, a mermaid diagram, quick start, an environment matrix for dev, stg and "
+         "pro, cost and security sections, and a docs index in docs/README.md that lists every docs page.",
+         readme_showcase, after=["AUD-DOC-COMPLIANCE", "AUD-COST-PROFILES", "AUD-NAMES", "AUD-LANG", "AUD-DOC-OSS"]),
+
+    # Decisions: these are not gaps. Do not reopen them.
+    Item("OK-MODULE-VPC", "p1", "Do not create one VPC per service or per module",
+         "One project, one application, one shared VPC created only when the YAML asks for it. A network per "
+         "service adds peering and NAT for an isolation boundary this template does not have.",
+         "Leave it.", disposition=ACCEPTED),
+    Item("OK-APP-SHAPE", "p1", "Do not nest services under a module map",
+         "app.service and app.job are the flat shape a single application wants.", "Keep app.service.",
+         disposition=ACCEPTED),
+    Item("OK-SCANNER-INSTANCE", "p2", "Do not add a scanner that needs its own instance",
+         "Harbor or SonarQube need a server, robots and tokens. In-build scanners (gitleaks, semgrep, trivy fs) "
+         "and Artifact Registry scanning are opt-in and need none.",
+         "Use cloudbuild.scan and security.artifact_scanning.", disposition=ACCEPTED),
+    Item("OK-RETENTION-JOB", "p3", "Do not ship a row-deletion job", "Deleting expired rows is application logic. "
+         "When a project needs it, it is an app.job entry.", "Leave it out.", disposition=ACCEPTED),
+    Item("OK-SQL-RESIZER", "p3", "Do not stop Cloud SQL at night", "A night stop needs functions and schedulers. "
+         "dev gets a shared-core tier instead.", "Leave it out.", disposition=ACCEPTED),
+    Item("OK-RENOVATE", "p3", "Do not ship a dependency bot", "Dependency updates are the adopter's choice.",
+         "Leave it out.", disposition=ACCEPTED),
+    Item("OK-VPCSC", "p2", "Do not manage VPC Service Controls here",
+         "A perimeter is an organization policy a project stack cannot own.", "Leave it out.", disposition=ACCEPTED),
+    Item("OK-MODEL-ARMOR", "p3", "Do not enable Model Armor or DLP by default", "Add the API where it is called.",
+         "Leave them commented.", disposition=ACCEPTED),
+    Item("OK-GROUPS", "p3", "Do not create Google groups from Terraform",
+         "Group creation is an organization process. Membership is a list on project_access and iap.",
+         "Leave it out.", disposition=ACCEPTED),
+    Item("OK-IAM-MATRIX", "p2", "Keep the two access lists", "viewers and operators fit one team. A large custom role "
+         "matrix belongs to a platform.", "Put group emails in the workspace files.", disposition=ACCEPTED),
+    Item("OK-BUILD-CHAT", "p3", "Do not ship a build-failure chat notifier",
+         "It needs a webhook and a space the adopter may not have.", "Leave it out.", disposition=ACCEPTED),
+    Item("OK-SYS-PROJECT", "p2", "Do not require a separate monitoring project",
+         "project_sys can be the workspace project until several apps share one.", "Leave it.", disposition=ACCEPTED),
+    Item("OK-SHALLOW-MERGE", "p1", "Keep the shallow settings merge",
+         "A deep merge would change every existing workspace in silence. Environment files are complete and do "
+         "not set active-apis.", "Document it.", disposition=ACCEPTED),
+    Item("OK-CMEK", "p2", "Do not encrypt every resource with CMEK by default",
+         "Google-managed encryption is the starting point. CMEK follows the data classification, one resource "
+         "family per change.", "Leave it out. SOPS has its own key.", disposition=ACCEPTED),
+    Item("OK-HELLO-IMAGE", "p3", "The first Cloud Run image stays the public hello image",
+         "The first apply boots a placeholder and Cloud Build replaces it. Terraform ignores later image changes.",
+         "Leave it.", disposition=ACCEPTED),
+    Item("OK-MODULE-SNAPSHOTS", "p2", "Vendored modules stay snapshots",
+         "A module changes only through a new version directory. Newer private modules are not copied in.",
+         "Upgrade one module per change, with a new directory.", disposition=ACCEPTED),
+    Item("OK-OCI", "p3", "The optional Oracle Cloud files stay",
+         "oracle.*.tf create nothing without an oracle section. The provider is required at init only.",
+         "Leave it. Document it as optional.", disposition=ACCEPTED),
+    Item("OK-OWNER", "p3", "CODEOWNERS and LICENSE name the repository owner",
+         "That is the owner of this repository, not a leak. A fork replaces it.", "Leave it.", disposition=ACCEPTED),
+    Item("OK-ACTIVE-APIS-KEY", "p3", "Keep the active-apis key name",
+         "Renaming it breaks every existing workspace for a style gain.", "Leave it.", disposition=ACCEPTED),
+    Item("OK-SOPS-OPTIONAL", "p2", "SOPS stays opt-in, also in pro",
+         "It needs a KMS key and encrypted files the adopter creates. The placeholder path is safe by default.",
+         "Document it in docs/SOPS.md.", disposition=ACCEPTED),
+    Item("OK-SQL-REPLICA", "p3", "No read replica by default in pro",
+         "REGIONAL availability already gives a standby. A replica is a read scaling choice.", "Leave it.",
+         disposition=ACCEPTED),
+    Item("OK-PRE-ALIAS", "p3", "settings/pre.yaml stays as the older name of stg",
+         "Existing users have a pre workspace. New projects use stg.", "Keep it equal to stg.", disposition=ACCEPTED),
 ]
 
 
-def status_of(item: dict) -> str:
-    if item["disposition"] == "accepted":
+# ----------------------------------------------------------------- engine
+
+
+_cache: dict[str, str] = {}
+
+
+def status_of(item: Item) -> str:
+    if item.disposition == ACCEPTED:
         return "accepted"
-    return "done" if item["ok"]() else "open"
+    if item.id not in _cache:
+        _cache[item.id] = "done" if item.ok() else "open"
+    return _cache[item.id]
 
 
-def selected(items: list[dict], fail_on: str | None) -> list[dict]:
+def ready(item: Item) -> bool:
+    by_id = {i.id: i for i in ITEMS}
+    return status_of(item) == "open" and all(status_of(by_id[dep]) != "open" for dep in item.after)
+
+
+def next_item() -> Item | None:
+    candidates = [i for i in ITEMS if ready(i)]
+    candidates.sort(key=lambda i: SEVERITY_RANK[i.severity])
+    return candidates[0] if candidates else None
+
+
+def selected(fail_on: str | None) -> list[Item]:
     if fail_on is None:
         return []
     ceiling = SEVERITY_RANK[fail_on]
-    return [
-        item
-        for item in items
-        if status_of(item) == "open" and SEVERITY_RANK[item["severity"]] <= ceiling
-    ]
+    return [i for i in ITEMS if status_of(i) == "open" and SEVERITY_RANK[i.severity] <= ceiling]
 
 
-def render(items: list[dict]) -> str:
-    rows = [(item, status_of(item)) for item in items]
+def render() -> str:
     counts = {"open": 0, "done": 0, "accepted": 0}
-    for _, status in rows:
-        counts[status] += 1
+    for item in ITEMS:
+        counts[status_of(item)] += 1
 
-    def section(title: str, status: str) -> str:
-        block = [f"## {title}", ""]
-        found = [item for item, item_status in rows if item_status == status]
+    def section(title: str, status: str, detail: bool) -> str:
+        lines = [f"## {title}", ""]
+        found = [i for i in ITEMS if status_of(i) == status]
         if not found:
-            block.append("None.")
-            block.append("")
-            return "\n".join(block)
+            return "\n".join(lines + ["None.", ""])
         for item in found:
-            block.append(f"### {item['id']} ({item['severity']}) {item['title']}")
-            block.append("")
-            block.append(item["why"])
-            block.append("")
-            block.append(f"Evidence: {item['evidence']}")
-            block.append("")
-            block.append(f"Next change: {item['change']}")
-            block.append("")
-        return "\n".join(block)
-
-    already = """## Already in place
-
-These match the Tools Hub pattern and are not gaps. Do not reopen them.
-
-- One settings YAML per workspace, loaded in locals.tf and merged over settings/default.yaml.
-- google and google-beta set user_project_override and billing_project, so API quota is billed to this project.
-- Secret Manager containers with a placeholder version and ignore_changes on the payload. Real values stay out of git.
-- A budget, with the billing-shutdown function only when the workspace asks for it.
-- One service account per Cloud Run service, ingress defaulting to the load balancer, and direct VPC egress when a VPC exists.
-- Private Cloud SQL as the example default, Cloud Armor on the load balancer, and IAP on the paths that opt in.
-- A GCS backend. Workspaces share the bucket and Terraform separates them by prefix.
-- Provider versions are pinned. The pin is old (see AUD-PROVIDER), but it is a pin.
-"""
+            if not detail:
+                lines.append(f"- {item.id} ({item.severity}) {item.title}")
+                continue
+            lines += [f"### {item.id} ({item.severity}) {item.title}", "", item.why, "", f"Next change: {item.change}", ""]
+            if item.after:
+                lines += [f"After: {', '.join(item.after)}", ""]
+        if not detail:
+            lines.append("")
+        return "\n".join(lines)
 
     header = f"""# Audit backlog
 
-Compared on 2026-11-09 with a production YAML-driven GCP stack (its
-settings, locals, network, security, SQL, KMS and provider pins). This
-repository is that template: root files `gcp.*.tf`, vendored `tf_gcp_*`
-modules, one workspace file per environment.
+The list of work that takes this template to a public, production-grade
+release: dev and stg cheap, pro ready for a security, backup and
+data-retention audit. Each item has a check in `bin/audit-terraform.py`.
 
-Open: {counts['open']}. Done: {counts['done']}. Accepted, do not port: {counts['accepted']}.
+Open: {counts['open']}. Done: {counts['done']}. Accepted, not a gap: {counts['accepted']}.
 
-Regenerate this file with `python3 bin/audit-terraform.py --write` in the same
-pull request that closes an item. The status comes from the code, not from
-this prose. How a session picks the next item: `docs/audit/OPERATING.md`.
+Regenerate with `python3 bin/audit-terraform.py --write` in the pull request
+that closes an item. `--next` names the item to take. How a session works an
+item: `docs/audit/OPERATING.md`.
 
 """
     parts = [
         header,
-        section("Open", "open"),
-        section("Done", "done"),
-        section("Accepted, do not port", "accepted"),
-        already,
+        section("Open", "open", True),
+        section("Accepted, not a gap", "accepted", True),
+        section("Done", "done", False),
     ]
     return "\n".join(parts).rstrip() + "\n"
 
 
-def print_summary(items: list[dict]) -> None:
-    for item in items:
-        status = status_of(item)
-        print(f"{status:8} {item['severity']:3} {item['id']:16} {item['title']}")
-
-
 def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--write",
-        action="store_true",
-        help="write docs/audit/BACKLOG.md",
-    )
-    parser.add_argument(
-        "--fail-on",
-        choices=("p0", "p1", "p2", "p3"),
-        help="exit 1 when an open item is at this severity or above",
-    )
-    parser.add_argument("--id", help="print one item and exit 0 if it is done or accepted")
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--write", action="store_true", help="write docs/audit/BACKLOG.md")
+    parser.add_argument("--fail-on", choices=tuple(SEVERITY_RANK), help="exit 1 on an open item at this severity or above")
+    parser.add_argument("--id", help="print one item; exit 1 while it is open")
+    parser.add_argument("--next", action="store_true", help="print the next item to work on; exit 1 when none is left")
+    parser.add_argument("--leaks", action="store_true", help="print every leak and language hit")
     args = parser.parse_args(argv)
 
-    items = ITEMS
+    if args.leaks:
+        for hit in leak_hits():
+            print(f"leak  {hit}")
+        for hit in spanish_hits():
+            print(f"lang  {hit}")
+        print(f"denylist patterns loaded: {len(denylist())}", file=sys.stderr)
+        return 0
+
     if args.id:
-        match = [item for item in items if item["id"] == args.id]
+        match = [i for i in ITEMS if i.id == args.id]
         if not match:
             print(f"unknown id {args.id}", file=sys.stderr)
             return 2
         item = match[0]
-        print(f"{status_of(item)} {item['id']} {item['title']}")
-        print(item["why"])
-        return 0 if status_of(item) != "open" else 1
+        print(f"{status_of(item)} {item.id} ({item.severity}) {item.title}\n\n{item.why}\n\nNext change: {item.change}")
+        return 1 if status_of(item) == "open" else 0
 
-    print_summary(items)
-    text = render(items)
+    if args.next:
+        item = next_item()
+        if item is None:
+            print("nothing left")
+            return 1
+        print(f"{item.id} ({item.severity}) {item.title}\n\n{item.why}\n\nNext change: {item.change}")
+        return 0
+
+    for item in ITEMS:
+        flag = "" if status_of(item) != "open" or ready(item) else " (waits)"
+        print(f"{status_of(item):8} {item.severity:3} {item.id:20} {item.title}{flag}")
+
     if args.write:
         destination = ROOT / "docs" / "audit" / "BACKLOG.md"
         destination.parent.mkdir(parents=True, exist_ok=True)
-        destination.write_text(text, encoding="utf-8")
+        destination.write_text(render(), encoding="utf-8")
         print(f"wrote {destination.relative_to(ROOT)}")
 
-    failing = selected(items, args.fail_on)
+    failing = selected(args.fail_on)
     if failing:
         print(f"{len(failing)} open item(s) at or above {args.fail_on}", file=sys.stderr)
         return 1
