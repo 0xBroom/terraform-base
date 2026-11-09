@@ -68,7 +68,9 @@ the common ones if you don't want to read 900 lines of comments.
 
 1. Create a repository from this template with GitHub's "Use this template" button, or
    just clone it.
-2. Create the GCP project and a bucket for remote state:
+2. Create the GCP projects and a bucket for remote state. `AGENTS.md` describes the folder
+   and naming layout to use (one folder and one project per environment, plus a shared ops
+   project for state). For a single project, the minimum is:
    ```bash
    gcloud projects create my-project --name="My Project"
    gcloud storage buckets create gs://my-project-tfstate --project=my-project --location=europe-west1

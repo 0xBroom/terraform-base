@@ -4,8 +4,9 @@
 # Each workspace file (settings/<workspace>.yaml) is merged on top of this one.
 # Keep here only what every project of yours shares; override the rest per workspace.
 
-# System/monitoring project used for NAT monitoring dashboards. Often the same
-# project as the workspace. Replace the placeholders before the first plan.
+# System/monitoring project: the shared ops project in the `common` folder, which
+# also holds the Terraform state bucket (see AGENTS.md). Replace the placeholders
+# before the first plan.
 project_sys:
   id: "my-system-project-id" #Mandatory parameter
   name: "my-system-project" #Mandatory parameter
