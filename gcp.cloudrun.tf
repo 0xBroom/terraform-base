@@ -248,6 +248,13 @@ module "cloud_run_services" {
     timeout      = try(each.value.cloudrun.timeout, "3600s")
     launch_stage = local.service_launch_stages[each.key]
 
+    # Same short-name rule as the jobs: a name without ":" is an instance of this project,
+    # in region_name, where gcp.sql.tf creates them.
+    cloud_sql_instances_mount = try(each.value.cloudrun.cloud_sql_instances_mount, null) == null ? null : [
+      for instance in each.value.cloudrun.cloud_sql_instances_mount :
+      length(regexall(":", instance)) > 0 ? instance : "${local.settings.project.id}:${local.settings.region_name}:${instance}"
+    ]
+
     containers = [
       {
         name  = local.run_service_names[each.key]

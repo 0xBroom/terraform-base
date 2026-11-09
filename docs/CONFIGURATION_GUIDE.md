@@ -59,6 +59,7 @@ recreate the mapping and its certificate.
 | Feature | Turned on by | APIs |
 |---|---|---|
 | `database` | a `database` instance | `sqladmin`, `servicenetworking` |
+| `cloud_sql_mount` | a service with `cloudrun.cloud_sql_instances_mount` or a job with `job-config.cloud_sql_instances_mount`, also without a `database` section (an instance in another project) | `sqladmin` |
 | `redis` | a `redis` instance | `redis`, `servicenetworking` |
 | `network` | `network.services_cidr` | `compute`, `servicenetworking`, `vpcaccess` |
 | `lb` | an `lb` section | `compute` |
@@ -74,10 +75,16 @@ recreate the mapping and its certificate.
 | `artifact_scanning` | `security.artifact_scanning: true` | `containerscanning` |
 | `binary_authorization` | `binary_authorization.enabled: true` | `binaryauthorization`, `containeranalysis`, `cloudkms` |
 | `sops` | `sops.enabled: true` | `cloudkms` |
+| `vpc_connector` | a job with `job-config.vpc_access.connector` | `vpcaccess` |
 | `wif` | a `wif.pools` key | `sts`, `iamcredentials` |
 
 Every gate is the expression that creates the feature's resources, so the two
 cannot drift apart. A new feature that calls a new API adds a line to both maps.
+Direct VPC egress (`vpc_access_enabled`, `enable_vpc_access`, a job's
+`vpc_access.network_interfaces`) onto a network this stack does not create needs
+Compute Engine only, which is in the base. Secrets read from another project and
+Pub/Sub, Cloud Tasks or Cloud Scheduler calls to Cloud Run need no API beyond
+their own feature and the base.
 
 ```yaml
 # settings/<workspace>.yaml
@@ -98,9 +105,14 @@ its API under the same `enabled_apis["<api>"]` address, with no change.
 
 The APIs that had their own resource before (`wif_sts`, `binary_authorization`,
 `container_analysis`, `binauth_kms`, `container_scanning`) are moved into
-`enabled_apis` with `moved` blocks. The SOPS copy of the Cloud KMS API
-(`google_project_service.cloudkms`) is dropped from state with a `removed`
-block, because Binary Authorization's copy already owns that key.
+`enabled_apis` with `moved` blocks. Cloud KMS had two copies, one for Binary
+Authorization (`binauth_kms`) and one for SOPS (`cloudkms`), and only one move
+can target `enabled_apis["cloudkms.googleapis.com"]`. The Binary Authorization
+copy moves; the SOPS copy (`google_project_service.cloudkms[0]`) leaves state
+through a `removed` block with `destroy = false`, so no API call is made. With
+Binary Authorization on, the moved entry carries on. With SOPS only,
+`enabled_apis` declares the API again: the plan shows a create, and enabling an
+API that is already on changes nothing in the project.
 
 ## 📦 Cloud Run Services
 

@@ -300,7 +300,8 @@ app:
         annotations:                                # [OPTIONAL] Annotations on the Cloud Run service
           "run.googleapis.com/binary-authorization": "default"  # Example: Enable binary authorization
 
-        # Cloud SQL connection (mounts Cloud SQL Auth Proxy sidecar)
+        # Cloud SQL connection (mounts Cloud SQL Auth Proxy sidecar). Also enables
+        # sqladmin.googleapis.com, with or without a database section.
         cloud_sql_instances_mount:                  # [OPTIONAL] Cloud SQL instances to connect
           - "my-sql-instance-connection-name"       #   Format: "{instance-name}" or full connection string
                                                     #   The Cloud SQL Auth Proxy handles authentication
@@ -446,7 +447,7 @@ app:
 
         # Advanced: VPC access configuration (alternative to enable_vpc_access)
         # vpc_access:                               # [OPTIONAL] Custom VPC access settings
-        #   connector: "my-connector"               #   VPC connector name
+        #   connector: "my-connector"               #   VPC connector name (enables vpcaccess.googleapis.com)
         #   egress: "ALL_TRAFFIC"                   #   Egress setting (default: "ALL_TRAFFIC")
         #   network_interfaces:                     #   Direct VPC egress (alternative to connector)
         #     network: "my-network"
