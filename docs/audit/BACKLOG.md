@@ -5,7 +5,7 @@ settings, locals, network, security, SQL, KMS and provider pins). This
 repository is that template: root files `gcp.*.tf`, vendored `tf_gcp_*`
 modules, one workspace file per environment.
 
-Open: 16. Done: 8. Accepted, do not port: 16.
+Open: 14. Done: 10. Accepted, do not port: 16.
 
 Regenerate this file with `python3 bin/audit-terraform.py --write` in the same
 pull request that closes an item. The status comes from the code, not from
@@ -13,22 +13,6 @@ this prose. How a session picks the next item: `docs/audit/OPERATING.md`.
 
 
 ## Open
-
-### AUD-PRE (p1) There is no pre workspace
-
-settings/ holds default.yaml and a commented example. Tools Hub keeps a real pre.yaml: smaller machines, zonal SQL, scale-to-zero, backups on, private IP, a budget. A new project needs that file so pre is a workspace someone can fill in, not a copy-paste from a 900 line example.
-
-Evidence: settings/ has no pre.yaml.
-
-Next change: Add settings/pre.yaml with one service, one database, the shared VPC, the load balancer, the budget and placeholder project ids.
-
-### AUD-PRO (p1) There is no pro workspace
-
-Pro is where deletion protection, regional SQL, a warm instance, longer backups, TLS to Redis and a higher budget stop being comments. Tools Hub has settings/pro.yaml for this. The file here should be complete and obviously full of placeholders, so applying it unchanged fails on purpose until the project ids are real.
-
-Evidence: settings/ has no pro.yaml.
-
-Next change: Add settings/pro.yaml. Regional SQL, min_instances 1, deletion protection on, encrypted SQL, HA Redis with in-transit encryption.
 
 ### AUD-LOCK (p1) The provider lock file is gitignored
 
@@ -199,6 +183,22 @@ gcp.sql.tf hardcodes query_insights_enabled = false. Pre can live without it. Pr
 Evidence: gcp.sql.tf insights_config block.
 
 Next change: Map settings.database.<id>.sql.insights over that object. Default stays off.
+
+### AUD-PRE (p1) There is no pre workspace
+
+settings/ holds default.yaml and a commented example. Tools Hub keeps a real pre.yaml: smaller machines, zonal SQL, scale-to-zero, backups on, private IP, a budget. A new project needs that file so pre is a workspace someone can fill in, not a copy-paste from a 900 line example.
+
+Evidence: settings/ has no pre.yaml.
+
+Next change: Add settings/pre.yaml with one service, one database, the shared VPC, the load balancer, the budget and placeholder project ids.
+
+### AUD-PRO (p1) There is no pro workspace
+
+Pro is where deletion protection, regional SQL, a warm instance, longer backups, TLS to Redis and a higher budget stop being comments. Tools Hub has settings/pro.yaml for this. The file here should be complete and obviously full of placeholders, so applying it unchanged fails on purpose until the project ids are real.
+
+Evidence: settings/ has no pro.yaml.
+
+Next change: Add settings/pro.yaml. Regional SQL, min_instances 1, deletion protection on, encrypted SQL, HA Redis with in-transit encryption.
 
 ### AUD-AGENTS (p1) A session that opens this repo has no operating rules
 

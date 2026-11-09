@@ -78,9 +78,10 @@ the common ones if you don't want to read 900 lines of comments.
 3. Put that bucket name in the `backend "gcs"` block of `versions.tf`.
 4. Edit `settings/default.yaml`. Set the region, the enabled APIs, and `client.name`, which
    is the short prefix every resource name starts with.
-5. Create `settings/<workspace>.yaml` and copy in the sections you need from
-   `settings/example.yaml`. The only required keys are `project.id`, `project.name`,
-   `project.number` and `security.alerts_email`.
+5. Start from `settings/pre.yaml` or `settings/pro.yaml` (see `docs/ENVIRONMENTS.md`),
+   or copy the sections you need from `settings/example.yaml`. Replace the
+   placeholder project id, billing account and email. The only required keys are
+   `project.id`, `project.name`, `project.number` and `security.alerts_email`.
 6. Plan and apply:
    ```bash
    terraform init

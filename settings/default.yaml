@@ -40,7 +40,7 @@ active-apis:
   # Storage Services
   - "storage.googleapis.com"
   - "sqladmin.googleapis.com"
-  #- "redis.googleapis.com"
+  - "redis.googleapis.com"
 
   # AI and ML Services
   #- "aiplatform.googleapis.com"
