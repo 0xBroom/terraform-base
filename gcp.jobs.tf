@@ -56,6 +56,16 @@ resource "google_cloud_run_v2_job" "jobs" {
 
   labels = local.common_labels
 
+  # Every image update is checked against the policy in gcp.binary_auth.tf. A
+  # job-config.image that no pipeline has signed is refused once the policy
+  # enforces.
+  dynamic "binary_authorization" {
+    for_each = local.enable_binary_auth ? [1] : []
+    content {
+      use_default = true
+    }
+  }
+
   template {
     parallelism = try(each.value.job-config.parallelism, 1)
     task_count  = try(each.value.job-config.task_count, 1)

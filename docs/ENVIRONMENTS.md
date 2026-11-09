@@ -49,7 +49,7 @@ exist, which is what we want.
 | Load balancer alerts (`monitoring.lb`) | none | none | 5xx, p99 latency, Cloud Armor 403 |
 | Uptime check (`monitoring.uptime`) | none | none | the first `lb.domain` every 5 minutes from 3 regions |
 | Secret read alert (`monitoring.secret_access`) | none | none | Secret Manager Data Access logs, one email per unexpected reader |
-| Binary Authorization | off | off | dry-run, attestation required |
+| Binary Authorization | off | off | enforced: Cloud Build signs each digest with a KMS key, unsigned images are refused |
 | External CI federation (`wif`) | none | none | none, a commented example (`docs/WIF.md`) |
 | VPC | `10.8.1.0/24` | `10.10.1.0/24` | `10.20.1.0/24` |
 | Monthly cost, estimate | about 45 to 60 USD | about 130 to 160 USD | about 420 to 500 USD |
@@ -69,7 +69,8 @@ committing to a figure. What drives it:
   to 40 USD) and Cloud NAT with its address (about 5 to 10 USD).
 - Pro adds the regional instance, which bills both zones (about 220 to 240
   USD), Redis STANDARD_HA (about 50 USD), one always-allocated Cloud Run
-  instance (about 95 to 105 USD), Cloud NAT and the audit archive.
+  instance (about 95 to 105 USD), Cloud NAT and the audit archive. The
+  Binary Authorization signing key is one KMS key version, cents a month.
 
 The `budget.amount` values are placeholders in the billing account currency.
 Set each one above the estimate for that workspace, or its alerts fire every

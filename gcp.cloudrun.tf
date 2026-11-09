@@ -220,7 +220,7 @@ resource "google_storage_bucket_iam_member" "cloudrun_gcs_access" {
 module "cloud_run_services" {
   for_each = local.app_services
 
-  source = "./modules/tf_gcp_cloudrun_v2_v6.5-202502191120"
+  source = "./modules/tf_gcp_cloudrun_v2_v6.6-202611092030"
 
   # If custom_name is set, use the exact service name; otherwise use standard naming
   base_name           = try(each.value.custom_name, null) != null ? each.value.custom_name : "${local.base_name}-${local.run_service_names[each.key]}"
@@ -314,6 +314,9 @@ module "cloud_run_services" {
     }
 
     iap_enabled = try(each.value.cloudrun.iap.enabled, false)
+
+    # Deploys are checked against the policy in gcp.binary_auth.tf.
+    binary_authorization = local.enable_binary_auth
   }
 
   # Permissions

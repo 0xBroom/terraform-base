@@ -145,6 +145,9 @@ locals {
       deploy_service        = value.type != "job" && value.deploy
       deploy_job            = value.type == "job" && value.deploy
       update_companion_job  = value.type != "job" && value.job_name != null
+      # Every pushed image gets an attestation, deployed or not: a base image may be
+      # run later, and the policy only admits signed digests.
+      sign_image = local.enable_binary_auth
     }
   }
 
@@ -217,6 +220,12 @@ locals {
           _JOB_NAME   = local.cloudbuild_job_names[key]
           _JOB_REGION = local.settings.region_name
         },
+        # Only with Binary Authorization on, so the sign-image step and its inputs
+        # come and go together (gcp.binary_auth.tf).
+        local.cloudbuild_capabilities[key].sign_image ? {
+          _BINAUTH_ATTESTOR        = local.binauth_attestor
+          _BINAUTH_KMS_KEY_VERSION = local.binauth_key_version
+        } : {},
       )
       # What an external pipeline has always been handed, and nothing new.
       : {
