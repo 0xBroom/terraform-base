@@ -152,3 +152,6 @@ Rules that are easy to break:
 - No secret values in YAML, HCL, or commit messages. Names and Secret Manager ids only.
 - A missing settings section creates nothing. If you add a `for_each`, wrap the map in
   `try(..., {})`.
+- Read the workspace name from `local.workspace`, never `terraform.workspace`: the
+  tests under `tests/` set it with `settings_workspace` (`docs/audit/OPERATING.md`,
+  "Tests"). Run `terraform test` after a change to a feature toggle.

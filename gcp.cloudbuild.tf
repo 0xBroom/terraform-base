@@ -61,7 +61,7 @@ locals {
       repo_name          = src.cb.repo_name
       provider           = try(src.cb.provider, local.default_repo_provider)
       branch_pattern     = try(src.cb.branch_pattern, null)
-      tag_pattern        = try(src.cb.tag_pattern, try(src.cb.branch_pattern, null) != null ? null : format("^%s-[0-9]{8}[0-9]{2}$", terraform.workspace))
+      tag_pattern        = try(src.cb.tag_pattern, try(src.cb.branch_pattern, null) != null ? null : format("^%s-[0-9]{8}[0-9]{2}$", local.workspace))
       build_filter_paths = try(src.cb.build_filter_paths, null)
 
       # ── which pipeline runs ──
@@ -194,7 +194,7 @@ locals {
       # Who this build is. True whatever pipeline runs it.
       {
         _GCP_REGION         = local.settings.region_name
-        _ENV                = terraform.workspace
+        _ENV                = local.workspace
         _RAW_NAME           = value.raw_name
         _PREFIXED_NAME      = value.prefixed_name
         _DOCKERFILE_PATH    = value.dockerfile_path
@@ -296,7 +296,7 @@ resource "google_cloudbuild_trigger" "cloudbuild_triggers" {
   project     = local.settings.project.id
   location    = local.settings.region_name
   name        = format("%s-%s", local.base_name, try(each.value.name, each.key))
-  description = format("Cloud Build trigger for %s service in %s environment", try(each.value.name, each.key), terraform.workspace)
+  description = format("Cloud Build trigger for %s service in %s environment", try(each.value.name, each.key), local.workspace)
 
   included_files = each.value.build_filter_paths
 
@@ -311,7 +311,7 @@ resource "google_cloudbuild_trigger" "cloudbuild_triggers" {
   lifecycle {
     precondition {
       condition     = !local.cloudbuild_file_missing[each.key]
-      error_message = "cloudbuild_files/${each.value.cloudbuild_file_path} does not exist, and '${each.key}' is declared inline. Fix cloudbuild_file_path in settings/${terraform.workspace}.yaml."
+      error_message = "cloudbuild_files/${each.value.cloudbuild_file_path} does not exist, and '${each.key}' is declared inline. Fix cloudbuild_file_path in settings/${local.workspace}.yaml."
     }
 
     # A newline in a build argument breaks the backslash-continued docker build command.

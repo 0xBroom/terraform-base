@@ -153,7 +153,10 @@ says it was destroyed, so confirm with `gcloud` afterwards.
 Pull requests and pushes to `main` run `.github/workflows/terraform.yml`,
 with no GCP login:
 
-- `fmt`: `terraform fmt -check` on the root files (not the vendored modules).
+- `fmt`: `terraform fmt -check` on the root files and the tests (not the
+  vendored modules).
+- `test`: `terraform test` plans the default, dev and pro shapes with mock
+  providers (`tests/*.tftest.hcl`): what each one must create and must not.
 - `validate`: `terraform validate` once per workspace, `default`, `dev`,
   `stg`, `pre` and `pro`, each with `TF_WORKSPACE` set, so a broken settings
   file fails its own job. `default` runs `terraform init -backend=false`; the

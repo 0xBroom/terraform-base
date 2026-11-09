@@ -11,8 +11,8 @@ locals {
 
   sops_service_files = {
     for name, _ in local.app_services :
-    name => "${path.module}/secrets/${terraform.workspace}/${name}.enc.yaml"
-    if fileexists("${path.module}/secrets/${terraform.workspace}/${name}.enc.yaml")
+    name => "${path.module}/secrets/${local.workspace}/${name}.enc.yaml"
+    if fileexists("${path.module}/secrets/${local.workspace}/${name}.enc.yaml")
   }
 }
 

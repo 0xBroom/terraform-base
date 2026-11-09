@@ -52,7 +52,7 @@ resource "google_cloud_run_v2_job" "jobs" {
   name                = try(each.value.custom_name, format("%s-%s", local.base_name, try(each.value.name, each.key)))
   location            = local.settings.region_name
   launch_stage        = try(each.value.job-config.launch_stage, "GA")
-  deletion_protection = try(each.value.job-config.deletion_protection, terraform.workspace == "pro")
+  deletion_protection = try(each.value.job-config.deletion_protection, local.workspace == "pro")
 
   labels = local.common_labels
 

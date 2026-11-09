@@ -46,7 +46,7 @@ resource "google_redis_instance" "redis_instances" {
 
   # Terraform refuses to destroy the instance while this is true. It lives
   # only in Terraform state, so changing it is an in-place update with no API call.
-  deletion_protection = try(each.value.deletion_protection, terraform.workspace == "pro")
+  deletion_protection = try(each.value.deletion_protection, local.workspace == "pro")
 
   # RDB snapshots (optional). Removing the block keeps the current mode on the
   # instance; set persistence_mode to "DISABLED" to turn snapshots off.

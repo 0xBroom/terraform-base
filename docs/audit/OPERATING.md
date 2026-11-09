@@ -41,6 +41,7 @@ when a full audit adds no new item.
    override, `*_override.tf`, is gitignored).
 6. CI repeats part of this on the pull request: `terraform fmt -check`,
    `terraform validate` in `default`, `dev`, `stg`, `pre` and `pro`,
+   `terraform test`,
    `python3 bin/cloudbuild-render-test.py`,
    `python3 bin/validate-settings.py` and
    `python3 bin/audit-terraform.py --fail-on p0`. A key you add to the
@@ -108,3 +109,21 @@ side): dots between levels, underscores inside a word
 (`gcp.cloudrun.domain_mappings.tf`, `gcp.compute.nat.tf`), no hyphens. Only
 `locals.tf`, `providers.tf`, `versions.tf` and `outputs.tf` sit outside the pattern.
 `AUD-NAMES` checks both conventions.
+
+## Tests
+
+`tests/*.tftest.hcl` plan the reference shapes with mock providers, so
+`terraform init -backend=false` then `terraform test` needs no GCP login and
+calls no API. `terraform test` always runs in the default workspace, so a test
+picks its shape with the `settings_workspace` variable (`locals.tf`), which
+replaces `terraform.workspace` for the settings file, the names and the
+pro-only defaults. Root files therefore read `local.workspace`, never
+`terraform.workspace`. Left unset, the workspace decides as before; set
+outside a test, the `settings_workspace_unset` check warns.
+
+A behaviour that only a workspace shape shows (a resource that must not exist
+in dev, a protection pro must have) gets an assertion in the matching test
+file, with a positive control so an empty plan cannot pass it. A test cannot
+read resources inside a module of the stack: assert on the root resource or
+local that feeds it, or plan the module alone as `pro_cloud_sql.tftest.hcl`
+does.
