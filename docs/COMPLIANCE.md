@@ -97,7 +97,7 @@ privacy notice and the erasure procedure.
 
 | Control | Key | Terraform resource | Evidence | ISO 27001 | SOC 2 | GDPR |
 |---|---|---|---|---|---|---|
-| Infrastructure changes go through code review and a read plan; nothing is created in the console | none: the repository and `AGENTS.md` | the whole stack | pull request history; `terraform plan` shows no drift | 8.9, 8.32 | CC8.1 | - |
+| Changes are expected through pull requests and a reviewed plan; a plan with no drift shows nothing was changed outside Terraform | none: the repository and `AGENTS.md` (not enforced, see below) | the whole stack | pull request history; `terraform plan` shows no drift | 8.9, 8.32 | CC8.1 | - |
 | A pro release is a tag `pro-YYYYMMDDHH`, not a branch push | `app.service.api.cloudbuild` (tag pattern code default `^pro-[0-9]{8}[0-9]{2}$`) | `google_cloudbuild_trigger.cloudbuild_triggers` | `gcloud builds triggers list --region=$R --project=$P`; `gcloud builds list --region=$R --project=$P` | 8.32 | CC8.1 | - |
 | Each build fails on a leaked secret and reports code and dependency findings | `app.service.api.cloudbuild.scan` | `google_cloudbuild_trigger.cloudbuild_triggers` (inline pipeline steps) | the build logs of `gcloud builds list` | 8.8, 8.28, 8.29 | CC7.1, CC8.1 | - |
 | Images in Artifact Registry are scanned for known vulnerabilities | `security.artifact_scanning` | `google_project_service.enabled_apis` (`containerscanning.googleapis.com`) | `gcloud artifacts docker images list <repository> --show-occurrences` | 8.8 | CC7.1 | - |
@@ -139,6 +139,10 @@ the adopter on purpose. The accepted items are in `docs/audit/BACKLOG.md`.
   restricted sharing, OS Login and the rest are set on the organization or the
   folder. Pro sets only the two service account key constraints, and the applier
   needs `roles/orgpolicy.policyAdmin` from whoever runs the organization.
+- **Change control.** The template does not enforce review. Turn on branch
+  protection with required reviews and status checks on the repository, and limit
+  console write access (Owner and Editor) to a break-glass group, so that the pull
+  request history really is the change record (ISO 8.32, SOC 2 CC8.1).
 - **Access reviews.** The stack grants what `project_access` and `iap` list. Who
   belongs on those lists, the review every quarter or so and the removal of
   leavers are a process (ISO 5.18, SOC 2 CC6.2 and CC6.3). Put group emails in the
