@@ -45,7 +45,7 @@ No modules.
 | <a name="input_network_tier"></a> [network\_tier](#input\_network\_tier) | Network Tier | `string` | `"PREMIUM"` | no |
 | <a name="input_repo_iac"></a> [repo\_iac](#input\_repo\_iac) | URL or name of IAC repository | `string` | n/a | yes |
 | <a name="input_serverless_vpc_connectors"></a> [serverless\_vpc\_connectors](#input\_serverless\_vpc\_connectors) | serverless\_vpc\_connector configuration | <pre>map(object({<br/>    cidr          = optional(string, "10.8.0.0/28")<br/>    region        = string<br/>    machine_type  = optional(string, "e2-micro")<br/>    subnet        = optional(string)<br/>    max_instances = optional(number, 3)<br/>    min_instances = optional(number, 2)<br/>  }))</pre> | `{}` | no |
-| <a name="input_services_ip_ranges"></a> [services\_ip\_ranges](#input\_services\_ip\_ranges) | google\_compute\_global\_address configuration (Services IP Ranges) | <pre>map(object({<br/>    address       = optional(string, null)<br/>    description   = optional(string, null)<br/>    prefix_length = optional(number, 16)<br/>    address_type  = optional(string, "INTERNAL")<br/>    purpose       = optional(string, "VPC_PEERING")<br/>    single_dash   = optional(bool, false)<br/>  }))</pre> | `{}` | no |
+| <a name="input_services_ip_ranges"></a> [services\_ip\_ranges](#input\_services\_ip\_ranges) | google\_compute\_global\_address configuration (Services IP Ranges). Every VPC\_PEERING entry is reserved for one Private Service Access connection. | <pre>map(object({<br/>    address       = optional(string, null)<br/>    description   = optional(string, null)<br/>    prefix_length = optional(number, 16)<br/>    address_type  = optional(string, "INTERNAL")<br/>    purpose       = optional(string, "VPC_PEERING")<br/>    single_dash   = optional(bool, false)<br/>  }))</pre> | `{}` | no |
 | <a name="input_subnets"></a> [subnets](#input\_subnets) | Subnets that will be created into the network | <pre>map(object({<br/>    cidr                  = string<br/>    region                = string<br/>    purpose               = optional(string)<br/>    role                  = optional(string)<br/>    private_google_access = optional(bool, true)<br/>    single_dash           = optional(bool, false)<br/>  }))</pre> | `{}` | no |
 
 ## Outputs
@@ -55,6 +55,9 @@ No modules.
 | <a name="output_ip_nat"></a> [ip\_nat](#output\_ip\_nat) | Cloud NAT IPs |
 | <a name="output_network_id"></a> [network\_id](#output\_network\_id) | Network id |
 | <a name="output_network_name"></a> [network\_name](#output\_network\_name) | Network name |
+| <a name="output_psa_connection_id"></a> [psa\_connection\_id](#output\_psa\_connection\_id) | Private Service Access connection id, null when no VPC\_PEERING range is set |
+| <a name="output_psa_network_id"></a> [psa\_network\_id](#output\_psa\_network\_id) | Network id that depends on the Private Service Access connection. A private Cloud SQL or Memorystore instance given this id is created after the peering. |
+| <a name="output_services_ip_range_names"></a> [services\_ip\_range\_names](#output\_services\_ip\_range\_names) | Allocated range name per services\_ip\_ranges key |
 | <a name="output_network_self_link"></a> [network\_self\_link](#output\_network\_self\_link) | Network link |
 | <a name="output_subnetworks"></a> [subnetworks](#output\_subnetworks) | Subnetworks data |
 | <a name="output_vpc_connectors"></a> [vpc\_connectors](#output\_vpc\_connectors) | VPC connectors data |

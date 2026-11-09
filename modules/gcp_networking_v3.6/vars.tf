@@ -85,8 +85,25 @@ variable "services_ip_ranges" {
     single_dash   = optional(bool, false)
   }))
 
-  description = "google_compute_global_address configuration (Services IP Ranges)"
+  description = "google_compute_global_address configuration (Services IP Ranges). Every VPC_PEERING entry is reserved for one Private Service Access connection."
   default     = {}
+  nullable    = false
+
+  validation {
+    condition = alltrue([
+      for range in values(var.services_ip_ranges) :
+      range.purpose != "VPC_PEERING" || (range.address_type == "INTERNAL" && range.prefix_length >= 8 && range.prefix_length <= 24)
+    ])
+    error_message = "A VPC_PEERING services range must be INTERNAL with a prefix_length from 8 to 24 (Cloud SQL needs at least a /24)."
+  }
+
+  validation {
+    condition = alltrue([
+      for range in values(var.services_ip_ranges) :
+      range.address == null || try(cidrhost(format("%s/%d", range.address, range.prefix_length), 0) == range.address, false)
+    ])
+    error_message = "A services range address must be the first IPv4 address of its block (address/prefix_length), for example 10.9.0.0 with 16."
+  }
 }
 
 variable "repo_iac" {

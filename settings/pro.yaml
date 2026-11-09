@@ -241,6 +241,12 @@ network:
   internal_connection: true
   services_cidr: "10.20.1.0/24"
   private_google_access: true
+  # Private Service Access: the private Cloud SQL IP and Memorystore come from
+  # this block. It must not overlap services_cidr. No charge.
+  services_ip_ranges:
+    private:
+      address: "10.21.0.0"
+      prefix_length: 16
   nats:
     services:
       region: europe-west1

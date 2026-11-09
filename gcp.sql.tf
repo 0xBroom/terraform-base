@@ -47,7 +47,9 @@ module "cloud_sql" {
   zones_name              = try(local.settings.zones_name, [])
   special_characters_pass = try(each.value.sql.special_password, {})
   secrets_locations       = [local.settings.region_name] # Use regional location for secrets
-  net_id                  = try(each.value.sql.ipv4_enabled, false) ? null : try(module.network[0].network_id, null)
+  # psa_network_id depends on the Private Service Access connection, so a
+  # private instance is created after the peering it takes its IP from.
+  net_id = try(each.value.sql.ipv4_enabled, false) ? null : try(module.network[0].psa_network_id, null)
   insights_config = {
     query_insights_enabled  = try(each.value.sql.insights.enabled, false)
     query_plans_per_minute  = try(each.value.sql.insights.query_plans_per_minute, 0)

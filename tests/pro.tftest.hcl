@@ -34,6 +34,16 @@ run "pro_shape_is_hardened" {
   }
 
   assert {
+    condition = (
+      local.private_service_access_needed
+      && length(module.network) == 1
+      && keys(module.network[0].services_ip_range_names) == ["private"]
+      && local.services_ip_range_cidrs["private"] == "10.21.0.0/16"
+    )
+    error_message = "pro reserves its Private Service Access range for the private Cloud SQL and Memorystore (pro_network.tftest.hcl checks the connection)."
+  }
+
+  assert {
     condition = length(google_redis_instance.redis_instances) > 0 && alltrue([
       for instance in values(google_redis_instance.redis_instances) : instance.deletion_protection
     ])

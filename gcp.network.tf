@@ -3,6 +3,48 @@
 # plans with no network, no NAT and no firewall. This is not a VPC per service.
 locals {
   network_enabled = can(local.settings.network.services_cidr)
+
+  # Cloud SQL without a public IP and Memorystore in PRIVATE_SERVICE_ACCESS mode
+  # take their address from a Private Service Access range of the shared VPC.
+  private_service_access_needed = anytrue(concat(
+    [for db in try(values(local.settings.database), []) : !try(db.sql.ipv4_enabled, false)],
+    [for redis in try(values(local.settings.redis), []) : try(redis.connect_mode, "") == "PRIVATE_SERVICE_ACCESS"],
+  ))
+
+  # network.services_ip_ranges as written. Left out, a workspace that needs
+  # Private Service Access gets one /16 that Google allocates from the free
+  # private space of the VPC, so it cannot overlap services_cidr. An explicit
+  # empty map creates no range and no connection.
+  services_ip_ranges = try(
+    coalesce(local.settings.network.services_ip_ranges),
+    local.private_service_access_needed ? { private = { prefix_length = 16 } } : {},
+  )
+
+  # Explicit addresses, as CIDRs, for the overlap check below.
+  services_ip_range_cidrs = {
+    for key, range in local.services_ip_ranges :
+    key => format("%s/%d", range.address, try(range.prefix_length, 16))
+    if try(range.address, null) != null
+  }
+}
+
+check "private_service_access_range" {
+  assert {
+    condition     = !local.network_enabled || !local.private_service_access_needed || length(local.services_ip_ranges) > 0
+    error_message = "A database with ipv4_enabled false or a redis with connect_mode PRIVATE_SERVICE_ACCESS needs a network.services_ip_ranges entry (leave the key out for one Google-allocated /16)."
+  }
+
+  assert {
+    # Two blocks overlap when they share the network address of the shorter prefix.
+    condition = alltrue([
+      for key, cidr in local.services_ip_range_cidrs : alltrue([
+        for other in distinct(concat([try(local.settings.network.services_cidr, "0.0.0.0/32")], try(local.settings.network.extra_internal_cidrs, []))) :
+        cidrhost(format("%s/%d", split("/", cidr)[0], min(tonumber(split("/", cidr)[1]), tonumber(split("/", other)[1]))), 0)
+        != cidrhost(format("%s/%d", split("/", other)[0], min(tonumber(split("/", cidr)[1]), tonumber(split("/", other)[1]))), 0)
+      ])
+    ])
+    error_message = "A network.services_ip_ranges entry overlaps network.services_cidr or extra_internal_cidrs. Pick a block outside the subnets."
+  }
 }
 
 # Addresses before this count was introduced. Harmless on a fresh state.
@@ -13,7 +55,7 @@ moved {
 
 module "network" {
   count  = local.network_enabled ? 1 : 0
-  source = "./modules/gcp_networking_v3.5"
+  source = "./modules/gcp_networking_v3.6"
 
   # Base name used in module (Mandatory)
   base_name = format("%s-vpc", local.base_name)
@@ -63,23 +105,10 @@ module "network" {
   #  }
   #}
 
-  services_ip_ranges = {
-    private = {
-      # All the below values are optional
-      # IP of the new created services address
-      address = null
-      # Just a description for the address
-      description = null
-      # The prefix length for the cidr (address/prefix_length)
-      prefix_length = 16
-      # Address type
-      address_type = "INTERNAL"
-      # Purpose
-      purpose = "VPC_PEERING"
-      # The service range name will use single dashes instead double dashes
-      single_dash = false
-    }
-  }
+  # Private Service Access ranges (network.services_ip_ranges, see the locals
+  # above). Every VPC_PEERING entry becomes a reserved global address, and all
+  # of them go into one servicenetworking connection.
+  services_ip_ranges = local.services_ip_ranges
 
   # IAC Repository to help the notifications to be more polite with the person who have to fix it.
   repo_iac = local.settings.iac.repo

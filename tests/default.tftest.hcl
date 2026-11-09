@@ -22,8 +22,8 @@ run "empty_shape_creates_nothing_optional" {
   }
 
   assert {
-    condition     = !local.network_enabled && length(module.network) == 0
-    error_message = "No network section: no shared VPC."
+    condition     = !local.network_enabled && length(module.network) == 0 && !local.private_service_access_needed && length(local.services_ip_ranges) == 0
+    error_message = "No network section: no shared VPC, no Private Service Access range and no servicenetworking connection."
   }
 
   assert {
