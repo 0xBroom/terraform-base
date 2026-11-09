@@ -5,7 +5,7 @@ settings, locals, network, security, SQL, KMS and provider pins). This
 repository is that template: root files `gcp.*.tf`, vendored `tf_gcp_*`
 modules, one workspace file per environment.
 
-Open: 1. Done: 20. Accepted, do not port: 19.
+Open: 0. Done: 21. Accepted, do not port: 19.
 
 Regenerate this file with `python3 bin/audit-terraform.py --write` in the same
 pull request that closes an item. The status comes from the code, not from
@@ -14,13 +14,7 @@ this prose. How a session picks the next item: `docs/audit/OPERATING.md`.
 
 ## Open
 
-### AUD-PROVIDER (p2) The Google provider is pinned to 6.42 while Tools Hub is on 7.42
-
-versions.tf asks for hashicorp/google ~> 6.42.0 and Terraform >= 1.10. Tools Hub is on ~> 7.42 and Terraform >= 1.14. The vendored modules in this repo were written against the 6.x provider. A major bump is a review of those modules, not a one-line edit.
-
-Evidence: versions.tf required_providers.google version ~> 6.42.0.
-
-Next change: Open one PR that bumps Terraform and both Google providers, runs validate, and notes every module argument the new provider rejects.
+None.
 
 ## Done
 
@@ -119,6 +113,14 @@ The template creates Secret Manager containers and a placeholder version, which 
 Evidence: versions.tf has no carlpett/sops provider.
 
 Next change: Add an optional SOPS path: a KMS key the workspace opts into, .sops.yaml, and secret versions read from an encrypted file when it exists. Keep the placeholder when the file is absent. Do not copy the Tools Hub key ring.
+
+### AUD-PROVIDER (p2) The Google provider is pinned to 6.42 while Tools Hub is on 7.42
+
+versions.tf asks for hashicorp/google ~> 6.42.0 and Terraform >= 1.10. Tools Hub is on ~> 7.42 and Terraform >= 1.14. The vendored modules in this repo were written against the 6.x provider. A major bump is a review of those modules, not a one-line edit.
+
+Evidence: versions.tf required_providers.google version ~> 6.42.0.
+
+Next change: Open one PR that bumps Terraform and both Google providers, runs validate, and notes every module argument the new provider rejects.
 
 ### AUD-PAP (p2) Buckets cannot set public access prevention
 
