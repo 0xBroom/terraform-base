@@ -103,8 +103,10 @@ monitoring:
       failing_regions: 2
   # Data Access logs for Secret Manager and one email per secret read by an
   # identity this stack does not grant access to. The service accounts of the
-  # services, jobs and Cloud Build are skipped already, and so is the
-  # Terraform identity above. Add any other expected reader here.
+  # services, jobs and Cloud Build are skipped already, and so are the
+  # Terraform identity above and the user: and serviceAccount: accessors of
+  # secrets and external_secret_access. Add any other expected reader here,
+  # such as the members of a group: accessor.
   secret_access:
     enabled: true
     allowed_principals: []
