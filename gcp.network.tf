@@ -19,13 +19,6 @@ locals {
     coalesce(local.settings.network.services_ip_ranges),
     local.private_service_access_needed ? { private = { prefix_length = 16 } } : {},
   )
-
-  # Explicit addresses, as CIDRs.
-  services_ip_range_cidrs = {
-    for key, range in local.services_ip_ranges :
-    key => format("%s/%d", range.address, try(range.prefix_length, 16))
-    if try(range.address, null) != null
-  }
 }
 
 # Addresses before this count was introduced. Harmless on a fresh state.
