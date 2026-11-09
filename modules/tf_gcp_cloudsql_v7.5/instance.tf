@@ -37,8 +37,10 @@ resource "google_sql_database_instance" "dbe" {
       enabled    = true
       location   = var.backup_configuration.location
       start_time = var.backup_configuration.start_time
-      # this option must be false for POSTGRES databases
-      binary_log_enabled = var.dbe.binary_log_enabled ? length(regexall("mysql", lower(var.dbe.version))) > 0 ? "true" : "false" : false
+      # binary_log_enabled must be false outside MySQL, point_in_time_recovery_enabled is not valid on MySQL
+      binary_log_enabled             = local.is_mysql ? local.pitr_enabled : false
+      point_in_time_recovery_enabled = local.is_mysql ? null : local.pitr_enabled
+      transaction_log_retention_days = local.pitr_enabled ? var.backup_configuration.transaction_log_retention_days : null
       backup_retention_settings {
         retained_backups = var.backup_configuration.retained_backups
       }

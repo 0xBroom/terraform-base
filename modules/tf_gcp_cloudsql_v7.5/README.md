@@ -2,6 +2,12 @@
 
 From version v5.5 and above, you need to update the Google Cloud Provider to >=4.75.0
 
+From version v7.5, `backup_configuration` takes `point_in_time_recovery_enabled` and
+`transaction_log_retention_days`. MySQL gets point-in-time recovery from the binary log,
+PostgreSQL and SQL Server from `point_in_time_recovery_enabled`. Leaving
+`point_in_time_recovery_enabled` unset keeps the v7.4 behaviour (MySQL follows
+`dbe.binary_log_enabled`, other engines off).
+
 ## Requirements
 
 | Name | Version |
@@ -52,7 +58,7 @@ No modules.
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
-| <a name="input_backup_configuration"></a> [backup\_configuration](#input\_backup\_configuration) | Cloud SQL Backup configuration | <pre>object({<br>    start_time       = optional(string, "03:00")<br>    retained_backups = optional(number, 7)<br>    location         = optional(string, null)<br>  })</pre> | `{}` | no |
+| <a name="input_backup_configuration"></a> [backup\_configuration](#input\_backup\_configuration) | Cloud SQL Backup configuration | <pre>object({<br>    start_time       = optional(string, "03:00")<br>    retained_backups = optional(number, 7)<br>    location         = optional(string, null)<br>    point_in_time_recovery_enabled = optional(bool, null)<br>    transaction_log_retention_days = optional(number, null)<br>  })</pre> | `{}` | no |
 | <a name="input_base_name"></a> [base\_name](#input\_base\_name) | Base name | `string` | n/a | yes |
 | <a name="input_databases"></a> [databases](#input\_databases) | n/a | `list(string)` | `[]` | no |
 | <a name="input_dbe"></a> [dbe](#input\_dbe) | n/a | <pre>object({<br>    version      = optional(string, "MYSQL_8_0")<br>    tier         = optional(string, "db-f1-micro")<br>    availability = optional(string, "ZONAL")<br>    edition      = optional(string, "ENTERPRISE")<br>    ipv4_enabled = optional(bool, false)<br>    ssl_mode     = optional(string, "ENCRYPTED_ONLY")<br>    allowed_networks = optional(list(object({<br>      name  = optional(string, "")<br>      value = string<br>    })), [])<br>    disk = optional(object({<br>      type = optional(string, "PD_SSD")<br>      size = optional(number, 10)<br>    }), {})<br>    binary_log_enabled  = optional(bool, true)<br>    replica             = optional(number, 0)<br>    deletion_protection = optional(bool, true)<br>    flags               = optional(map(string))<br>  })</pre> | `{}` | no |

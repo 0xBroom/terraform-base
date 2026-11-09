@@ -26,6 +26,8 @@ app:
       start_time: "08:00"
       retained_backups: 7
       location: "eu"
+      point_in_time_recovery_enabled: true   # MySQL: binary log, PostgreSQL: WAL. Omit to follow binary_log_enabled on MySQL
+      transaction_log_retention_days: 7      # 1-7 on ENTERPRISE, 1-35 on ENTERPRISE_PLUS
     maintenance:
       day: 2
       hour: 7

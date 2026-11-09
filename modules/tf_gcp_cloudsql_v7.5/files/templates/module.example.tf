@@ -13,7 +13,7 @@ locals {
 }
 
 module "cloud_sql" {
-  source = "./modules/tf_gcp_cloudsql_v7.4-202506180832"
+  source = "./modules/tf_gcp_cloudsql_v7.5"
 
   gcp_project_id     = local.settings.project.id
   gcp_project_sys_id = local.settings.project_sys.id

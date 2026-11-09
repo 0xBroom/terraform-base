@@ -149,6 +149,7 @@ database:
         retained_backups: 7
         location: "eu"
         point_in_time_recovery_enabled: true
+        transaction_log_retention_days: 3
       maintenance:
         day: 2
         hour: 4
