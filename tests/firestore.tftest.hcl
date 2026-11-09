@@ -1,6 +1,7 @@
 # No reference file has a firestore section, so each run adds one with
 # settings_override (locals.tf). Pro defaults to point-in-time recovery and
-# delete protection, every other workspace to neither, and the YAML wins.
+# delete protection; elsewhere point-in-time recovery is off and delete
+# protection is left to the database. The YAML wins.
 
 mock_provider "google" {}
 mock_provider "google" {
@@ -51,11 +52,8 @@ run "dev_firestore_is_disposable" {
   expect_failures = [check.settings_workspace_unset]
 
   assert {
-    condition = (
-      google_firestore_database.databases["default"].point_in_time_recovery_enablement == "POINT_IN_TIME_RECOVERY_DISABLED"
-      && google_firestore_database.databases["default"].delete_protection_state == "DELETE_PROTECTION_DISABLED"
-    )
-    error_message = "A dev Firestore database without the keys has neither point-in-time recovery nor delete protection."
+    condition     = google_firestore_database.databases["default"].point_in_time_recovery_enablement == "POINT_IN_TIME_RECOVERY_DISABLED"
+    error_message = "A dev Firestore database without the keys has no point-in-time recovery. Delete protection is left unset (computed), so there is nothing to assert."
   }
 }
 

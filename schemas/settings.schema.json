@@ -340,7 +340,7 @@
           "type": { "enum": ["FIRESTORE_NATIVE", "DATASTORE_MODE"] },
           "location_id": { "type": "string" },
           "point_in_time_recovery": { "type": "boolean", "description": "Default true in pro, false elsewhere." },
-          "delete_protection_state": { "enum": ["DELETE_PROTECTION_ENABLED", "DELETE_PROTECTION_DISABLED"], "description": "Default enabled in pro, disabled elsewhere." },
+          "delete_protection_state": { "enum": ["DELETE_PROTECTION_ENABLED", "DELETE_PROTECTION_DISABLED"], "description": "Default enabled in pro, unset (kept as the database has it) elsewhere." },
           "deletion_policy": { "type": "string", "description": "ABANDON (provider default) or DELETE." },
           "indexes_file": { "type": "string" },
           "permissions": { "$ref": "#/$defs/permissionGroups" }
