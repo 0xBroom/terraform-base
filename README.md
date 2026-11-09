@@ -155,6 +155,9 @@ with no GCP login:
 
 - `fmt`: `terraform fmt -check` on the root files and the tests (not the
   vendored modules).
+- `lint`: `tflint` on the root module with the Terraform `recommended` preset
+  and the pinned Google ruleset (`.tflint.hcl`). The vendored modules are not
+  linted: they change only through a new version directory.
 - `test`: `terraform test` plans the default, dev and pro shapes with mock
   providers (`tests/*.tftest.hcl`): what each one must create and must not.
 - `validate`: `terraform validate` once per workspace, `default`, `dev`,
@@ -168,6 +171,21 @@ with no GCP login:
   while a p0 item in `docs/audit/BACKLOG.md` is still open.
 
 A newer push to the same branch cancels the run it replaces.
+
+The same checks run before each commit with [pre-commit](https://pre-commit.com),
+given `terraform` and `tflint` on the `PATH`:
+
+```bash
+pip install pre-commit
+pre-commit install            # once per clone
+pre-commit run --all-files    # everything, now
+```
+
+`.pre-commit-config.yaml` runs trailing whitespace and end-of-file fixes,
+`terraform fmt`, `terraform validate`, `tflint`, `bin/validate-settings.py` and
+`bin/audit-terraform.py --fail-on p0`, with pinned hook versions. It skips
+`modules/`. `terraform test` stays in CI: run it yourself after changing a
+feature toggle.
 
 ## Production readiness backlog
 

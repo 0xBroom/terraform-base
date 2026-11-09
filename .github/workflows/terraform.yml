@@ -25,6 +25,22 @@ jobs:
       - name: Format the root files and the tests
         run: find . \( -name '*.tf' -o -name '*.tftest.hcl' \) -not -path './modules/*' -print0 | xargs -0 terraform fmt -check -diff
 
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: terraform-linters/setup-tflint@v6
+        with:
+          tflint_version: v0.66.0
+      # .tflint.hcl pins the google ruleset; the token only lifts the GitHub
+      # API rate limit of the plugin download.
+      - name: Install the tflint plugins
+        run: tflint --init
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Lint the root module
+        run: tflint --format compact --minimum-failure-severity=warning
+
   test:
     runs-on: ubuntu-24.04
     steps:

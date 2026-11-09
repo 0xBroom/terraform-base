@@ -59,4 +59,4 @@ module "cloud_sql" {
   flags                             = try(each.value.sql.flags, {})
   notification_channels             = [google_monitoring_notification_channel.security_alerts.id]
   notification_channels_not_on_call = [google_monitoring_notification_channel.security_alerts.id]
-} 
+}

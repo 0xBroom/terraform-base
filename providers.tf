@@ -1,7 +1,3 @@
-data "google_client_config" "default" {
-  provider = google
-}
-
 # The two overrides mirror the stable provider below, and they are not cosmetic.
 # Without them a google-beta call bills quota to gcloud's own shared client project
 # instead of ours, and any beta API that is enabled HERE but not THERE answers 403
@@ -43,4 +39,4 @@ provider "google" {
 provider "oci" {
   auth                = "ApiKey"
   config_file_profile = "DEFAULT"
-} 
+}

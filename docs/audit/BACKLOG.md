@@ -4,7 +4,7 @@ The list of work that takes this template to a public, production-grade
 release: dev and stg cheap, pro ready for a security, backup and
 data-retention audit. Each item has a check in `bin/audit-terraform.py`.
 
-Open: 4. Done: 48. Accepted, not a gap: 22.
+Open: 3. Done: 49. Accepted, not a gap: 22.
 
 Regenerate with `python3 bin/audit-terraform.py --write` in the pull request
 that closes an item. `--next` names the item to take. How a session works an
@@ -12,14 +12,6 @@ item: `docs/audit/OPERATING.md`.
 
 
 ## Open
-
-### AUD-LINT (p3) No tflint or pre-commit configuration
-
-Contributors get fmt and lint errors only after a push.
-
-Next change: Add .tflint.hcl with the google ruleset, .pre-commit-config.yaml (fmt, validate, tflint, the auditor) and a tflint step in CI.
-
-After: AUD-CI-MATRIX
 
 ### AUD-DOC-OSS (p2) The repository has no contributor, security or change files
 
@@ -222,6 +214,7 @@ Next change: Keep it equal to stg.
 - AUD-TF-TESTS (p3) There are no terraform tests
 - AUD-CI-MATRIX (p1) CI validates only the default workspace
 - AUD-CI-RUNNER (p1) CI runs on a moving runner label with Node 20 actions
+- AUD-LINT (p3) No tflint or pre-commit configuration
 - AUD-COST-DEFAULTS (p1) Two code defaults cost money when a key is left out
 - AUD-COST-PROFILES (p1) dev is a copy of stg and stg a copy of pre
 - AUD-COST-APIS (p3) APIs for SQL, Redis, Firestore and other features are enabled when unused

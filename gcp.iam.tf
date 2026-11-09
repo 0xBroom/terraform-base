@@ -3,9 +3,6 @@ locals {
   viewers   = try(local.settings.project_access.viewers, [])
   operators = try(local.settings.project_access.operators, [])
 
-  # IAP (Identity-Aware Proxy) admin members
-  iap_admin_members = try(local.settings.iap.admin_access.members, [])
-
   # Viewers and operators merged for the basic viewer role
   all_viewers_list = setunion(local.viewers, local.operators)
 }

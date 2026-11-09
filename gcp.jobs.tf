@@ -38,7 +38,7 @@ resource "time_sleep" "wait_for_iam_propagation" {
     # same apply. A second apply succeeds with no changes to anything. If you add a
     # root-level secret grant for a job, list it here.
     # Also depend on root level IAM bindings
-    # google_secret_manager_secret_iam_member.run_secrets_access 
+    # google_secret_manager_secret_iam_member.run_secrets_access
   ]
 
   create_duration = "30s"

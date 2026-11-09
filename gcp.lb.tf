@@ -43,9 +43,6 @@ locals {
 
   # Convert to map for for_each
   iap_rules_map = { for rule in local.iap_rules : rule.rule_id => rule }
-
-  # Get unique services that have IAP rules
-  iap_services = toset([for rule in local.iap_rules : rule.service_key])
 }
 
 # ===================================================================
@@ -568,4 +565,3 @@ resource "google_iap_web_iam_binding" "iap_resource_accessor" {
     create_before_destroy = true
   }
 }
-

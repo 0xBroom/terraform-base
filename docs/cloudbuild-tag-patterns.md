@@ -51,7 +51,7 @@ app:
         repo_name: "multiweb-nuxt"
         provider: "github" # optional, defaults to settings.repo_providers.default
         # Custom tag pattern override
-        tag_pattern: "^release-v[0-9]+.[0-9]+.[0-9]+$" 
+        tag_pattern: "^release-v[0-9]+.[0-9]+.[0-9]+$"
 ```
 *This will trigger on tags like `release-v1.0.0`, `release-v2.1.5`.*
 
@@ -96,4 +96,3 @@ git push origin my-workspace-2024021501
 ```
 
 3. GCP Cloud Build will detect the tag and start the pipeline.
-
