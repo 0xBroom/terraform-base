@@ -202,7 +202,7 @@ resource "google_cloud_run_v2_job" "jobs" {
       # VPC Access configuration
       dynamic "vpc_access" {
         for_each = try(each.value.job-config.vpc_access, null) != null ? ["dummy"] : (
-          try(each.value.job-config.enable_vpc_access, true) ? ["dummy"] : []
+          try(each.value.job-config.enable_vpc_access, local.network_enabled) ? ["dummy"] : []
         )
 
         content {
@@ -211,7 +211,7 @@ resource "google_cloud_run_v2_job" "jobs" {
 
           dynamic "network_interfaces" {
             for_each = try(each.value.job-config.vpc_access.network_interfaces, null) != null ? ["dummy"] : (
-              try(each.value.job-config.enable_vpc_access, true) ? ["dummy"] : []
+              try(each.value.job-config.enable_vpc_access, local.network_enabled) ? ["dummy"] : []
             )
 
             content {

@@ -293,7 +293,7 @@ module "cloud_run_services" {
     ]
 
     # VPC access configuration
-    vpc_access = try(each.value.cloudrun.vpc_access_enabled, true) ? {
+    vpc_access = try(each.value.cloudrun.vpc_access_enabled, local.network_enabled) ? {
       egress = try(each.value.cloudrun.vpc.egress, "ALL_TRAFFIC")
       network_interfaces = {
         network    = try(each.value.cloudrun.vpc.network, "${local.base_name}-vpc")

@@ -46,7 +46,7 @@ resource "google_compute_instance" "vm" {
 
   # --- Network interface ---
   network_interface {
-    network    = try(each.value.network, "default") == "default" ? data.google_compute_network.default[0].self_link : module.network.network_self_link
+    network    = try(each.value.network, "default") == "default" ? data.google_compute_network.default[0].self_link : try(module.network[0].network_self_link, null)
     subnetwork = try(each.value.subnetwork, null) == "default" ? "projects/${local.settings.project.id}/regions/${each.value.region}/subnetworks/default" : null
   }
 

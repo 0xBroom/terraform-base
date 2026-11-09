@@ -15,6 +15,16 @@ locals {
   }
 }
 
+check "private_sql_needs_shared_vpc" {
+  assert {
+    condition = alltrue([
+      for db in try(values(local.settings.database), []) :
+      try(db.sql.ipv4_enabled, false) || local.network_enabled
+    ])
+    error_message = "A database with ipv4_enabled false needs network.services_cidr so it can take a private IP on the shared VPC."
+  }
+}
+
 # Create Cloud SQL instances for each database configuration
 module "cloud_sql" {
   source = "./modules/tf_gcp_cloudsql_v7.4-202506180832"
@@ -36,8 +46,8 @@ module "cloud_sql" {
   deny_maintenance_period = try(each.value.sql.deny_maintenance_period, null)
   zones_name              = try(local.settings.zones_name, [])
   special_characters_pass = try(each.value.sql.special_password, null)
-  secrets_locations       = [local.settings.region_name]                                                          # Use regional location for secrets
-  net_id                  = try(each.value.sql.ipv4_enabled, false) ? null : try(module.network.network_id, null) # Only pass network when using private IP
+  secrets_locations       = [local.settings.region_name] # Use regional location for secrets
+  net_id                  = try(each.value.sql.ipv4_enabled, false) ? null : try(module.network[0].network_id, null)
   insights_config = {
     query_insights_enabled  = false
     query_plans_per_minute  = 0

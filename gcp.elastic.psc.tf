@@ -18,11 +18,11 @@ locals {
 
 # Create a Private Service Connect endpoint
 resource "google_compute_address" "elastic_psc_address" {
-  count = local.enable_elastic_psc ? 1 : 0
+  count = local.enable_elastic_psc && local.network_enabled ? 1 : 0
 
   name         = "${local.base_name_medium}-elastic-psc-address"
   region       = local.settings.region_name
-  subnetwork   = module.network.subnetworks["services"].self_link
+  subnetwork   = try(module.network[0].subnetworks["services"].self_link, null)
   address_type = "INTERNAL"
   purpose      = "GCE_ENDPOINT"
   description  = "Private Service Connect IP address for Elastic Cloud"
@@ -33,11 +33,11 @@ resource "google_compute_address" "elastic_psc_address" {
 }
 
 resource "google_compute_forwarding_rule" "elastic_psc_endpoint" {
-  count = local.enable_elastic_psc ? 1 : 0
+  count = local.enable_elastic_psc && local.network_enabled ? 1 : 0
 
   name                  = "${local.base_name_medium}-elastic-psc-endpoint"
   region                = local.settings.region_name
-  network               = module.network.network_id
+  network               = try(module.network[0].network_id, null)
   ip_address            = google_compute_address.elastic_psc_address[0].id
   target                = "projects/cloud-production-168820/regions/europe-west1/serviceAttachments/proxy-psc-production-europe-west1-v1-attachment"
   load_balancing_scheme = ""
@@ -50,7 +50,7 @@ resource "google_compute_forwarding_rule" "elastic_psc_endpoint" {
 
 # Create a private DNS zone for the Elastic Cloud domain
 resource "google_dns_managed_zone" "elastic_private_zone" {
-  count = local.enable_elastic_psc ? 1 : 0
+  count = local.enable_elastic_psc && local.network_enabled ? 1 : 0
 
   name        = "${local.base_name_medium}-elastic-dns-zone"
   dns_name    = "cloud.es.io."
@@ -64,14 +64,14 @@ resource "google_dns_managed_zone" "elastic_private_zone" {
 
   private_visibility_config {
     networks {
-      network_url = module.network.network_id
+      network_url = try(module.network[0].network_id, null)
     }
   }
 }
 
 # Create DNS record pointing to PSC endpoint IP address
 resource "google_dns_record_set" "elastic_dns_record" {
-  count = local.enable_elastic_psc ? 1 : 0
+  count = local.enable_elastic_psc && local.network_enabled ? 1 : 0
 
   name         = "cloud.es.io."
   managed_zone = google_dns_managed_zone.elastic_private_zone[0].name
@@ -82,7 +82,7 @@ resource "google_dns_record_set" "elastic_dns_record" {
 
 # Create DNS record for wildcard subdomains
 resource "google_dns_record_set" "elastic_wildcard_dns_record" {
-  count = local.enable_elastic_psc ? 1 : 0
+  count = local.enable_elastic_psc && local.network_enabled ? 1 : 0
 
   name         = "*.cloud.es.io."
   managed_zone = google_dns_managed_zone.elastic_private_zone[0].name

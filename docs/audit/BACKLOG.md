@@ -5,7 +5,7 @@ settings, locals, network, security, SQL, KMS and provider pins). This
 repository is that template: root files `gcp.*.tf`, vendored `tf_gcp_*`
 modules, one workspace file per environment.
 
-Open: 23. Done: 1. Accepted, do not port: 16.
+Open: 20. Done: 4. Accepted, do not port: 16.
 
 Regenerate this file with `python3 bin/audit-terraform.py --write` in the same
 pull request that closes an item. The status comes from the code, not from
@@ -13,30 +13,6 @@ this prose. How a session picks the next item: `docs/audit/OPERATING.md`.
 
 
 ## Open
-
-### AUD-NET (p0) The shared VPC is created even when the workspace has no network section
-
-gcp.network.tf reads local.settings.network.* with no guard, and the firewall, Cloud SQL private IP and Cloud Run VPC attachment all assume that module exists. A workspace that only needs Cloud Run behind a load balancer cannot plan. Tools Hub creates networks with for_each and skips a product that has none. This template needs the same switch, for one VPC, not one VPC per service.
-
-Evidence: gcp.network.tf module.network has no count. gcp.firewall.tf always binds to it.
-
-Next change: Create the VPC only when settings.network.services_cidr is set. Point every consumer at module.network[0] through that flag.
-
-### AUD-VPC-DEFAULT (p0) Cloud Run and jobs attach to the VPC by default
-
-gcp.cloudrun.tf defaults vpc_access_enabled to true, and gcp.jobs.tf defaults enable_vpc_access to true. With the VPC made optional, those defaults would still name a network that does not exist. Direct VPC egress is the right default only when this project actually has the shared VPC. Tools Hub does the same kind of gating with feature flags.
-
-Evidence: gcp.cloudrun.tf vpc_access_enabled default true. gcp.jobs.tf enable_vpc_access default true.
-
-Next change: Default both to local.network_enabled. A service can still opt in or out in YAML.
-
-### AUD-FW-CIDR (p1) The internal firewall allows two CIDRs the VPC does not have
-
-allow_internal_vpc permits 10.10.1.0/24, 10.20.0.0/24 and 10.20.1.0/24. Only the first is the services subnet in settings/example.yaml. The other two match nothing this stack creates: Cloud SQL and Redis use Private Service Access, not those ranges. A project that picks a different services_cidr gets a firewall for the wrong subnet.
-
-Evidence: gcp.firewall.tf source_ranges.
-
-Next change: Use settings.network.services_cidr plus an optional extra_internal_cidrs list.
 
 ### AUD-BUCKET (p0) A workspace with no bucket key cannot plan
 
@@ -199,6 +175,30 @@ Evidence: No CODEOWNERS at the repo root or under .github/.
 Next change: Add CODEOWNERS when the project has a GitHub team or user to name. Do not invent an owner.
 
 ## Done
+
+### AUD-NET (p0) The shared VPC is created even when the workspace has no network section
+
+gcp.network.tf reads local.settings.network.* with no guard, and the firewall, Cloud SQL private IP and Cloud Run VPC attachment all assume that module exists. A workspace that only needs Cloud Run behind a load balancer cannot plan. Tools Hub creates networks with for_each and skips a product that has none. This template needs the same switch, for one VPC, not one VPC per service.
+
+Evidence: gcp.network.tf module.network has no count. gcp.firewall.tf always binds to it.
+
+Next change: Create the VPC only when settings.network.services_cidr is set. Point every consumer at module.network[0] through that flag.
+
+### AUD-VPC-DEFAULT (p0) Cloud Run and jobs attach to the VPC by default
+
+gcp.cloudrun.tf defaults vpc_access_enabled to true, and gcp.jobs.tf defaults enable_vpc_access to true. With the VPC made optional, those defaults would still name a network that does not exist. Direct VPC egress is the right default only when this project actually has the shared VPC. Tools Hub does the same kind of gating with feature flags.
+
+Evidence: gcp.cloudrun.tf vpc_access_enabled default true. gcp.jobs.tf enable_vpc_access default true.
+
+Next change: Default both to local.network_enabled. A service can still opt in or out in YAML.
+
+### AUD-FW-CIDR (p1) The internal firewall allows two CIDRs the VPC does not have
+
+allow_internal_vpc permits 10.10.1.0/24, 10.20.0.0/24 and 10.20.1.0/24. Only the first is the services subnet in settings/example.yaml. The other two match nothing this stack creates: Cloud SQL and Redis use Private Service Access, not those ranges. A project that picks a different services_cidr gets a firewall for the wrong subnet.
+
+Evidence: gcp.firewall.tf source_ranges.
+
+Next change: Use settings.network.services_cidr plus an optional extra_internal_cidrs list.
 
 ### AUD-AGENTS (p1) A session that opens this repo has no operating rules
 

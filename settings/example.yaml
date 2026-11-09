@@ -586,8 +586,10 @@ bucket:
 # ═══════════════════════════════════════════════════════════════════════════════
 # 11. NETWORK CONFIGURATION (VPC)
 # ═══════════════════════════════════════════════════════════════════════════════
-# VPC network for secure internal communication between services.
-# Creates: VPC, subnet, VPC connector for Cloud Run, optional NAT.
+# One shared VPC for the project. Omit this whole section and Terraform creates
+# no network, no firewall and no NAT. There is not a VPC per service.
+# Creates: VPC, services subnet, Private Service Access for Cloud SQL, optional NAT.
+# Cloud Run uses direct VPC egress onto this network when the section exists.
 network:
   network_tier: PREMIUM                             # [MANDATORY] Network tier for NAT IPs
                                                     #   "PREMIUM" = Google's premium backbone (recommended)
