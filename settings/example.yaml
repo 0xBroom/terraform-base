@@ -198,7 +198,7 @@ app:
                                                     #           only `substitutions` reaches it.
         cloudbuild_file_path: "cloudbuild.yaml"     # [OPTIONAL] Pipeline file (default: "cloudbuild.yaml")
         dockerfile_path: "Dockerfile"               # [OPTIONAL] Path to the Dockerfile (default: "Dockerfile")
-                                                    #   Matched literally — "dockerfile" is a different file
+                                                    #   Matched literally: "dockerfile" is a different file
         build_context_path: "."                     # [OPTIONAL] Docker build context (default: ".")
                                                     #   Use "apps/web" if the Dockerfile COPYs from there
 
@@ -231,7 +231,7 @@ app:
         # branch_pattern: "^main$"                  # [OPTIONAL] Git branch pattern to trigger builds
                                                     #   Overrides tag_pattern if set
         # substitutions:                            # [OPTIONAL] Raw Cloud Build substitutions. For a pipeline
-        #   _MY_VAR: "my-value"                     #   this repository cannot see (inline: false) — the shared
+        #   _MY_VAR: "my-value"                     #   this repository cannot see (inline: false), the shared
                                                     #   pipeline reads build_args, not these
         # artifact_format: "PYTHON"                 # [OPTIONAL] Artifact format (for library builds)
                                                     #   Values: DOCKER, MAVEN, NPM, PYTHON, GO, APT, YUM
@@ -243,6 +243,8 @@ app:
                                                     #   true = anyone can call the service
                                                     #   false = requires IAM authentication
         ingress: "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"  # [OPTIONAL] Ingress traffic filter
+                                                    #   Default: INTERNAL_LOAD_BALANCER when the workspace has lb:,
+                                                    #   ALL otherwise (still IAM-only unless allow_unauthenticated)
                                                     #   "INGRESS_TRAFFIC_ALL" = accept all traffic
                                                     #   "INGRESS_TRAFFIC_INTERNAL_ONLY" = only VPC traffic
                                                     #   "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER" = LB + VPC only

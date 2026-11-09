@@ -4,7 +4,7 @@ The list of work that takes this template to a public, production-grade
 release: dev and stg cheap, pro ready for a security, backup and
 data-retention audit. Each item has a check in `bin/audit-terraform.py`.
 
-Open: 23. Done: 28. Accepted, not a gap: 22.
+Open: 22. Done: 29. Accepted, not a gap: 22.
 
 Regenerate with `python3 bin/audit-terraform.py --write` in the pull request
 that closes an item. `--next` names the item to take. How a session works an
@@ -52,12 +52,6 @@ Next change: Sign images in the Cloud Build pipeline when binary_authorization.e
 Pro should be able to require RESTRICTED without a code change.
 
 Next change: Read lb.ssl_policy.profile and min_tls_version, MODERN by default, RESTRICTED in pro.
-
-### AUD-TF-GUARDS (p1) A minimal workspace still fails on missing keys and wrong defaults
-
-security.alerts_email and active-apis are read without try(), SQL depends on module.network even when there is none, and Cloud Run ingress defaults to the load balancer when the workspace has no lb.
-
-Next change: Guard both keys (a check block with a clear message is fine for the email), drop the unconditional depends_on, and default ingress from local.lb_enabled.
 
 ### AUD-TF-ALWAYS-ON (p2) Some resources are created in every workspace whether used or not
 
@@ -329,3 +323,4 @@ Next change: Keep it equal to stg.
 - AUD-AUDIT-ARCHIVE (p1) Audit logs are not archived in a locked bucket
 - AUD-MON-LOG-ALERTS (p1) No alert fires on IAM, firewall, service account key or audit config changes
 - AUD-WIF (p1) External CI can only authenticate with a service account key
+- AUD-TF-GUARDS (p1) A minimal workspace still fails on missing keys and wrong defaults

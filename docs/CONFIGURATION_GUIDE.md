@@ -117,6 +117,16 @@ security:
   alerts_email: "security@example.com"
 ```
 
+Every alert policy notifies this channel, so the address is required: the plan
+stops with a clear error when it is missing or malformed. The settings merge is
+shallow, so a workspace that declares `security:` must repeat `alerts_email`.
+
+### Cloud Run ingress
+A service without an explicit `cloudrun.ingress` gets
+`INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER` when the workspace has an `lb:` section
+and `INGRESS_TRAFFIC_ALL` when it has none. Without a load balancer the service
+still requires IAM (`allow_unauthenticated` defaults to false).
+
 ### External CI without keys
 GitHub Actions, GitLab CI or another OIDC issuer authenticate through Workload
 Identity Federation (`wif`), never with a service account key. Every provider
