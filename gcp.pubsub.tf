@@ -5,6 +5,7 @@
 # {env}.{domain}.{context}.{event}
 
 resource "google_project_service_identity" "pubsub_agent" {
+  count    = length(try(local.settings.pubsub.topics, {})) > 0 ? 1 : 0
   provider = google-beta
   service  = "pubsub.googleapis.com"
   project  = local.settings.project.id
@@ -87,6 +88,8 @@ resource "google_pubsub_topic" "topics" {
     context     = local.topic_config[each.key].context
     event       = local.topic_config[each.key].event
   })
+
+  depends_on = [google_project_service_identity.pubsub_agent]
 }
 
 # Dead Letter Topics
@@ -102,6 +105,8 @@ resource "google_pubsub_topic" "dead_letter" {
     environment = terraform.workspace
     type        = "dead-letter"
   })
+
+  depends_on = [google_project_service_identity.pubsub_agent]
 }
 #Permisos para que Pub/Sub firme tokens
 resource "google_service_account_iam_member" "pubsub_token_creator" {
@@ -109,7 +114,7 @@ resource "google_service_account_iam_member" "pubsub_token_creator" {
 
   service_account_id = "projects/${local.settings.project.id}/serviceAccounts/${local.base_name}-${each.value}-sa@${local.settings.project.id}.iam.gserviceaccount.com"
   role               = "roles/iam.serviceAccountTokenCreator"
-  member             = "serviceAccount:${google_project_service_identity.pubsub_agent.email}"
+  member             = "serviceAccount:${try(one(google_project_service_identity.pubsub_agent[*].email), "unused@example.com")}"
 
   depends_on = [module.cloud_run_services]
 }

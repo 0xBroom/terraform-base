@@ -5,7 +5,7 @@ settings, locals, network, security, SQL, KMS and provider pins). This
 repository is that template: root files `gcp.*.tf`, vendored `tf_gcp_*`
 modules, one workspace file per environment.
 
-Open: 9. Done: 15. Accepted, do not port: 16.
+Open: 8. Done: 16. Accepted, do not port: 16.
 
 Regenerate this file with `python3 bin/audit-terraform.py --write` in the same
 pull request that closes an item. The status comes from the code, not from
@@ -53,14 +53,6 @@ The storage module (v2.5, June 2024) exposes uniform_bucket_level_access and def
 Evidence: modules/tf_gcp_storage_v2.5-202406121124/vars.tf has no public_access_prevention.
 
 Next change: Add the argument to the vendored module, default it to enforced, and thread a YAML override through gcp.storage.tf. Bump the directory version suffix so the edit is visible.
-
-### AUD-PUBSUB-AGENT (p3) The Pub/Sub service identity is created in every workspace
-
-google_project_service_identity.pubsub_agent has no count. A project with no topics still needs the Pub/Sub API identity, and the API is in the default list. Low impact. It breaks the rule that a missing section creates nothing.
-
-Evidence: gcp.pubsub.tf resource google_project_service_identity.pubsub_agent.
-
-Next change: Give it a count tied to length(local.topic_config) > 0, and keep the topic resources depending on it.
 
 ### AUD-BINAUTH (p2) Binary Authorization, when turned on, only dry-runs an allow-all rule
 
@@ -199,6 +191,14 @@ gcp.sql.tf builds the database and user lists from keys(local.app_services) and 
 Evidence: gcp.sql.tf local.schema.databases is a for over service_names.
 
 Next change: Read databases and users from the database YAML. Keep generating one database per service only as a default when the YAML omits the lists.
+
+### AUD-PUBSUB-AGENT (p3) The Pub/Sub service identity is created in every workspace
+
+google_project_service_identity.pubsub_agent has no count. A project with no topics still needs the Pub/Sub API identity, and the API is in the default list. Low impact. It breaks the rule that a missing section creates nothing.
+
+Evidence: gcp.pubsub.tf resource google_project_service_identity.pubsub_agent.
+
+Next change: Give it a count tied to length(local.topic_config) > 0, and keep the topic resources depending on it.
 
 ### AUD-AGENTS (p1) A session that opens this repo has no operating rules
 
