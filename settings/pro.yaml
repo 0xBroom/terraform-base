@@ -24,6 +24,11 @@ security:
 
 logging:
   retention_days: 90
+  # Locked: the retention cannot be shortened and the bucket cannot be deleted
+  # until its oldest entry is 365 days old. Storage past 30 days is billed.
+  audit_archive:
+    retention_days: 365
+    locked: true
 
 # Dry-run until images are signed. The hello image is on the whitelist.
 binary_authorization:
