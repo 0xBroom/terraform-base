@@ -4,7 +4,7 @@ The list of work that takes this template to a public, production-grade
 release: dev and stg cheap, pro ready for a security, backup and
 data-retention audit. Each item has a check in `bin/audit-terraform.py`.
 
-Open: 1. Done: 63. Accepted, not a gap: 22.
+Open: 0. Done: 64. Accepted, not a gap: 22.
 
 Regenerate with `python3 bin/audit-terraform.py --write` in the pull request
 that closes an item. `--next` names the item to take. How a session works an
@@ -13,13 +13,7 @@ item: `docs/audit/OPERATING.md`.
 
 ## Open
 
-### AUD-DOC-README (p1) The README does not explain the project at a glance
-
-A first-time visitor needs what it is, a diagram, a quick start, the environment and cost matrix, the security posture and where the docs are, in one screen.
-
-Next change: Rewrite README.md with badges, a mermaid diagram, quick start, an environment matrix for dev, stg and pro, cost and security sections, and a docs index in docs/README.md that lists every docs page. Fix the key table (dns_zones), list every root output (sops_kms_key too), say firewall rules exist only with a network, keep the tone impersonal, and separate the adopter's path from the maintainer's backlog in docs/audit/.
-
-After: AUD-DOC-COMPLIANCE, AUD-COST-PROFILES, AUD-NAMES, AUD-LANG, AUD-DOC-OSS, AUD-DOC-STALE, AUD-DEV-NO-LB
+None.
 
 ## Accepted, not a gap
 
@@ -220,3 +214,4 @@ Next change: Keep it equal to stg.
 - AUD-FIRESTORE-PRO (p3) Firestore in pro starts without PITR or delete protection
 - AUD-DOC-STALE (p1) Several docs describe files, keys and names that changed
 - AUD-DOC-COMPLIANCE (p1) Nothing maps the pro settings to audit controls
+- AUD-DOC-README (p1) The README does not explain the project at a glance
