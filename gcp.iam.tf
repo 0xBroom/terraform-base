@@ -75,9 +75,22 @@ resource "google_project_iam_member" "cloudbuild_connection_admins" {
 }
 
 
+# Services behind IAP, directly (cloudrun.iap.enabled) or through a load balancer
+# rule with iap.enabled. The IAP service agent and its wait exist only when one does.
+locals {
+  iap_invoker_services = {
+    for k, v in local.app_services : k => v
+    if try(v.cloudrun.iap.enabled, false) == true || length([
+      for rule in try(v.loadbalancer.rules, []) : rule
+      if try(rule.iap.enabled, false) == true
+    ]) > 0
+  }
+  iap_identity_enabled = length(local.iap_invoker_services) > 0
+}
+
 # 1. Service identity (the IAP service agent)
 resource "google_project_service_identity" "iap_sa" {
-  count    = 1
+  count    = local.iap_identity_enabled ? 1 : 0
   provider = google-beta
   project  = local.settings.project.id
   service  = "iap.googleapis.com"
@@ -85,7 +98,7 @@ resource "google_project_service_identity" "iap_sa" {
 
 # 2. Safety wait (60s for the service agent to propagate)
 resource "time_sleep" "wait_for_iap_sa" {
-  count           = 1
+  count           = local.iap_identity_enabled ? 1 : 0
   create_duration = "60s"
   depends_on      = [google_project_service_identity.iap_sa]
 }
@@ -93,14 +106,7 @@ resource "time_sleep" "wait_for_iap_sa" {
 # 3. Invoker permission PER SERVICE (only services with IAP enabled)
 
 resource "google_cloud_run_service_iam_member" "iap_invoker_services" {
-  # Only services with IAP enabled (directly or through the load balancer)
-  for_each = {
-    for k, v in local.app_services : k => v
-    if try(v.cloudrun.iap.enabled, false) == true || length([
-      for rule in try(v.loadbalancer.rules, []) : rule
-      if try(rule.iap.enabled, false) == true
-    ]) > 0
-  }
+  for_each = local.iap_invoker_services
 
   project  = local.settings.project.id
   location = try(each.value.cloudrun.region, local.settings.region_name)

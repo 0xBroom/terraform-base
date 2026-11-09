@@ -91,8 +91,8 @@ the common ones if you don't want to read 900 lines of comments.
    ```
 
 The first apply turns on the APIs listed under `active-apis` and creates the security
-baseline, the Cloud Build service account and its artifacts bucket. What happens after
-that depends on which sections your YAML has.
+baseline. What happens after that depends on which sections your YAML has: the Cloud
+Build service account and its artifacts bucket, for example, come with the first build.
 
 ### Oracle Cloud
 

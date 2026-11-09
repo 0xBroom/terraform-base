@@ -121,36 +121,36 @@ resource "google_container_analysis_note_iam_member" "binauth_attestor_reader" {
 }
 
 # What the sign-image step of cloudbuild_files/cloudbuild.yaml needs, and nothing
-# when Binary Authorization is off.
+# when Binary Authorization is off or nothing builds.
 resource "google_binary_authorization_attestor_iam_member" "cloudbuild_viewer" {
-  count    = local.enable_binary_auth ? 1 : 0
+  count    = local.enable_binary_auth && local.cloudbuild_enabled ? 1 : 0
   project  = local.settings.project.id
   attestor = google_binary_authorization_attestor.binauth[0].name
   role     = "roles/binaryauthorization.attestorsViewer"
-  member   = "serviceAccount:${google_service_account.cloudbuild.email}"
+  member   = "serviceAccount:${local.cloudbuild_sa_email}"
 }
 
 resource "google_container_analysis_note_iam_member" "cloudbuild_attacher" {
-  count   = local.enable_binary_auth ? 1 : 0
+  count   = local.enable_binary_auth && local.cloudbuild_enabled ? 1 : 0
   project = local.settings.project.id
   note    = google_container_analysis_note.binauth[0].name
   role    = "roles/containeranalysis.notes.attacher"
-  member  = "serviceAccount:${google_service_account.cloudbuild.email}"
+  member  = "serviceAccount:${local.cloudbuild_sa_email}"
 }
 
 # Occurrences live in the project, not under the note, so this one is project-wide.
 resource "google_project_iam_member" "cloudbuild_occurrences" {
-  count   = local.enable_binary_auth ? 1 : 0
+  count   = local.enable_binary_auth && local.cloudbuild_enabled ? 1 : 0
   project = local.settings.project.id
   role    = "roles/containeranalysis.occurrences.editor"
-  member  = "serviceAccount:${google_service_account.cloudbuild.email}"
+  member  = "serviceAccount:${local.cloudbuild_sa_email}"
 }
 
 resource "google_kms_crypto_key_iam_member" "cloudbuild_signer" {
-  count         = local.enable_binary_auth ? 1 : 0
+  count         = local.enable_binary_auth && local.cloudbuild_enabled ? 1 : 0
   crypto_key_id = google_kms_crypto_key.binauth[0].id
   role          = "roles/cloudkms.signerVerifier"
-  member        = "serviceAccount:${google_service_account.cloudbuild.email}"
+  member        = "serviceAccount:${local.cloudbuild_sa_email}"
 }
 
 resource "google_binary_authorization_policy" "policy" {
