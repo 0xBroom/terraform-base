@@ -42,6 +42,21 @@
             "data_read": { "type": "boolean" },
             "data_write": { "type": "boolean" }
           }
+        },
+        "metric_alerts": {
+          "type": ["boolean", "object"],
+          "additionalProperties": false,
+          "description": "Threshold alerts of the basic security module: true, false, or one switch per family.",
+          "properties": {
+            "audit_config": { "type": "boolean" },
+            "cloud_sql": { "type": "boolean" },
+            "custom_roles": { "type": "boolean" },
+            "firewall": { "type": "boolean" },
+            "network": { "type": "boolean" },
+            "owner": { "type": "boolean" },
+            "routes": { "type": "boolean" },
+            "storage_permissions": { "type": "boolean" }
+          }
         }
       }
     },

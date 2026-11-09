@@ -1,5 +1,7 @@
-resource "google_monitoring_alert_policy" "cloud-sql-monitoring" {
-  display_name = format("%s--cloud-sql-monitoring", local.m_base_name_medium)
+resource "google_monitoring_alert_policy" "firewall-monitoring" {
+  count = var.metric_alerts.firewall ? 1 : 0
+
+  display_name = format("%s--firewall-monitoring", local.m_base_name_medium)
   combiner     = "OR"
 
   alert_strategy {
@@ -7,9 +9,9 @@ resource "google_monitoring_alert_policy" "cloud-sql-monitoring" {
   }
 
   conditions {
-    display_name = "cloud-sql-monitoring"
+    display_name = "firewall-monitoring"
     condition_threshold {
-      filter     = "resource.type = \"global\" AND metric.type = \"logging.googleapis.com/user/${google_logging_metric.cloud-sql-monitoring.name}\""
+      filter     = "resource.type = \"global\" AND metric.type = \"logging.googleapis.com/user/${google_logging_metric.firewall-monitoring[0].name}\""
       duration   = "0s"
       comparison = "COMPARISON_GT"
       aggregations {

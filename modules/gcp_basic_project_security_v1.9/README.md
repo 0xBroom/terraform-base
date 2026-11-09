@@ -1,3 +1,11 @@
+## Metric alerts
+
+Each family (audit config, Cloud SQL, custom roles, firewall, network, owner,
+routes, storage permissions) is a log-based metric and a threshold alert
+policy. `metric_alerts.<family> = false` creates neither. The OS Login
+metadata and the project audit config are always managed. `moved.tf` maps the
+objects of a v1.8 workspace to instance `[0]`, so the upgrade plans no destroy.
+
 ## Requirements
 
 No requirements.
@@ -43,6 +51,7 @@ No modules.
 | <a name="input_audit_logging"></a> [audit\_logging](#input\_audit\_logging) | n/a | <pre>object({<br>    admin_read = optional(bool, true)<br>    data_read  = optional(bool, false)<br>    data_write = optional(bool, false)<br>  })</pre> | `{}` | no |
 | <a name="input_base_name"></a> [base\_name](#input\_base\_name) | Base name | `string` | n/a | yes |
 | <a name="input_gcp_project_id"></a> [gcp\_project\_id](#input\_gcp\_project\_id) | GCP Project ID | `string` | n/a | yes |
+| <a name="input_metric_alerts"></a> [metric\_alerts](#input\_metric\_alerts) | Metric threshold alerts to create, per family. Every family is on by default. | <pre>object({<br>    audit_config        = optional(bool, true)<br>    cloud_sql           = optional(bool, true)<br>    custom_roles        = optional(bool, true)<br>    firewall            = optional(bool, true)<br>    network             = optional(bool, true)<br>    owner               = optional(bool, true)<br>    routes              = optional(bool, true)<br>    storage_permissions = optional(bool, true)<br>  })</pre> | `{}` | no |
 | <a name="input_module_name"></a> [module\_name](#input\_module\_name) | Constant for module | `string` | `"security"` | no |
 | <a name="input_notification_channels"></a> [notification\_channels](#input\_notification\_channels) | List of notification channel resources | `list(any)` | n/a | yes |
 

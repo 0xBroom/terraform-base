@@ -1,4 +1,6 @@
 resource "google_logging_metric" "firewall-monitoring" {
+  count = var.metric_alerts.firewall ? 1 : 0
+
   name = format("%s--firewall-monitoring", local.m_base_name_medium)
 
   description = "Firewall Monitoring"

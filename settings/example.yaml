@@ -1178,6 +1178,24 @@ security:
   #   admin_read: true
   #   data_read: false
   #   data_write: false
+  # Threshold alerts of the security baseline module, one log-based metric and
+  # one alert policy per family. true (default) or false for all, or a map
+  # where an omitted family stays on. Five families report the same events as
+  # a monitoring.log_alerts preset: audit_config (audit_config_change),
+  # cloud_sql (sql_instance_change), custom_roles (custom_role_change),
+  # firewall (firewall_change), storage_permissions (bucket_iam_change). Turn
+  # those off where the preset is on, or each change sends two emails. The
+  # check security_metric_alerts_covered warns when a family is off and its
+  # preset is not.
+  # metric_alerts:                                  # [OPTIONAL] Default: true
+  #   audit_config: false
+  #   cloud_sql: false
+  #   custom_roles: false
+  #   firewall: false
+  #   storage_permissions: false
+  #   network: true                                 #   No preset covers network, routes or owner
+  #   routes: true
+  #   owner: true
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

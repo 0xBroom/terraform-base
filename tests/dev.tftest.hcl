@@ -29,6 +29,11 @@ run "dev_shape_is_cheap" {
   }
 
   assert {
+    condition     = alltrue(values(local.security_metric_alerts)) && length(local.security_metric_alerts) == 8
+    error_message = "dev has no log alerts, so it keeps every threshold alert of the security module."
+  }
+
+  assert {
     condition     = local.network_enabled && length(module.network) == 1
     error_message = "dev has network.services_cidr: one shared VPC (positive control for the NAT check)."
   }

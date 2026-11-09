@@ -52,6 +52,7 @@ exist, which is what we want.
 | _Default log retention | 30 days | 30 days | 90 days |
 | Audit log archive | none | none | locked log bucket, 365 days |
 | Log-based security alerts | none | none | seven presets, one email per event |
+| Security module threshold alerts (`security.metric_alerts`) | all eight families | all eight families | network, routes and owner; the other five come from the log-based presets |
 | Load balancer TLS policy (`lb.ssl_policy`) | no load balancer (run.app serves Google's own TLS) | `MODERN`, TLS 1.2 minimum (default) | `RESTRICTED`, TLS 1.2 minimum |
 | Load balancer alerts (`monitoring.lb`) | none | none | 5xx, p99 latency, Cloud Armor 403 |
 | Uptime check (`monitoring.uptime`) | none | none | the first `lb.domain` every 5 minutes from 3 regions |
@@ -187,15 +188,18 @@ applies to every alert: put the identity that runs `terraform apply` there,
 or each apply that touches IAM or a firewall pages the channel. Pro lists a
 placeholder Terraform service account; replace it.
 
-The basic security module still keeps its own threshold alerts on firewall,
-custom role, audit config, Cloud SQL and bucket IAM changes, so a manual
-change can reach the channel twice. The log-based ones are the ones to read:
-they arrive per event, name who did it and skip the Terraform identity. A
-change to an audit config also matches `iam_policy_change`, since both are a
-`SetIamPolicy`.
+The basic security module has its own threshold alerts on the same firewall,
+custom role, audit config, Cloud SQL and bucket IAM changes, which aggregate
+over ten minutes and do not say who made the change. Pro turns those five off
+with `security.metric_alerts`, so each change sends one email, from the
+log-based preset. The module keeps its network, route and owner alerts, which
+no preset covers. The check `security_metric_alerts_covered` warns when a
+family is off and its preset is not in `log_alerts`. A change to an audit
+config also matches `iam_policy_change`, since both are a `SetIamPolicy`.
 
 Log-based alert policies are not billed, and they read logs Cloud Logging
-already keeps. Dev and stg still leave the key out, so their channel only
+already keeps. Dev and stg still leave the key out and keep every module
+alert (`security.metric_alerts` defaults to `true`), so their channel only
 gets the module's alerts.
 
 Pro also sets `monitoring.lb`, read by the load balancer monitoring module in

@@ -1,5 +1,7 @@
-resource "google_monitoring_alert_policy" "custom-roles-monitoring" {
-  display_name = format("%s--custom-roles-monitoring", local.m_base_name_medium)
+resource "google_monitoring_alert_policy" "cloud-sql-monitoring" {
+  count = var.metric_alerts.cloud_sql ? 1 : 0
+
+  display_name = format("%s--cloud-sql-monitoring", local.m_base_name_medium)
   combiner     = "OR"
 
   alert_strategy {
@@ -7,9 +9,9 @@ resource "google_monitoring_alert_policy" "custom-roles-monitoring" {
   }
 
   conditions {
-    display_name = "custom-roles-monitoring"
+    display_name = "cloud-sql-monitoring"
     condition_threshold {
-      filter     = "resource.type = \"global\" AND metric.type = \"logging.googleapis.com/user/${google_logging_metric.custom-roles-monitoring.name}\""
+      filter     = "resource.type = \"global\" AND metric.type = \"logging.googleapis.com/user/${google_logging_metric.cloud-sql-monitoring[0].name}\""
       duration   = "0s"
       comparison = "COMPARISON_GT"
       aggregations {

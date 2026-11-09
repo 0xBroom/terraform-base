@@ -4,7 +4,7 @@ The list of work that takes this template to a public, production-grade
 release: dev and stg cheap, pro ready for a security, backup and
 data-retention audit. Each item has a check in `bin/audit-terraform.py`.
 
-Open: 11. Done: 53. Accepted, not a gap: 22.
+Open: 10. Done: 54. Accepted, not a gap: 22.
 
 Regenerate with `python3 bin/audit-terraform.py --write` in the pull request
 that closes an item. `--next` names the item to take. How a session works an
@@ -24,12 +24,6 @@ Next change: Add CONTRIBUTING.md, SECURITY.md, CHANGELOG.md, a pull request temp
 The settings merge is shallow, so project: {id: x} drops project.number from default.yaml, and several files interpolate local.settings.project.number without a fallback.
 
 Next change: Read the number from data.google_project when the YAML leaves it out, or stop the plan with a check that names the key.
-
-### AUD-MON-SECURITY-DUP (p2) The security module's metric alerts cannot be turned off and duplicate the log alerts
-
-Pro gets two emails for a firewall, custom role, audit config, SQL or bucket IAM change.
-
-Next change: Add a metric_alerts switch to a new security module version and turn it off where monitoring.log_alerts covers the same events.
 
 ### AUD-SECRET-READERS (p2) Secret readers granted from YAML trigger the secret access alert
 
@@ -273,4 +267,5 @@ Next change: Keep it equal to stg.
 - AUD-PSA (p1) Private Service Access is never created, so private Cloud SQL and Redis fail on a new project
 - AUD-IAM-OPERATORS (p1) Operators can invoke every service and act as every service account
 - AUD-DEV-NO-LB (p1) The dev reference still pays for a load balancer and Cloud Armor
+- AUD-MON-SECURITY-DUP (p2) The security module's metric alerts cannot be turned off and duplicate the log alerts
 - AUD-DEV-SQL-DISPOSABLE (p3) dev keeps Cloud SQL deletion protection on
