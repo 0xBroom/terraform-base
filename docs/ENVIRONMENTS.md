@@ -27,7 +27,7 @@ exist, which is what we want.
 | Cloud Run | scale to zero, 1 vCPU, 512Mi, deletion protection off | one warm instance, 2 vCPU, 2Gi, deletion protection on |
 | Deploys | a push to `main` | a tag `pro-YYYYMMDDHH` |
 | Cloud SQL | zonal, 1 vCPU, 7 backups, insights off | regional, 2 vCPU, 30 backups, insights on |
-| Cloud SQL point-in-time recovery | off on dev, 3 days of WAL on stg | 7 days of WAL |
+| Cloud SQL point-in-time recovery | off, the nightly backup only | 7 days of WAL |
 | Redis | basic, no TLS | standard HA, TLS |
 | Bucket soft delete | 7 days | 30 days |
 | Budget | 40 EUR on dev, 80 EUR on stg | 400 EUR |

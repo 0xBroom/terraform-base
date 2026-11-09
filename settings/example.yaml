@@ -717,10 +717,10 @@ database:
                                                     #   "eu", "us", "asia", or specific region
         point_in_time_recovery_enabled: true        # [OPTIONAL] Point-in-time recovery (default: off on PostgreSQL,
                                                     #   binary_log_enabled on MySQL). PostgreSQL keeps WAL,
-                                                    #   MySQL turns on the binary log. dev: false, stg and pro: true
+                                                    #   MySQL turns on the binary log. dev and stg: false, pro: true
         transaction_log_retention_days: 7           # [OPTIONAL] Days of logs kept for PITR (default: GCP, 7)
                                                     #   1-7 on ENTERPRISE, 1-35 on ENTERPRISE_PLUS
-                                                    #   stg: 3, pro: 7. Ignored when PITR is off
+                                                    #   pro: 7. Ignored when PITR is off
 
       # Maintenance window (when GCP can apply updates)
       maintenance:
