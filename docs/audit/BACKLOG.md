@@ -4,7 +4,7 @@ The list of work that takes this template to a public, production-grade
 release: dev and stg cheap, pro ready for a security, backup and
 data-retention audit. Each item has a check in `bin/audit-terraform.py`.
 
-Open: 14. Done: 50. Accepted, not a gap: 22.
+Open: 13. Done: 51. Accepted, not a gap: 22.
 
 Regenerate with `python3 bin/audit-terraform.py --write` in the pull request
 that closes an item. `--next` names the item to take. How a session works an
@@ -24,12 +24,6 @@ Next change: Add CONTRIBUTING.md, SECURITY.md, CHANGELOG.md, a pull request temp
 The settings merge is shallow, so project: {id: x} drops project.number from default.yaml, and several files interpolate local.settings.project.number without a fallback.
 
 Next change: Read the number from data.google_project when the YAML leaves it out, or stop the plan with a check that names the key.
-
-### AUD-IAM-OPERATORS (p1) Operators can invoke every service and act as every service account
-
-gcp.iam.tf grants project_access.operators roles/run.invoker and roles/iam.serviceAccountUser on the whole project. serviceAccountUser on the project lets an operator deploy as any account, including the Cloud Build one. Least privilege is the first IAM question of an audit.
-
-Next change: Grant run.invoker per service and serviceAccountUser per runtime service account, only where the operator needs it. Document the change for existing users.
 
 ### AUD-DEV-NO-LB (p1) The dev reference still pays for a load balancer and Cloud Armor
 
@@ -289,3 +283,4 @@ Next change: Keep it equal to stg.
 - AUD-NAMES (p2) Module directories carry build timestamps and some root files break the naming pattern
 - AUD-LANG (p1) Docs and comments mix Spanish with English, and use em dashes
 - AUD-PSA (p1) Private Service Access is never created, so private Cloud SQL and Redis fail on a new project
+- AUD-IAM-OPERATORS (p1) Operators can invoke every service and act as every service account

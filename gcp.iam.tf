@@ -15,20 +15,47 @@ resource "google_project_iam_member" "viewers" {
   member  = each.value
 }
 
-resource "google_project_iam_member" "run_invokers" {
-  for_each = toset(local.operators)
+# Operators invoke each Cloud Run service of this stack, not every service in the
+# project.
+resource "google_cloud_run_v2_service_iam_member" "operator_invokers" {
+  for_each = {
+    for pair in setproduct(keys(local.app_services), local.operators) :
+    "${pair[0]}/${pair[1]}" => { service_key = pair[0], member = pair[1] }
+  }
 
-  project = local.settings.project.id
-  role    = "roles/run.invoker"
-  member  = each.value
+  project  = local.settings.project.id
+  location = local.service_regions[each.value.service_key]
+  name     = module.cloud_run_services[each.value.service_key].cloudrun_name
+  role     = "roles/run.invoker"
+  member   = each.value.member
 }
 
-resource "google_project_iam_member" "sa_users" {
-  for_each = toset(local.operators)
+# Operators act as the runtime accounts this stack creates for its services and
+# jobs, and no other. A project-wide serviceAccountUser would also cover
+# run-cloudbuild-sa, which holds run.admin and serviceAccountUser on the
+# project. An external_sa or an external job account is not managed here: its
+# owner grants actAs on it.
+locals {
+  operator_runtime_accounts = merge(
+    {
+      for key, config in local.app_services : "service/${key}" => module.cloud_run_services[key].sa_id
+      if try(config.cloudrun.external_sa, null) == null
+    },
+    {
+      for key, account in google_service_account.cloudrun_job : "job/${key}" => account.name
+    }
+  )
+}
 
-  project = local.settings.project.id
-  role    = "roles/iam.serviceAccountUser"
-  member  = each.value
+resource "google_service_account_iam_member" "operator_act_as" {
+  for_each = {
+    for pair in setproduct(keys(local.operator_runtime_accounts), local.operators) :
+    "${pair[0]}/${pair[1]}" => { account_key = pair[0], member = pair[1] }
+  }
+
+  service_account_id = local.operator_runtime_accounts[each.value.account_key]
+  role               = "roles/iam.serviceAccountUser"
+  member             = each.value.member
 }
 
 resource "google_project_iam_custom_role" "job_operator_overrides" {
@@ -55,19 +82,16 @@ resource "google_project_iam_member" "job_operators_binding" {
   member  = each.value
 }
 
+# Cancel builds. Creating, editing or running a trigger by hand also needs actAs
+# on run-cloudbuild-sa, which operators do not get: that would hand them its
+# run.admin. Pushes and tags still start the builds.
+# No connectionAdmin: it can fetch a read-write token for every linked
+# repository and delete or repoint the connection Terraform manages.
 resource "google_project_iam_member" "cloudbuild_editors" {
   for_each = toset(local.operators)
 
   project = local.settings.project.id
   role    = "roles/cloudbuild.builds.editor"
-  member  = each.value
-}
-
-resource "google_project_iam_member" "cloudbuild_connection_admins" {
-  for_each = toset(local.operators)
-
-  project = local.settings.project.id
-  role    = "roles/cloudbuild.connectionAdmin"
   member  = each.value
 }
 

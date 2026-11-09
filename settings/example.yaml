@@ -1137,8 +1137,11 @@ monitoring:
 # ═══════════════════════════════════════════════════════════════════════════════
 # 17. PROJECT ACCESS (IAM)
 # ═══════════════════════════════════════════════════════════════════════════════
-# Project-level IAM bindings for users and groups.
-# Viewers get read-only access; Operators get broader management access.
+# IAM bindings for users and groups. Viewers get roles/viewer on the project.
+# Operators get roles/viewer, the job operator custom role and
+# cloudbuild.builds.editor on the project, run.invoker on each service of
+# app.service, and serviceAccountUser on each runtime account the stack creates
+# for a service or a job (never project-wide). docs/CONFIGURATION_GUIDE.md.
 # project_access:
 #   viewers:                                        # [OPTIONAL] Users with project viewer access
 #     - "user:viewer@mydomain.com"
