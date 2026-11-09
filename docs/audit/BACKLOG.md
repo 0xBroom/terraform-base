@@ -4,7 +4,7 @@ The list of work that takes this template to a public, production-grade
 release: dev and stg cheap, pro ready for a security, backup and
 data-retention audit. Each item has a check in `bin/audit-terraform.py`.
 
-Open: 15. Done: 37. Accepted, not a gap: 22.
+Open: 14. Done: 38. Accepted, not a gap: 22.
 
 Regenerate with `python3 bin/audit-terraform.py --write` in the pull request
 that closes an item. `--next` names the item to take. How a session works an
@@ -12,14 +12,6 @@ item: `docs/audit/OPERATING.md`.
 
 
 ## Open
-
-### AUD-SECRET-ACCESS (p2) Nobody is alerted when a secret is read by an unexpected principal
-
-Secret reads are invisible without data access logs for Secret Manager and an alert on them.
-
-Next change: Add monitoring.secret_access: data access audit logs on secretmanager.googleapis.com and a log alert excluding the expected service accounts. Enable it in pro.
-
-After: AUD-MON-LOG-ALERTS
 
 ### AUD-BINAUTH-PRO (p2) Pro turns Binary Authorization on but never blocks
 
@@ -279,6 +271,7 @@ Next change: Keep it equal to stg.
 - AUD-REDIS (p2) Redis blocks destroy in every workspace and has no persistence option
 - AUD-MON-LOG-ALERTS (p1) No alert fires on IAM, firewall, service account key or audit config changes
 - AUD-MON-LB (p2) Pro has no load balancer error alerts and no uptime check
+- AUD-SECRET-ACCESS (p2) Nobody is alerted when a secret is read by an unexpected principal
 - AUD-WIF (p1) External CI can only authenticate with a service account key
 - AUD-TF-GUARDS (p1) A minimal workspace still fails on missing keys and wrong defaults
 - AUD-CI-MATRIX (p1) CI validates only the default workspace

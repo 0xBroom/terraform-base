@@ -57,15 +57,75 @@ locals {
   log_alerts_settings           = try(local.settings.monitoring.log_alerts, {})
   log_alert_excluded_principals = try(local.settings.monitoring.excluded_principals, [])
 
-  log_alerts = {
-    for name, alert in local.log_alerts_settings : name => {
-      filter      = try(alert.filter, local.log_alert_presets[name].filter, null)
-      severity    = try(alert.severity, local.log_alert_presets[name].severity, "WARNING")
-      description = try(alert.description, local.log_alert_presets[name].description, "Custom log-based alert ${name}.")
-      rate_limit  = try(alert.notification_rate_limit, "300s")
-      auto_close  = try(alert.auto_close, "1800s")
-      excluded    = distinct(concat(local.log_alert_excluded_principals, try(alert.excluded_principals, [])))
-    } if try(alert.enabled, true)
+  log_alerts = merge(
+    {
+      for name, alert in local.log_alerts_settings : name => {
+        filter      = try(alert.filter, local.log_alert_presets[name].filter, null)
+        severity    = try(alert.severity, local.log_alert_presets[name].severity, "WARNING")
+        description = try(alert.description, local.log_alert_presets[name].description, "Custom log-based alert ${name}.")
+        rate_limit  = try(alert.notification_rate_limit, "300s")
+        auto_close  = try(alert.auto_close, "1800s")
+        excluded    = distinct(concat(local.log_alert_excluded_principals, try(alert.excluded_principals, [])))
+      } if try(alert.enabled, true)
+    },
+    local.secret_access_enabled ? { secret_access = local.secret_access_alert } : {},
+  )
+}
+
+# Secret reads by an unexpected principal, driven by
+# settings.monitoring.secret_access. Without the key nothing is created.
+#
+# A secret read (AccessSecretVersion) is only logged as a Data Access audit
+# log entry, so the key also turns on DATA_READ for secretmanager.googleapis.com
+# alone (gcp.security.tf), not for every service. The alert skips the
+# identities this stack gives secret access to: the service account of every
+# Cloud Run service and job (the external one when set), the Cloud Build
+# service account and the Cloud Build service agent that reads the repository
+# connection tokens. allowed_principals and monitoring.excluded_principals
+# (the Terraform identity, which reads secret versions on every refresh) are
+# skipped too.
+
+locals {
+  secret_access_settings = try(local.settings.monitoring.secret_access, null)
+  secret_access_enabled  = local.secret_access_settings != null && try(local.secret_access_settings.enabled, true)
+
+  secret_access_stack_principals = concat(
+    [
+      for key, config in local.app_services :
+      try(config.cloudrun.external_sa, null) != null ? config.cloudrun.external_sa : format("%s-%s-sa@%s.iam.gserviceaccount.com", local.base_name, local.run_service_names[key], local.settings.project.id)
+    ],
+    [
+      for key, job in try(local.settings.app.job, {}) :
+      try(job.service_account.external, false) ? job.service_account.name : format("%s-%s-job-sa@%s.iam.gserviceaccount.com", local.base_name, try(job.name, key), local.settings.project.id)
+    ],
+    [
+      format("run-cloudbuild-sa@%s.iam.gserviceaccount.com", local.settings.project.id),
+      format("service-%s@gcp-sa-cloudbuild.iam.gserviceaccount.com", local.settings.project.number),
+    ],
+  )
+
+  secret_access_secrets = try(local.secret_access_settings.secrets, [])
+
+  secret_access_alert = {
+    filter = join(" AND ", concat(
+      [
+        "log_id(\"cloudaudit.googleapis.com/data_access\")",
+        "protoPayload.serviceName=\"secretmanager.googleapis.com\"",
+        "protoPayload.methodName=\"google.cloud.secretmanager.v1.SecretManagerService.AccessSecretVersion\"",
+      ],
+      length(local.secret_access_secrets) == 0 ? [] : [
+        format("protoPayload.resourceName:(%s)", join(" OR ", [for secret in local.secret_access_secrets : "\"/secrets/${secret}/versions/\""])),
+      ],
+    ))
+    severity    = try(local.secret_access_settings.severity, "ERROR")
+    description = "A secret version was read by a principal this stack does not expect."
+    rate_limit  = try(local.secret_access_settings.notification_rate_limit, "300s")
+    auto_close  = try(local.secret_access_settings.auto_close, "1800s")
+    excluded = distinct(concat(
+      try(local.secret_access_settings.exclude_stack_principals, true) ? local.secret_access_stack_principals : [],
+      local.log_alert_excluded_principals,
+      try(local.secret_access_settings.allowed_principals, []),
+    ))
   }
 }
 
@@ -116,6 +176,18 @@ resource "google_monitoring_alert_policy" "log_alerts" {
     precondition {
       condition     = each.value.filter != null
       error_message = "monitoring.log_alerts.${each.key} is not a preset (${join(", ", keys(local.log_alert_presets))}), so it needs a filter."
+    }
+    precondition {
+      condition     = !(each.key == "secret_access" && contains(keys(local.log_alerts_settings), "secret_access") && local.secret_access_enabled)
+      error_message = "monitoring.log_alerts.secret_access clashes with the alert of monitoring.secret_access. Rename the log_alerts entry."
+    }
+    precondition {
+      condition     = each.key != "secret_access" || alltrue([for secret in local.secret_access_secrets : can(regex("^[A-Za-z0-9_-]{1,255}$", secret))])
+      error_message = "monitoring.secret_access.secrets takes secret ids (letters, digits, - and _), not resource names."
+    }
+    precondition {
+      condition     = try(length(each.value.filter), 0) + 70 + length(join(" OR ", [for principal in each.value.excluded : "\"${principal}\""])) <= 20000
+      error_message = "monitoring.log_alerts.${each.key}: the filter with its excluded principals is longer than the 20000 characters Cloud Logging accepts."
     }
   }
 
