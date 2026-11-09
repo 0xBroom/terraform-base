@@ -1,7 +1,8 @@
 # The networking module with network.services_ip_ranges of settings/pro.yaml,
 # passed the way gcp.network.tf passes it. It checks the Private Service Access
-# resources the module creates: pro.tftest.hcl checks that pro asks for them and
-# default.tftest.hcl that the default workspace asks for none.
+# resources the module creates and the preconditions that stop the plan:
+# pro.tftest.hcl checks that pro asks for them and default.tftest.hcl that the
+# default workspace asks for none.
 
 mock_provider "google" {}
 
@@ -26,7 +27,8 @@ run "pro_private_service_access" {
   }
 
   variables {
-    services_ip_ranges = yamldecode(file("settings/pro.yaml")).network.services_ip_ranges
+    services_ip_ranges              = yamldecode(file("settings/pro.yaml")).network.services_ip_ranges
+    private_service_access_required = true
   }
 
   assert {
@@ -72,6 +74,54 @@ run "no_range_no_connection" {
     condition     = length(google_compute_subnetwork.subnet) == 1
     error_message = "The VPC and its subnet are still planned (positive control)."
   }
+}
+
+run "private_store_without_range_is_refused" {
+  command = plan
+
+  module {
+    source = "./modules/gcp_networking_v3.6"
+  }
+
+  variables {
+    services_ip_ranges              = {}
+    private_service_access_required = true
+  }
+
+  expect_failures = [google_compute_network.net]
+}
+
+run "range_over_the_subnet_is_refused" {
+  command = plan
+
+  module {
+    source = "./modules/gcp_networking_v3.6"
+  }
+
+  variables {
+    services_ip_ranges = {
+      private = { address = "10.20.0.0", prefix_length = 16 }
+    }
+  }
+
+  expect_failures = [google_compute_network.net]
+}
+
+run "range_over_a_reserved_cidr_is_refused" {
+  command = plan
+
+  module {
+    source = "./modules/gcp_networking_v3.6"
+  }
+
+  variables {
+    services_ip_ranges = {
+      private = { address = "10.21.0.0", prefix_length = 16 }
+    }
+    reserved_cidrs = ["10.21.4.0/24"]
+  }
+
+  expect_failures = [google_compute_network.net]
 }
 
 run "range_too_small_is_refused" {

@@ -666,8 +666,9 @@ network:
   # through one peering to the Google service network. Ranges and peering are free.
   # Default when the key is left out: one /16 named "private" that Google allocates
   # from the free private space of the VPC, created only when such a data store
-  # exists. An explicit {} creates nothing, and a private data store then fails
-  # the plan. A block can never shrink while instances use it: size it once.
+  # exists. An explicit {} creates nothing, and a private data store then stops
+  # the plan with an error, as does an address that overlaps services_cidr or
+  # extra_internal_cidrs. A block can never shrink while instances use it: size it once.
   services_ip_ranges:                               # [OPTIONAL] One reserved global address per entry
     private:                                        #   Entry key, part of the range name ("<vpc>--private")
       address: "10.11.0.0"                          #   [OPTIONAL] First IP of the block (default: Google picks one)

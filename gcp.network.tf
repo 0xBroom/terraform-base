@@ -20,30 +20,11 @@ locals {
     local.private_service_access_needed ? { private = { prefix_length = 16 } } : {},
   )
 
-  # Explicit addresses, as CIDRs, for the overlap check below.
+  # Explicit addresses, as CIDRs.
   services_ip_range_cidrs = {
     for key, range in local.services_ip_ranges :
     key => format("%s/%d", range.address, try(range.prefix_length, 16))
     if try(range.address, null) != null
-  }
-}
-
-check "private_service_access_range" {
-  assert {
-    condition     = !local.network_enabled || !local.private_service_access_needed || length(local.services_ip_ranges) > 0
-    error_message = "A database with ipv4_enabled false or a redis with connect_mode PRIVATE_SERVICE_ACCESS needs a network.services_ip_ranges entry (leave the key out for one Google-allocated /16)."
-  }
-
-  assert {
-    # Two blocks overlap when they share the network address of the shorter prefix.
-    condition = alltrue([
-      for key, cidr in local.services_ip_range_cidrs : alltrue([
-        for other in distinct(concat([try(local.settings.network.services_cidr, "0.0.0.0/32")], try(local.settings.network.extra_internal_cidrs, []))) :
-        cidrhost(format("%s/%d", split("/", cidr)[0], min(tonumber(split("/", cidr)[1]), tonumber(split("/", other)[1]))), 0)
-        != cidrhost(format("%s/%d", split("/", other)[0], min(tonumber(split("/", cidr)[1]), tonumber(split("/", other)[1]))), 0)
-      ])
-    ])
-    error_message = "A network.services_ip_ranges entry overlaps network.services_cidr or extra_internal_cidrs. Pick a block outside the subnets."
   }
 }
 
@@ -109,6 +90,11 @@ module "network" {
   # above). Every VPC_PEERING entry becomes a reserved global address, and all
   # of them go into one servicenetworking connection.
   services_ip_ranges = local.services_ip_ranges
+  # The module stops the plan (preconditions on its network) when a private
+  # data store has no range, or an explicit range overlaps services_cidr or
+  # one of these CIDRs.
+  private_service_access_required = local.private_service_access_needed
+  reserved_cidrs                  = try(local.settings.network.extra_internal_cidrs, [])
 
   # IAC Repository to help the notifications to be more polite with the person who have to fix it.
   repo_iac = local.settings.iac.repo

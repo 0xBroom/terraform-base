@@ -248,9 +248,9 @@ network:
   cannot overlap `services_cidr`. A workspace without one gets no range and no
   connection.
 - `services_ip_ranges: {}`: nothing is created, and a private data store stops
-  the plan (check `private_service_access_range`).
+  the plan with an error (a precondition on the VPC in the networking module).
 - An explicit `address` that overlaps `services_cidr` or `extra_internal_cidrs`
-  stops the plan too.
+  stops the plan with an error from the same place.
 - `redis.<name>.reserved_ip_range` may name a key of this map; it is passed as
   the allocated range name.
 - On destroy the connection is abandoned (`deletion_policy = "ABANDON"`): the

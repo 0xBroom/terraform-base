@@ -106,6 +106,20 @@ variable "services_ip_ranges" {
   }
 }
 
+variable "private_service_access_required" {
+  type        = bool
+  description = "A private Cloud SQL or Memorystore instance uses this network: the plan stops when services_ip_ranges has no VPC_PEERING entry"
+  default     = false
+  nullable    = false
+}
+
+variable "reserved_cidrs" {
+  type        = list(string)
+  description = "CIDRs outside this module's subnets that an explicit services_ip_ranges address must not overlap"
+  default     = []
+  nullable    = false
+}
+
 variable "repo_iac" {
   type        = string
   description = "URL or name of IAC repository"
