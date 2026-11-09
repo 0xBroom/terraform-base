@@ -5,7 +5,7 @@ settings, locals, network, security, SQL, KMS and provider pins). This
 repository is that template: root files `gcp.*.tf`, vendored `tf_gcp_*`
 modules, one workspace file per environment.
 
-Open: 6. Done: 18. Accepted, do not port: 16.
+Open: 5. Done: 19. Accepted, do not port: 16.
 
 Regenerate this file with `python3 bin/audit-terraform.py --write` in the same
 pull request that closes an item. The status comes from the code, not from
@@ -45,14 +45,6 @@ modules/tf_gcp_cloudrun_v2_v6.5-202502191120. Tools Hub has moved on. Root files
 Evidence: gcp.cloudrun.tf source path contains tf_gcp_cloudrun_v2_v6.5.
 
 Next change: Upgrade in one PR when a republishable module is available. Do not fork the vendored copy in place.
-
-### AUD-BINAUTH (p2) Binary Authorization, when turned on, only dry-runs an allow-all rule
-
-gcp.binary_auth.tf sets evaluation_mode ALWAYS_ALLOW and enforcement_mode DRYRUN_AUDIT_LOG_ONLY. Switching binary_authorization.enabled to true does not reject an unsigned image. Tools Hub pairs Binary Authorization with a signer key and a real policy. A dry-run allow-all is a useful first step and a bad place to stop for pro.
-
-Evidence: gcp.binary_auth.tf default_admission_rule.
-
-Next change: Let the YAML choose ALWAYS_ALLOW or REQUIRE_ATTESTATION, and default pro to dry-run only until an attestor exists. Do not pretend the current policy enforces anything.
 
 ### AUD-CODEOWNERS (p3) No CODEOWNERS file
 
@@ -191,6 +183,14 @@ google_project_service_identity.pubsub_agent has no count. A project with no top
 Evidence: gcp.pubsub.tf resource google_project_service_identity.pubsub_agent.
 
 Next change: Give it a count tied to length(local.topic_config) > 0, and keep the topic resources depending on it.
+
+### AUD-BINAUTH (p2) Binary Authorization, when turned on, only dry-runs an allow-all rule
+
+gcp.binary_auth.tf sets evaluation_mode ALWAYS_ALLOW and enforcement_mode DRYRUN_AUDIT_LOG_ONLY. Switching binary_authorization.enabled to true does not reject an unsigned image. Tools Hub pairs Binary Authorization with a signer key and a real policy. A dry-run allow-all is a useful first step and a bad place to stop for pro.
+
+Evidence: gcp.binary_auth.tf default_admission_rule.
+
+Next change: Let the YAML choose ALWAYS_ALLOW or REQUIRE_ATTESTATION, and default pro to dry-run only until an attestor exists. Do not pretend the current policy enforces anything.
 
 ### AUD-LOGS (p3) Log buckets keep the Google default retention
 
