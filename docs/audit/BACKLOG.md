@@ -4,7 +4,7 @@ The list of work that takes this template to a public, production-grade
 release: dev and stg cheap, pro ready for a security, backup and
 data-retention audit. Each item has a check in `bin/audit-terraform.py`.
 
-Open: 3. Done: 49. Accepted, not a gap: 22.
+Open: 15. Done: 49. Accepted, not a gap: 22.
 
 Regenerate with `python3 bin/audit-terraform.py --write` in the pull request
 that closes an item. `--next` names the item to take. How a session works an
@@ -19,21 +19,95 @@ A public project needs to say how to contribute, how to report a vulnerability a
 
 Next change: Add CONTRIBUTING.md, SECURITY.md, CHANGELOG.md, a pull request template and issue templates.
 
+### AUD-PSA (p1) Private Service Access is never created, so private Cloud SQL and Redis fail on a new project
+
+gcp.network.tf passes services_ip_ranges to the networking module, but the module creates only the VPC and subnets: no reserved range and no servicenetworking connection. A private-IP Cloud SQL instance or a PRIVATE_SERVICE_ACCESS Redis fails at apply on a fresh project, and nothing warns at plan time.
+
+Next change: Copy the networking module to a new version that creates google_compute_global_address and google_service_networking_connection from services_ip_ranges, expose the connection, and make Cloud SQL and Redis wait for it. Add a check when a private data store has no range.
+
+### AUD-PROJECT-NUMBER (p1) A workspace that sets project with only an id loses the project number
+
+The settings merge is shallow, so project: {id: x} drops project.number from default.yaml, and several files interpolate local.settings.project.number without a fallback.
+
+Next change: Read the number from data.google_project when the YAML leaves it out, or stop the plan with a check that names the key.
+
+### AUD-IAM-OPERATORS (p1) Operators can invoke every service and act as every service account
+
+gcp.iam.tf grants project_access.operators roles/run.invoker and roles/iam.serviceAccountUser on the whole project. serviceAccountUser on the project lets an operator deploy as any account, including the Cloud Build one. Least privilege is the first IAM question of an audit.
+
+Next change: Grant run.invoker per service and serviceAccountUser per runtime service account, only where the operator needs it. Document the change for existing users.
+
+### AUD-DEV-NO-LB (p1) The dev reference still pays for a load balancer and Cloud Armor
+
+The load balancer and its policy are a fixed cost of about 34 USD a month, most of dev's bill, and the dev budget is below the estimate in docs/ENVIRONMENTS.md.
+
+Next change: dev: no lb section, services reached on their run.app URL with IAM (allow_unauthenticated false), and a budget at or above the estimate. Keep the LB in stg and pro and update the matrix.
+
+### AUD-MON-SECURITY-DUP (p2) The security module's metric alerts cannot be turned off and duplicate the log alerts
+
+Pro gets two emails for a firewall, custom role, audit config, SQL or bucket IAM change.
+
+Next change: Add a metric_alerts switch to a new security module version and turn it off where monitoring.log_alerts covers the same events.
+
+### AUD-SECRET-READERS (p2) Secret readers granted from YAML trigger the secret access alert
+
+Accessors set in the standalone and external secret settings are not in the default exclusion list.
+
+Next change: Add them to secret_access_stack_principals.
+
+After: AUD-SECRET-ACCESS
+
+### AUD-INPUT-GUARDS (p3) Two settings fail late or silently
+
+elastic_psc without a network creates nothing and says nothing. A log alert with a rate limit under 300s or an auto close under 1800s fails only at the API.
+
+Next change: Add a check for elastic_psc without network, and preconditions for the two durations.
+
+### AUD-SA-KEY-POLICY (p2) Nothing prevents service account key creation
+
+The template only alerts after a key exists. A project-level organization policy can refuse it.
+
+Next change: Optional security.disable_service_account_keys enforcing iam.disableServiceAccountKeyCreation on the project, on in pro. Document the permission it needs.
+
+### AUD-ESSENTIAL-CONTACTS (p2) Google has nobody to tell about security, legal or billing notices
+
+Essential Contacts route mandatory notifications. Without them they go to project owners only.
+
+Next change: security.essential_contacts (email and categories), defaulting to alerts_email for SECURITY and TECHNICAL. On in pro.
+
+### AUD-DEV-SQL-DISPOSABLE (p3) dev keeps Cloud SQL deletion protection on
+
+dev is meant to be torn down, and the database is the one resource that blocks it.
+
+Next change: Set deletion_protection false on dev's database. Keep stg and pro as they are.
+
+### AUD-FIRESTORE-PRO (p3) Firestore in pro starts without PITR or delete protection
+
+A pro workspace that adds a firestore section gets the unprotected defaults.
+
+Next change: Default point-in-time recovery and DELETE_PROTECTION_ENABLED to on in pro, off elsewhere, still overridable from YAML.
+
+### AUD-DOC-STALE (p1) Several docs describe files, keys and names that changed
+
+cloudbuild-tag-patterns.md names project.cloudbuild.tf, example.yaml lacks dns_zones and sops, the Cloud Run doc states one egress default and a pre tag, CONFIGURATION_GUIDE keeps a one-off migration note, PROJECT_STRUCTURE lists only pre and pro, AGENTS.md talks about a production baseline, SOPS.md and SCANNING.md use old wording.
+
+Next change: Rewrite each passage against the current code.
+
 ### AUD-DOC-COMPLIANCE (p1) Nothing maps the pro settings to audit controls
 
 An auditor or a buyer asks which control covers backups, retention, logging, encryption and access.
 
 Next change: Add docs/COMPLIANCE.md mapping each pro setting to ISO 27001 Annex A, SOC 2 and GDPR article 32, with the gaps a user still owns, and link it from the README.
 
-After: AUD-SQL-HARDEN, AUD-AUDIT-ARCHIVE, AUD-MON-LOG-ALERTS, AUD-WIF
+After: AUD-SQL-HARDEN, AUD-AUDIT-ARCHIVE, AUD-MON-LOG-ALERTS, AUD-WIF, AUD-PSA, AUD-IAM-OPERATORS, AUD-SA-KEY-POLICY, AUD-ESSENTIAL-CONTACTS, AUD-MON-SECURITY-DUP
 
 ### AUD-DOC-README (p1) The README does not explain the project at a glance
 
 A first-time visitor needs what it is, a diagram, a quick start, the environment and cost matrix, the security posture and where the docs are, in one screen.
 
-Next change: Rewrite README.md with badges, a mermaid diagram, quick start, an environment matrix for dev, stg and pro, cost and security sections, and a docs index in docs/README.md that lists every docs page.
+Next change: Rewrite README.md with badges, a mermaid diagram, quick start, an environment matrix for dev, stg and pro, cost and security sections, and a docs index in docs/README.md that lists every docs page. Fix the key table (dns_zones), list every root output (sops_kms_key too), say firewall rules exist only with a network, keep the tone impersonal, and separate the adopter's path from the maintainer's backlog in docs/audit/.
 
-After: AUD-DOC-COMPLIANCE, AUD-COST-PROFILES, AUD-NAMES, AUD-LANG, AUD-DOC-OSS
+After: AUD-DOC-COMPLIANCE, AUD-COST-PROFILES, AUD-NAMES, AUD-LANG, AUD-DOC-OSS, AUD-DOC-STALE, AUD-DEV-NO-LB
 
 ## Accepted, not a gap
 
