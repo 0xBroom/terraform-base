@@ -95,8 +95,9 @@ gcloud billing projects link "$ORG-$APP-dev-$SUFFIX" --billing-account=<billing-
   read.
 - Never use `-target`. Run a full plan.
 - Never create resources in the console. Add them to the YAML, or import them.
-- Validate with a real workspace, for example `TF_WORKSPACE=dev terraform validate`. The
-  `default` workspace has no `project` key and does not validate by design.
+- Validate with `terraform validate` on the default workspace, or on `dev`, `stg`
+  or `pro`. The default file carries placeholder project values so CI can validate
+  without a GCP login. Replace them before any plan of that workspace.
 
 ## Catching up with a production baseline
 

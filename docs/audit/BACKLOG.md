@@ -5,7 +5,7 @@ settings, locals, network, security, SQL, KMS and provider pins). This
 repository is that template: root files `gcp.*.tf`, vendored `tf_gcp_*`
 modules, one workspace file per environment.
 
-Open: 13. Done: 11. Accepted, do not port: 16.
+Open: 12. Done: 12. Accepted, do not port: 16.
 
 Regenerate this file with `python3 bin/audit-terraform.py --write` in the same
 pull request that closes an item. The status comes from the code, not from
@@ -13,14 +13,6 @@ this prose. How a session picks the next item: `docs/audit/OPERATING.md`.
 
 
 ## Open
-
-### AUD-CI (p1) Nothing checks fmt or validate on a pull request
-
-There is no .github/workflows. A bad merge reaches main and the next person finds it at plan time, against a real project. The check is init -backend=false and validate. It does not need a GCP login.
-
-Evidence: No .github/workflows directory.
-
-Next change: Add a workflow that runs fmt on the root files (not the vendored modules), init -backend=false, and validate.
 
 ### AUD-SOPS (p1) Secret values have no sealed path into the plan
 
@@ -199,6 +191,14 @@ Next change: Add settings/pro.yaml. Regional SQL, min_instances 1, deletion prot
 Evidence: .gitignore contains *.lock.hcl. No .terraform.lock.hcl in the tree.
 
 Next change: Stop ignoring the lock file, generate it with terraform init -backend=false, and commit it.
+
+### AUD-CI (p1) Nothing checks fmt or validate on a pull request
+
+There is no .github/workflows. A bad merge reaches main and the next person finds it at plan time, against a real project. The check is init -backend=false and validate. It does not need a GCP login.
+
+Evidence: No .github/workflows directory.
+
+Next change: Add a workflow that runs fmt on the root files (not the vendored modules), init -backend=false, and validate.
 
 ### AUD-AGENTS (p1) A session that opens this repo has no operating rules
 

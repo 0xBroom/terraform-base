@@ -4,6 +4,18 @@
 # Each workspace file (settings/<workspace>.yaml) is merged on top of this one.
 # Keep here only what every project of yours shares; override the rest per workspace.
 
+# Placeholders so `terraform validate` works on the default workspace. That is
+# the workspace CI checks. A real environment is settings/dev.yaml,
+# settings/stg.yaml or settings/pro.yaml, and those files replace these maps.
+# Replace them before any plan of the default workspace.
+project:
+  id: "my-project-id"
+  name: "my-project"
+  number: "000000000000"
+
+security:
+  alerts_email: "alerts@example.com"
+
 # System/monitoring project: the shared ops project in the `common` folder, which
 # also holds the Terraform state bucket (see AGENTS.md). Replace the placeholders
 # before the first plan.

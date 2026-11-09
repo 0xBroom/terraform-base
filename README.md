@@ -135,6 +135,13 @@ version, and you add the real value with `gcloud secrets versions add`.
 Check that destroys actually happened. Firestore in particular can survive an apply that
 says it was destroyed, so confirm with `gcloud` afterwards.
 
+## Checks
+
+Pull requests run `terraform fmt` on the root files, then `terraform init
+-backend=false` and `terraform validate` on the default workspace. The job
+does not format the vendored modules and it does not need a GCP login. It
+also fails while a p0 item in `docs/audit/BACKLOG.md` is still open.
+
 ## Catching up with a production baseline
 
 `docs/audit/BACKLOG.md` is the gap list against the current Tools Hub Terraform,
