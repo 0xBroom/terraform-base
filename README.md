@@ -1,9 +1,8 @@
 <h1 align="center">terraform-base</h1>
 
 <p align="center">
-  <em>A YAML-driven Terraform template to bootstrap the infrastructure of a new project on
-  Google Cloud (and optionally Oracle Cloud). Describe the project in one YAML file,
-  let the root modules turn it into resources, click nothing in a console.</em>
+  <em>A Terraform template for starting new projects on Google Cloud, with optional Oracle
+  Cloud support. You describe each environment in a YAML file and Terraform builds it.</em>
 </p>
 
 <p align="center">
@@ -17,16 +16,20 @@
   <img alt="rule" src="https://img.shields.io/badge/console%20edits-forbidden-cf222e">
 </p>
 
-## The pattern
+## How it works
 
-One `gcp.<type>.tf` file per resource type reads `local.settings`, and `local.settings` is
-just `settings/default.yaml` merged with `settings/<workspace>.yaml`. Every section is
-optional: a workspace without a `database:` block creates no Cloud SQL, a workspace without
-`lb:` creates no load balancer. Adding a Cloud Run service, a bucket, a DNS record or an
-IAM binding is an edit to a YAML file, not new Terraform.
+`locals.tf` loads `settings/default.yaml`, merges `settings/<workspace>.yaml` on top of it,
+and exposes the result as `local.settings`. Each `gcp.<type>.tf` file reads its own section
+of that object and loops over it. If a section is missing, that file creates nothing. A
+workspace with no `database:` block gets no Cloud SQL, and one with no `lb:` gets no load
+balancer.
 
-The Terraform **workspace is the project**. One YAML per workspace, one GCP project per
-workspace, one shared state bucket with a prefix per workspace.
+In practice, adding a Cloud Run service, a bucket, a DNS record or an IAM binding means
+editing YAML. You only write new Terraform when you need a resource type the template
+doesn't cover yet.
+
+Each Terraform workspace maps to one GCP project and one YAML file. All workspaces share a
+single state bucket, and Terraform gives each one its own prefix inside it.
 
 ```mermaid
 graph LR
@@ -38,7 +41,7 @@ graph LR
   TF --> OCI[(Oracle Cloud · VM, VCN, security)]
 ```
 
-## What you get
+## What each section creates
 
 | Section in the YAML | Resources it creates |
 |---|---|
@@ -58,66 +61,76 @@ graph LR
 | `elastic`, `binary_authorization`, `repo_providers` | PSC to Elastic Cloud, Binary Authorization, GitHub/Bitbucket connections |
 | `oracle` | OCI instances, VCN and security lists |
 
-`settings/example.yaml` documents every key. `docs/CONFIGURATION_GUIDE.md` is the short version.
+Every key is documented in `settings/example.yaml`. `docs/CONFIGURATION_GUIDE.md` covers
+the common ones if you don't want to read 900 lines of comments.
 
-## Bootstrapping a new project
+## Starting a new project
 
-1. **Use this template.** Create a repository from it (GitHub: "Use this template") or clone it.
-2. **Create the GCP project** and a bucket for remote state, by hand or with gcloud:
+1. Create a repository from this template with GitHub's "Use this template" button, or
+   just clone it.
+2. Create the GCP project and a bucket for remote state:
    ```bash
    gcloud projects create my-project --name="My Project"
    gcloud storage buckets create gs://my-project-tfstate --project=my-project --location=europe-west1
    ```
-3. **Point the backend at it** in `versions.tf` (`bucket = "my-project-tfstate"`).
-4. **Set the shared defaults** in `settings/default.yaml`: region, `client.name` (the short prefix every resource name starts with), the enabled APIs.
-5. **Create the workspace file** by copying the sections you need from `settings/example.yaml` into `settings/<workspace>.yaml`. `project.id`, `project.name` and `project.number` are mandatory.
-6. **Plan and apply:**
+3. Put that bucket name in the `backend "gcs"` block of `versions.tf`.
+4. Edit `settings/default.yaml`. Set the region, the enabled APIs, and `client.name`, which
+   is the short prefix every resource name starts with.
+5. Create `settings/<workspace>.yaml` and copy in the sections you need from
+   `settings/example.yaml`. The only required keys are `project.id`, `project.name`,
+   `project.number` and `security.alerts_email`.
+6. Plan and apply:
    ```bash
    terraform init
    terraform workspace new my-workspace
-   terraform plan -detailed-exitcode   # exit 0 = converged, 2 = changes pending
-   terraform apply                     # read the plan first, all of it
+   terraform plan -detailed-exitcode   # exit 0 = nothing to change, 2 = changes pending
+   terraform apply
    ```
 
-The first apply enables the APIs listed under `active-apis` and creates the security
-baseline, the Cloud Build service account and its artifacts bucket. Everything else depends
-on which sections your YAML declares.
+The first apply turns on the APIs listed under `active-apis` and creates the security
+baseline, the Cloud Build service account and its artifacts bucket. What happens after
+that depends on which sections your YAML has.
 
 ### Oracle Cloud
 
-`oracle.*.tf` are inert until the YAML has an `oracle:` section. The OCI provider reads
-`~/.oci/config` (profile `DEFAULT`); set that up with the OCI CLI before planning a
-workspace that uses it.
+The `oracle.*.tf` files do nothing until the YAML has an `oracle:` section. The OCI
+provider reads `~/.oci/config` with the `DEFAULT` profile, so set that up with the OCI CLI
+before you plan a workspace that uses it.
 
 ## Layout
 
 | Path | What |
 |---|---|
-| `settings/default.yaml` | Shared defaults for every workspace |
+| `settings/default.yaml` | Defaults shared by every workspace |
 | `settings/example.yaml` | Commented reference of every supported key |
-| `settings/<workspace>.yaml` | One file per project. This is what you edit day to day |
+| `settings/<workspace>.yaml` | One file per project, and the file you'll edit most |
 | `gcp.<type>.tf` | One root file per resource type, each a `for_each` over its YAML section |
 | `oracle.*.tf` | The OCI side |
 | `locals.tf` · `providers.tf` · `versions.tf` | YAML loading, provider config and pins, state backend |
-| `modules/` | 9 vendored, version-stamped modules |
-| `cloudbuild_files/` | The single shared Cloud Build pipeline (see `docs/cloudbuild-pipeline.md`) |
-| `cloud_function_source/` | The stop-billing Cloud Function |
-| `bin/` | Helpers: render a service's effective pipeline, audit registry cleanup |
+| `modules/` | 9 vendored modules, with the version in the directory name |
+| `cloudbuild_files/` | The one Cloud Build pipeline every service shares (see `docs/cloudbuild-pipeline.md`) |
+| `cloud_function_source/` | The Cloud Function that disables billing when the budget runs out |
+| `bin/` | Scripts to render a service's effective pipeline and audit registry cleanup |
 | `docs/` | Structure, configuration, pipeline, tag patterns, billing control |
 
-## Rules worth keeping
+## Rules I'd keep
 
-- **No console edits.** Anything created by hand is drift. If it must exist, it goes in the
-  YAML and gets applied, or it gets imported.
-- **`terraform apply` is an announced step.** A plan that deletes or replaces anything
-  stateful (SQL, Firestore, buckets) is a conversation, not a keystroke.
-- **Never `-target`.** A targeted plan reports only on its targets, so what it omits is
-  invisible, including the fact that it was omitted. A full plan is the only thing that
-  tells you the workspace matches the code.
-- **Secrets are referenced, not stored.** Terraform creates the container and a
-  placeholder version; the payload goes in with `gcloud secrets versions add`.
-- **A destroy that reports success is not proof.** Some resources (Firestore, notably)
-  survive a `destroyed` line. Verify with `gcloud` afterwards.
+Don't create things in the console. Anything made by hand is drift that the next plan
+can't see. If it needs to exist, add it to the YAML and apply, or import it.
+
+Read the whole plan before you apply it. If it deletes or replaces something that holds
+data, like a Cloud SQL instance, a Firestore database or a bucket, stop and check with
+whoever owns that data first.
+
+Avoid `-target`. A targeted plan only reports on its targets, so you can't see what it
+skipped, or even that it skipped anything. A full plan is the only way to know the
+workspace matches the code.
+
+Keep secret values out of Terraform. The template creates the secret and a placeholder
+version, and you add the real value with `gcloud secrets versions add`.
+
+Check that destroys actually happened. Firestore in particular can survive an apply that
+says it was destroyed, so confirm with `gcloud` afterwards.
 
 ## License
 
