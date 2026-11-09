@@ -23,6 +23,7 @@ locals {
     cloud_sql_mount = ["sqladmin.googleapis.com"]
     cloud_tasks     = ["cloudtasks.googleapis.com"]
     compute         = ["compute.googleapis.com"]
+    contacts        = ["essentialcontacts.googleapis.com"]
     database        = ["sqladmin.googleapis.com", "servicenetworking.googleapis.com"]
     dns             = ["dns.googleapis.com"]
     firestore       = ["firestore.googleapis.com"]
@@ -51,6 +52,7 @@ locals {
     ))
     cloud_tasks = length(local.cloud_tasks_configs) > 0
     compute     = length(local.compute_instances) > 0 || length(local.compute_nats) > 0
+    contacts    = length(local.essential_contacts) > 0
     database    = length(try(local.settings.database, {})) > 0
     dns         = length(local.dns_zones) > 0 || local.enable_elastic_psc_dns
     firestore   = length(local.all_firestore) > 0

@@ -59,6 +59,7 @@ exist, which is what we want.
 | Secret read alert (`monitoring.secret_access`) | none | none | Secret Manager Data Access logs, one email per unexpected reader |
 | Binary Authorization | off | off | enforced: Cloud Build signs each digest with a KMS key, unsigned images are refused |
 | Service account keys (`security.disable_service_account_keys`) | allowed | allowed | refused: creation and upload, by organization policy on the project |
+| Essential Contacts (`security.essential_contacts`) | none of its own (inherited, else the owners) | none of its own (inherited, else the owners) | one contact for `SECURITY`, `TECHNICAL` and `SUSPENSION` |
 | External CI federation (`wif`) | none | none | none, a commented example (`docs/WIF.md`) |
 | VPC | `10.8.1.0/24` | `10.10.1.0/24` | `10.20.1.0/24` |
 | Private Service Access range (no charge) | `10.9.0.0/16` | `10.11.0.0/16` | `10.21.0.0/16` |
@@ -294,6 +295,29 @@ attached service accounts, and external CI uses `wif`. Two things to know:
 
 Dev and stg leave the key out: a policy costs nothing, but a sandbox may need
 a key for a quick test, and the folder policy decides there.
+
+Pro sets `security.essential_contacts`, read in `gcp.security.tf`: one
+`google_essential_contacts_contact` per entry on the project, with the
+Essential Contacts API enabled with them. Google sends its mandatory notices
+(a security incident or a compromised resource, an outage, a project about to
+be suspended) to these contacts instead of only to the project owners, who
+may be a person who left or a group nobody reads. The value is `true` for
+`security.alerts_email` on `SECURITY` and `TECHNICAL`, or a list of entries
+with `email` (default `alerts_email`), `categories` (default `SECURITY` and
+`TECHNICAL`) and `language_tag` (default `en`); absent or `false` creates
+none. Pro lists the placeholder address with `SECURITY`, `TECHNICAL` and
+`SUSPENSION`. Notes:
+
+- `BILLING` on a project contact only gets the notices about that project.
+  Invoices and payment problems go to the contacts of the billing account,
+  which this stack does not own. `ALL` adds product updates, mostly noise.
+- An organization can restrict the domains a contact may use
+  (`essentialcontacts.allowedContactDomains`); an address outside them fails
+  at apply. One address appears once per project; list every category it
+  needs on that entry.
+- Contacts cost nothing. Dev and stg leave the key out, so their notices
+  still reach the owners, and the folder or organization contacts are
+  inherited either way.
 
 The first Cloud Run revision is the public hello image. Cloud Build replaces
 the digest and Terraform leaves it alone. Do not pin a real image in the YAML.

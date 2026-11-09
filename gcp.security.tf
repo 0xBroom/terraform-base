@@ -36,6 +36,10 @@ resource "google_monitoring_notification_channel" "security_alerts" {
       condition     = local.disable_service_account_keys != null
       error_message = "security.disable_service_account_keys is true or false."
     }
+    precondition {
+      condition     = local.essential_contacts_list != null
+      error_message = "security.essential_contacts is true, false or a list of maps with email, categories and language_tag."
+    }
   }
 }
 
@@ -128,6 +132,59 @@ resource "google_org_policy_policy" "service_account_keys" {
   spec {
     rules {
       enforce = "TRUE"
+    }
+  }
+
+  depends_on = [google_project_service.enabled_apis]
+}
+
+# security.essential_contacts names who Google tells about security incidents,
+# outages, suspensions and legal notices for this project; without it they go to
+# the project owners only. Absent or false: no contact. true: alerts_email for
+# SECURITY and TECHNICAL. A list: one contact per entry, where email defaults to
+# alerts_email, categories to SECURITY and TECHNICAL, language_tag to en.
+locals {
+  essential_contact_categories = ["ALL", "SUSPENSION", "SECURITY", "TECHNICAL", "BILLING", "LEGAL", "PRODUCT_UPDATES", "TECHNICAL_INCIDENTS"]
+  essential_contact_defaults   = ["SECURITY", "TECHNICAL"]
+
+  essential_contacts_setting = try(local.settings.security.essential_contacts, null)
+
+  # The entries, or null when the value is neither a bool nor a list of maps.
+  essential_contacts_list = try(
+    [for contact in [{}] : contact if(local.essential_contacts_setting == null ? false : tobool(local.essential_contacts_setting))],
+    !can(keys(local.essential_contacts_setting)) && alltrue([for contact in local.essential_contacts_setting : can(keys(contact))]) ? [for contact in local.essential_contacts_setting : contact] : null,
+    null,
+  )
+
+  essential_contacts = {
+    for contact in try([for entry in local.essential_contacts_list : entry], []) :
+    lower(try(contact.email, local.settings.security.alerts_email)) => {
+      categories   = distinct(try(tolist(contact.categories), local.essential_contact_defaults))
+      language_tag = try(contact.language_tag, "en")
+    }
+  }
+}
+
+resource "google_essential_contacts_contact" "contacts" {
+  for_each = local.essential_contacts
+
+  parent                              = "projects/${local.settings.project.id}"
+  email                               = each.key
+  language_tag                        = each.value.language_tag
+  notification_category_subscriptions = each.value.categories
+
+  lifecycle {
+    precondition {
+      condition     = can(regex("^[^@[:space:]]+@[^@[:space:]]+\\.[^@[:space:]]+$", each.key))
+      error_message = "security.essential_contacts: ${each.key} is not an email address."
+    }
+    precondition {
+      condition     = length(each.value.categories) > 0 && length(setsubtract(each.value.categories, local.essential_contact_categories)) == 0
+      error_message = "security.essential_contacts: the categories of ${each.key} must be one or more of ${join(", ", local.essential_contact_categories)}."
+    }
+    precondition {
+      condition     = can(regex("^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$", each.value.language_tag))
+      error_message = "security.essential_contacts: language_tag of ${each.key} must be a BCP-47 tag such as en, es or en-GB."
     }
   }
 

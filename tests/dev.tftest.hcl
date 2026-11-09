@@ -39,6 +39,11 @@ run "dev_shape_is_cheap" {
   }
 
   assert {
+    condition     = length(google_essential_contacts_contact.contacts) == 0 && !contains(local.enabled_apis, "essentialcontacts.googleapis.com")
+    error_message = "dev creates no Essential Contact and does not enable its API."
+  }
+
+  assert {
     condition     = local.network_enabled && length(module.network) == 1
     error_message = "dev has network.services_cidr: one shared VPC (positive control for the NAT check)."
   }

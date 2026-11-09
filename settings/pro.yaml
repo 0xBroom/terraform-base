@@ -25,6 +25,12 @@ security:
   # created or uploaded. The applier needs roles/orgpolicy.policyAdmin, granted
   # on the organization or a folder.
   disable_service_account_keys: true
+  # Who Google tells about security incidents, outages and suspensions of this
+  # project, instead of the owners only. Billing notices go to the contacts of
+  # the billing account, which this stack does not own.
+  essential_contacts:
+    - email: "replace-me@example.com"
+      categories: ["SECURITY", "TECHNICAL", "SUSPENSION"]
   # The monitoring.log_alerts presets below report these events once per
   # change, with the principal. The module's threshold alerts on the same
   # events would send a second email. Network, routes and owner stay on.
