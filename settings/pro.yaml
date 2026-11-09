@@ -32,7 +32,8 @@ logging:
 
 # Log-based alerts on audit log events, one email per change. Replace the
 # excluded principal with the identity that runs terraform apply, or every
-# apply that touches IAM or a firewall pages the channel.
+# apply that touches IAM or a firewall pages the channel. Load balancer alerts
+# and an uptime check on the public domain follow.
 monitoring:
   excluded_principals:
     - "terraform@example-app-pro.iam.gserviceaccount.com"
@@ -51,6 +52,46 @@ monitoring:
       enabled: true
     bucket_iam_change:
       enabled: true
+  # Load balancer alerts: server errors, p99 latency in ms, and requests
+  # blocked by Cloud Armor. Every field is required by the module.
+  lb:
+    status_5xx_backends:
+      duration: "180s"
+      threshold_value: 25
+      alignment_period: "60s"
+      severity: "ERROR"
+      enabled: true
+    latency:
+      duration: "300s"
+      threshold_value: 3000
+      alignment_period: "60s"
+      severity: "WARNING"
+      enabled: true
+    status_403_cloud_armor:
+      duration: "180s"
+      threshold_value: 150
+      alignment_period: "60s"
+      severity: "WARNING"
+      enabled: true
+  # HTTPS probe of the first lb.domain every 5 minutes from three regions.
+  # The whole site is behind IAP, so an anonymous probe gets 302 (or 401):
+  # accepting them proves DNS, certificate, load balancer and IAP answer.
+  # Point path at a route without IAP and accept 2xx only to cover the
+  # backend. It fails until lb.domain holds the real domain.
+  uptime:
+    site:
+      path: "/"
+      period: "300s"
+      timeout: "10s"
+      regions:
+        - "EUROPE"
+        - "USA_VIRGINIA"
+        - "SOUTH_AMERICA"
+      accepted_status_codes:
+        - "2xx"
+        - 302
+        - 401
+      failing_regions: 2
 
 # Dry-run until images are signed. The hello image is on the whitelist.
 binary_authorization:

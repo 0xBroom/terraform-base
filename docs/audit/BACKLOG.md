@@ -4,7 +4,7 @@ The list of work that takes this template to a public, production-grade
 release: dev and stg cheap, pro ready for a security, backup and
 data-retention audit. Each item has a check in `bin/audit-terraform.py`.
 
-Open: 16. Done: 36. Accepted, not a gap: 22.
+Open: 15. Done: 37. Accepted, not a gap: 22.
 
 Regenerate with `python3 bin/audit-terraform.py --write` in the pull request
 that closes an item. `--next` names the item to take. How a session works an
@@ -12,14 +12,6 @@ item: `docs/audit/OPERATING.md`.
 
 
 ## Open
-
-### AUD-MON-LB (p2) Pro has no load balancer error alerts and no uptime check
-
-The LB monitoring module exists, but pro sets no monitoring.lb block, and nothing probes the public domain.
-
-Next change: Set monitoring.lb (5xx, latency, Cloud Armor 403) in pro and add google_monitoring_uptime_check_config driven by monitoring.uptime.
-
-After: AUD-MON-LOG-ALERTS
 
 ### AUD-SECRET-ACCESS (p2) Nobody is alerted when a secret is read by an unexpected principal
 
@@ -286,6 +278,7 @@ Next change: Keep it equal to stg.
 - AUD-GCS-RETENTION (p2) Buckets cannot set a retention policy or access logs, and pro keeps old versions forever
 - AUD-REDIS (p2) Redis blocks destroy in every workspace and has no persistence option
 - AUD-MON-LOG-ALERTS (p1) No alert fires on IAM, firewall, service account key or audit config changes
+- AUD-MON-LB (p2) Pro has no load balancer error alerts and no uptime check
 - AUD-WIF (p1) External CI can only authenticate with a service account key
 - AUD-TF-GUARDS (p1) A minimal workspace still fails on missing keys and wrong defaults
 - AUD-CI-MATRIX (p1) CI validates only the default workspace
