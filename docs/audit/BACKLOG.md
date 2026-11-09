@@ -4,7 +4,7 @@ The list of work that takes this template to a public, production-grade
 release: dev and stg cheap, pro ready for a security, backup and
 data-retention audit. Each item has a check in `bin/audit-terraform.py`.
 
-Open: 6. Done: 46. Accepted, not a gap: 22.
+Open: 5. Done: 47. Accepted, not a gap: 22.
 
 Regenerate with `python3 bin/audit-terraform.py --write` in the pull request
 that closes an item. `--next` names the item to take. How a session works an
@@ -12,12 +12,6 @@ item: `docs/audit/OPERATING.md`.
 
 
 ## Open
-
-### AUD-TF-SCHEMA (p2) Nothing validates the settings files before a plan
-
-A typo in a YAML key is silently ignored by try(). example.yaml can drift from the code.
-
-Next change: Add schemas/settings.schema.json and bin/validate-settings.py (stdlib or PyYAML), checking every settings/*.yaml including example.yaml, and run it in CI.
 
 ### AUD-TF-TESTS (p3) There are no terraform tests
 
@@ -232,6 +226,7 @@ Next change: Keep it equal to stg.
 - AUD-TF-LABELS (p2) common_labels are not applied by the providers
 - AUD-TF-OUTPUTS (p2) The root module has no outputs
 - AUD-TF-BACKEND (p2) The state bucket is a literal in versions.tf
+- AUD-TF-SCHEMA (p2) Nothing validates the settings files before a plan
 - AUD-CI-MATRIX (p1) CI validates only the default workspace
 - AUD-CI-RUNNER (p1) CI runs on a moving runner label with Node 20 actions
 - AUD-COST-DEFAULTS (p1) Two code defaults cost money when a key is left out
