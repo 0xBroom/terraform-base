@@ -39,7 +39,7 @@ resource "google_project_iam_custom_role" "job_operator_overrides" {
 
   role_id     = "CloudRunJobOperatorWithOverrides"
   title       = "Cloud Run Job Operator (With Overrides)"
-  description = "Permite ejecutar Cloud Run Jobs con overrides."
+  description = "Runs Cloud Run Jobs with overrides."
 
   permissions = [
     "run.jobs.run",

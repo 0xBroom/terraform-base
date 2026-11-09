@@ -128,7 +128,11 @@ def leak_hits() -> list[str]:
     return hits
 
 
-SPANISH = re.compile(r"[áéíóúñ¿¡]|\b(para|los|las|una|esta|este|desde|cuando|también)\b", re.IGNORECASE)
+SPANISH = re.compile(
+    r"[áéíóúñ¿¡]|\b(para|los|las|una|esta|este|desde|cuando|también"
+    r"|permite|ejecutar|servicios?|despliegue|usuarios?|cuentas?|configuracion)\b",
+    re.IGNORECASE,
+)
 EM_DASH = re.compile("\u2014")
 
 
