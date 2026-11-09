@@ -183,7 +183,9 @@ method and the resource in the incident. The presets are:
 
 Any other key is a custom alert and needs its own `filter`. Entries take
 `enabled`, `severity`, `notification_rate_limit` (one email per period, 5
-minutes by default) and `excluded_principals`. `monitoring.excluded_principals`
+minutes by default and at least that), `auto_close` (30 minutes by default
+and at least that; the plan refuses a shorter value of either) and
+`excluded_principals`. `monitoring.excluded_principals`
 applies to every alert: put the identity that runs `terraform apply` there,
 or each apply that touches IAM or a firewall pages the channel. Pro lists a
 placeholder Terraform service account; replace it.

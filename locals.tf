@@ -12,10 +12,19 @@ variable "settings_workspace" {
   }
 }
 
+# Top-level keys a test merges over the workspace file, the same shallow way,
+# to plan a value no reference file holds (one that a precondition refuses).
+variable "settings_override" {
+  type        = any
+  default     = {}
+  nullable    = false
+  description = "Top-level settings keys merged over the workspace file. For terraform test only."
+}
+
 check "settings_workspace_unset" {
   assert {
-    condition     = var.settings_workspace == null || var.settings_workspace == terraform.workspace
-    error_message = "settings_workspace (${coalesce(var.settings_workspace, "unset")}) overrides workspace ${terraform.workspace}. Unset it outside terraform test."
+    condition     = (var.settings_workspace == null || var.settings_workspace == terraform.workspace) && length(var.settings_override) == 0
+    error_message = "settings_workspace (${coalesce(var.settings_workspace, "unset")}) or settings_override (${length(var.settings_override)} keys) overrides workspace ${terraform.workspace}. Unset them outside terraform test."
   }
 }
 
@@ -29,7 +38,8 @@ locals {
   workspace_data = fileexists(local.workspace_file) ? file(local.workspace_file) : yamlencode({})
   settings = merge(
     yamldecode(local.defaults),
-    yamldecode(local.workspace_data)
+    yamldecode(local.workspace_data),
+    var.settings_override,
   )
   base_name        = format("%s", local.settings.client.name)
   base_name_medium = format("%s-%s", local.settings.client.name, local.workspace)

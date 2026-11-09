@@ -292,7 +292,9 @@ ranges in the settings instead of failing.
 
 `elastic_psc` creates an internal address in the `services` subnet and a PSC
 endpoint to the provider's service attachment. Without the key nothing is
-created. The attachment must be in `region_name`, and `network` must be set.
+created. The attachment must be in `region_name`, and `network.services_cidr`
+must be set: without it the plan stops with an error instead of creating
+nothing.
 `dns_domain` is optional and adds a private zone with apex and wildcard records
 pointing at the endpoint.
 

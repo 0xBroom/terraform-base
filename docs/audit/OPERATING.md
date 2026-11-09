@@ -121,6 +121,12 @@ pro-only defaults. Root files therefore read `local.workspace`, never
 `terraform.workspace`. Left unset, the workspace decides as before; set
 outside a test, the `settings_workspace_unset` check warns.
 
+A test that needs a value no reference file holds, typically one a
+precondition must refuse, passes it in `settings_override`: top-level keys
+merged over the workspace file, as shallow as the file itself, so a key there
+replaces the whole section. The same check warns when it is set.
+`input_guards.tftest.hcl` uses it with `expect_failures`.
+
 A behaviour that only a workspace shape shows (a resource that must not exist
 in dev, a protection pro must have) gets an assertion in the matching test
 file, with a positive control so an empty plan cannot pass it. A test cannot

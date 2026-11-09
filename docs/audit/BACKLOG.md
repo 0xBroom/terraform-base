@@ -4,7 +4,7 @@ The list of work that takes this template to a public, production-grade
 release: dev and stg cheap, pro ready for a security, backup and
 data-retention audit. Each item has a check in `bin/audit-terraform.py`.
 
-Open: 9. Done: 55. Accepted, not a gap: 22.
+Open: 8. Done: 56. Accepted, not a gap: 22.
 
 Regenerate with `python3 bin/audit-terraform.py --write` in the pull request
 that closes an item. `--next` names the item to take. How a session works an
@@ -24,12 +24,6 @@ Next change: Add CONTRIBUTING.md, SECURITY.md, CHANGELOG.md, a pull request temp
 The settings merge is shallow, so project: {id: x} drops project.number from default.yaml, and several files interpolate local.settings.project.number without a fallback.
 
 Next change: Read the number from data.google_project when the YAML leaves it out, or stop the plan with a check that names the key.
-
-### AUD-INPUT-GUARDS (p3) Two settings fail late or silently
-
-elastic_psc without a network creates nothing and says nothing. A log alert with a rate limit under 300s or an auto close under 1800s fails only at the API.
-
-Next change: Add a check for elastic_psc without network, and preconditions for the two durations.
 
 ### AUD-SA-KEY-POLICY (p2) Nothing prevents service account key creation
 
@@ -261,4 +255,5 @@ Next change: Keep it equal to stg.
 - AUD-DEV-NO-LB (p1) The dev reference still pays for a load balancer and Cloud Armor
 - AUD-MON-SECURITY-DUP (p2) The security module's metric alerts cannot be turned off and duplicate the log alerts
 - AUD-SECRET-READERS (p2) Secret readers granted from YAML trigger the secret access alert
+- AUD-INPUT-GUARDS (p3) Two settings fail late or silently
 - AUD-DEV-SQL-DISPOSABLE (p3) dev keeps Cloud SQL deletion protection on

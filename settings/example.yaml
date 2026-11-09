@@ -1030,6 +1030,9 @@ monitoring:
   # sent to the security.alerts_email channel once per event, with the principal,
   # method and resource. Omit log_alerts and nothing is created. Log-based
   # alert policies are not billed; the reference files enable them in pro only.
+  # Durations are seconds with an s ("300s"). The plan refuses a
+  # notification_rate_limit under 300s or an auto_close under 1800s here and in
+  # secret_access below, the minimums Cloud Monitoring accepts.
   excluded_principals:                              # [OPTIONAL] Identities never alerted on, in every log alert
     - "terraform@my-project.iam.gserviceaccount.com"  #   The account that runs terraform apply or CI
   log_alerts:                                       # [OPTIONAL] Map of named alerts
@@ -1128,6 +1131,7 @@ monitoring:
 # Private connectivity to Elastic Cloud via Google Private Service Connect.
 # Needs the network section: the endpoint IP comes from the services subnet, so
 # the endpoint lives in region_name and the attachment must be in that region.
+# Without network.services_cidr the plan stops with an error.
 # NOTE: Omit this section if you don't use Elasticsearch: nothing is created.
 # The service attachment is published by the provider for your deployment's
 # region; copy it from the provider's console or documentation.
