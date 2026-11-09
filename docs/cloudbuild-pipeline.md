@@ -146,3 +146,9 @@ python3 bin/cloudbuild-render-test.py    # exit 0 required
 - **Cloud Run pins the image digest at deploy time.** A job that shares a service's image
   keeps running the digest it was created with until something updates it — that is what
   `job_name` is for.
+
+## Scans
+
+`cloudbuild.scan` turns on gitleaks, semgrep and trivy fs. They are off by
+default. Harbor and SonarQube are not part of this pipeline. See
+`docs/SCANNING.md`.

@@ -228,11 +228,11 @@ Next change: Keep app.service. Document the difference in AGENTS.md so nobody po
 
 ### OK-SHIELDCODE (p2) Do not port Shieldcode, Harbor or the Sonar quality gate
 
-Tools Hub builds images through a Harbor proxy and fails the build on a Sonar gate. That stack is a platform service with its own robots, tokens and proxy repository. A new project does not have it. Binary Authorization, once it can require an attestation, is the control that belongs in this template.
+Harbor and SonarQube need a separate instance, with robots, tokens and a proxy repository. This template does not port them. Scans that run inside Cloud Build (gitleaks, semgrep, trivy fs) and Artifact Registry vulnerability scanning are opt-in and do not need that instance.
 
-Evidence: Tools Hub shieldcode.tf. This repo has no harbor or sonar resources.
+Evidence: No harbor or sonar resources. cloudbuild.scan and security.artifact_scanning cover the in-build scanners.
 
-Next change: Leave it out. Track image policy under AUD-BINAUTH.
+Next change: Leave Harbor and Sonar out. Turn scanners on with cloudbuild.scan and security.artifact_scanning.
 
 ### OK-RETENTION (p3) Do not port the data-retention sweeper
 

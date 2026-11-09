@@ -95,6 +95,7 @@ def collect_configs(settings: dict, workspace: str) -> dict:
             image_base = _resolve_image(image_base, settings, python="/simple" in image_base)
 
         deploy = cb.get("deploy", True)
+        scan = cb.get("scan") or {}
         # A service may live outside the project's region; a job never does.
         deploy_region = ((owner.get("cloudrun") or {}).get("region") or settings["region_name"]) if kind == "app" else settings["region_name"]
         configs[key] = {
@@ -118,6 +119,12 @@ def collect_configs(settings: dict, workspace: str) -> dict:
             "substitutions": cb.get("substitutions") or {},
             "capabilities": {
                 "ar_token": bool(cb.get("artifact_registry_token", False)),
+                "scan_secrets": bool(scan.get("secrets", False)) and not bool(scan.get("secrets_blocking", False)),
+                "scan_secrets_blocking": bool(scan.get("secrets_blocking", False)),
+                "scan_sast": bool(scan.get("sast", False)) and not bool(scan.get("sast_blocking", False)),
+                "scan_sast_blocking": bool(scan.get("sast_blocking", False)),
+                "scan_deps": bool(scan.get("deps", False)) and not bool(scan.get("deps_blocking", False)),
+                "scan_deps_blocking": bool(scan.get("deps_blocking", False)),
                 "deploy_service": kind != "job" and deploy,
                 "deploy_job": kind == "job" and deploy,
                 "update_companion_job": kind != "job" and cb.get("job_name") is not None,
