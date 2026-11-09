@@ -87,7 +87,8 @@ gcloud billing projects link "$ORG-$APP-dev-$SUFFIX" --billing-account=<billing-
 - `settings/default.yaml`: `project_sys` points to the ops project, and `client.name` is the
   app prefix.
 - One file per environment: `settings/dev.yaml`, `settings/stg.yaml`, `settings/pro.yaml`,
-  each with its own `project.id`, `project.name` and `project.number`.
+  each with its own `project.id` and `project.name`. `project.number` is optional:
+  without it, or at the all-zero placeholder, `gcp.project.tf` reads it from the project.
 - One `backend.hcl` per clone, from `backend.hcl.example`: `bucket` is the ops project's
   state bucket, `prefix` optional. First `terraform init -backend-config=backend.hcl`,
   then the workspaces.

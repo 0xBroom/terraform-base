@@ -188,7 +188,7 @@ resource "google_billing_budget" "billing_budget" {
   }
 
   budget_filter {
-    projects = ["projects/${local.settings.project.number}"]
+    projects = ["projects/${local.project_number}"]
   }
 
   dynamic "all_updates_rule" {

@@ -4,7 +4,7 @@ The list of work that takes this template to a public, production-grade
 release: dev and stg cheap, pro ready for a security, backup and
 data-retention audit. Each item has a check in `bin/audit-terraform.py`.
 
-Open: 5. Done: 59. Accepted, not a gap: 22.
+Open: 4. Done: 60. Accepted, not a gap: 22.
 
 Regenerate with `python3 bin/audit-terraform.py --write` in the pull request
 that closes an item. `--next` names the item to take. How a session works an
@@ -18,12 +18,6 @@ item: `docs/audit/OPERATING.md`.
 A public project needs to say how to contribute, how to report a vulnerability and what changed.
 
 Next change: Add CONTRIBUTING.md, SECURITY.md, CHANGELOG.md, a pull request template and issue templates.
-
-### AUD-PROJECT-NUMBER (p1) A workspace that sets project with only an id loses the project number
-
-The settings merge is shallow, so project: {id: x} drops project.number from default.yaml, and several files interpolate local.settings.project.number without a fallback.
-
-Next change: Read the number from data.google_project when the YAML leaves it out, or stop the plan with a check that names the key.
 
 ### AUD-DOC-STALE (p1) Several docs describe files, keys and names that changed
 
@@ -233,6 +227,7 @@ Next change: Keep it equal to stg.
 - AUD-NAMES (p2) Module directories carry build timestamps and some root files break the naming pattern
 - AUD-LANG (p1) Docs and comments mix Spanish with English, and use em dashes
 - AUD-PSA (p1) Private Service Access is never created, so private Cloud SQL and Redis fail on a new project
+- AUD-PROJECT-NUMBER (p1) A workspace that sets project with only an id loses the project number
 - AUD-IAM-OPERATORS (p1) Operators can invoke every service and act as every service account
 - AUD-DEV-NO-LB (p1) The dev reference still pays for a load balancer and Cloud Armor
 - AUD-MON-SECURITY-DUP (p2) The security module's metric alerts cannot be turned off and duplicate the log alerts

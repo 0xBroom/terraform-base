@@ -83,7 +83,8 @@ the common ones if you don't want to read 900 lines of comments.
 5. Start from `settings/pre.yaml` or `settings/pro.yaml` (see `docs/ENVIRONMENTS.md`),
    or copy the sections you need from `settings/example.yaml`. Replace the
    placeholder project id, billing account and email. The only required keys are
-   `project.id`, `project.name`, `project.number` and `security.alerts_email`.
+   `project.id`, `project.name` and `security.alerts_email`. `project.number` is
+   read from the project when it is left out or at the all-zero placeholder.
 6. Plan and apply:
    ```bash
    terraform init -backend-config=backend.hcl

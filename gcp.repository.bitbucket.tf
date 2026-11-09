@@ -155,7 +155,7 @@ resource "google_secret_manager_secret_iam_binding" "bitbucket_read_token" {
   role      = "roles/secretmanager.secretAccessor"
 
   members = [
-    "serviceAccount:service-${local.settings.project.number}@gcp-sa-cloudbuild.iam.gserviceaccount.com"
+    "serviceAccount:service-${local.project_number}@gcp-sa-cloudbuild.iam.gserviceaccount.com"
   ]
 
   depends_on = [
@@ -171,7 +171,7 @@ resource "google_secret_manager_secret_iam_binding" "bitbucket_admin_token" {
   role      = "roles/secretmanager.secretAccessor"
 
   members = [
-    "serviceAccount:service-${local.settings.project.number}@gcp-sa-cloudbuild.iam.gserviceaccount.com"
+    "serviceAccount:service-${local.project_number}@gcp-sa-cloudbuild.iam.gserviceaccount.com"
   ]
 
   depends_on = [
@@ -187,7 +187,7 @@ resource "google_secret_manager_secret_iam_binding" "bitbucket_webhook_secret" {
   role      = "roles/secretmanager.secretAccessor"
 
   members = [
-    "serviceAccount:service-${local.settings.project.number}@gcp-sa-cloudbuild.iam.gserviceaccount.com"
+    "serviceAccount:service-${local.project_number}@gcp-sa-cloudbuild.iam.gserviceaccount.com"
   ]
 
   depends_on = [

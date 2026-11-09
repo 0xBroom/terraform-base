@@ -117,7 +117,7 @@ locals {
     ],
     [
       format("run-cloudbuild-sa@%s.iam.gserviceaccount.com", local.settings.project.id),
-      format("service-%s@gcp-sa-cloudbuild.iam.gserviceaccount.com", local.settings.project.number),
+      format("service-%s@gcp-sa-cloudbuild.iam.gserviceaccount.com", local.project_number),
     ],
     local.secret_access_yaml_readers,
   )

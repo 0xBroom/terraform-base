@@ -137,7 +137,7 @@ resource "google_artifact_registry_repository_iam_member" "standalone_legacy_clo
   location   = google_artifact_registry_repository.standalone[each.key].location
   repository = google_artifact_registry_repository.standalone[each.key].name
   role       = "roles/artifactregistry.writer"
-  member     = format("serviceAccount:%s@cloudbuild.gserviceaccount.com", local.settings.project.number)
+  member     = format("serviceAccount:%s@cloudbuild.gserviceaccount.com", local.project_number)
 }
 
 # Readers: Cloud Run pulls as the job's own service account, and those are created in
