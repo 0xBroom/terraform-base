@@ -18,6 +18,9 @@
 #   _DEPLOY_REGION       where that service lives, NOT always the project's region
 #   _JOB_NAME            the Cloud Run job to update
 #   _JOB_REGION          where that job lives
+#   _BINAUTH_ATTESTOR    the attestor that signs the pushed digest, only with
+#                        binary_authorization.enabled
+#   _BINAUTH_KMS_KEY_VERSION  the KMS key version it signs with, same condition
 #
 # `x-when: [flag]` keeps a step only when every listed capability is on for that service
 # (local.cloudbuild_capabilities in gcp.cloudbuild.tf). Terraform rewrites the `waitFor`
@@ -97,11 +100,28 @@ steps:
       - "${_IMAGE}"
       - "--all-tags"
 
+  # Binary Authorization only admits a digest the attestor has signed, so the image is
+  # signed before anything deploys it. Signing the digest, not the tag: a tag can move.
+  - id: "sign-image"
+    x-when: ["sign_image"]
+    name: "gcr.io/cloud-builders/gcloud"
+    entrypoint: "bash"
+    waitFor: ["push"]
+    args:
+      - "-c"
+      - |
+        set -euo pipefail
+        digest="$$(gcloud artifacts docker images describe ${_IMAGE}:${SHORT_SHA} --format='value(image_summary.digest)')"
+        gcloud beta container binauthz attestations sign-and-create \
+          --artifact-url="${_IMAGE}@$${digest}" \
+          --attestor="${_BINAUTH_ATTESTOR}" \
+          --keyversion="${_BINAUTH_KMS_KEY_VERSION}"
+
   - id: "deploy-service"
     x-when: ["deploy_service"]
     name: "gcr.io/cloud-builders/gcloud"
     entrypoint: "gcloud"
-    waitFor: ["push"]
+    waitFor: ["push", "sign-image"]
     args:
       - "run"
       - "deploy"
@@ -120,7 +140,7 @@ steps:
     x-when: ["deploy_job"]
     name: "gcr.io/cloud-builders/gcloud"
     entrypoint: "gcloud"
-    waitFor: ["push"]
+    waitFor: ["push", "sign-image"]
     args:
       - "run"
       - "jobs"
@@ -140,7 +160,7 @@ steps:
     x-when: ["update_companion_job"]
     name: "gcr.io/cloud-builders/gcloud"
     entrypoint: "gcloud"
-    waitFor: ["push"]
+    waitFor: ["push", "sign-image"]
     allowFailure: true
     args:
       - "run"

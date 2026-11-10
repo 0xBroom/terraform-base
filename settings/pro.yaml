@@ -100,10 +100,13 @@ monitoring:
     enabled: true
     allowed_principals: []
 
-# Dry-run until images are signed. The hello image is on the whitelist.
+# Cloud Build signs every pushed digest, and Cloud Run refuses an unsigned one.
+# The hello placeholder is on the whitelist, so the first apply goes through.
+# A project that already runs unsigned images goes through a dry-run first:
+# docs/cloudbuild-pipeline.md, "Signing for Binary Authorization".
 binary_authorization:
   enabled: true
-  enforcement_mode: "DRYRUN_AUDIT_LOG_ONLY"
+  enforcement_mode: "ENFORCED_BLOCK_AND_AUDIT_LOG"
 
 budget:
   billing_account: "000000-000000-000000"

@@ -4,7 +4,7 @@ The list of work that takes this template to a public, production-grade
 release: dev and stg cheap, pro ready for a security, backup and
 data-retention audit. Each item has a check in `bin/audit-terraform.py`.
 
-Open: 14. Done: 38. Accepted, not a gap: 22.
+Open: 13. Done: 39. Accepted, not a gap: 22.
 
 Regenerate with `python3 bin/audit-terraform.py --write` in the pull request
 that closes an item. `--next` names the item to take. How a session works an
@@ -12,12 +12,6 @@ item: `docs/audit/OPERATING.md`.
 
 
 ## Open
-
-### AUD-BINAUTH-PRO (p2) Pro turns Binary Authorization on but never blocks
-
-Dry-run records violations and deploys them anyway. Pro should enforce once the pipeline signs images.
-
-Next change: Sign images in the Cloud Build pipeline when binary_authorization.enabled, then set pro to ENFORCED_BLOCK_AND_AUDIT_LOG.
 
 ### AUD-TLS (p2) The TLS profile is hardcoded
 
@@ -273,6 +267,7 @@ Next change: Keep it equal to stg.
 - AUD-MON-LB (p2) Pro has no load balancer error alerts and no uptime check
 - AUD-SECRET-ACCESS (p2) Nobody is alerted when a secret is read by an unexpected principal
 - AUD-WIF (p1) External CI can only authenticate with a service account key
+- AUD-BINAUTH-PRO (p2) Pro turns Binary Authorization on but never blocks
 - AUD-TF-GUARDS (p1) A minimal workspace still fails on missing keys and wrong defaults
 - AUD-CI-MATRIX (p1) CI validates only the default workspace
 - AUD-CI-RUNNER (p1) CI runs on a moving runner label with Node 20 actions

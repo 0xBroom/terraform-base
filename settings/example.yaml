@@ -1172,6 +1172,34 @@ security:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# 21b. BINARY AUTHORIZATION (ONLY SIGNED IMAGES RUN)
+# ═══════════════════════════════════════════════════════════════════════════════
+# enabled: true creates an attestor backed by a KMS signing key (key ring
+# <client.name>-<workspace>-binauth, key attestor-signer, version 1), a project
+# policy that requires its attestation, and turns the policy on for every Cloud
+# Run service and job. The inline pipeline then signs every pushed digest
+# (sign-image step) before it deploys, and the Cloud Build account gets the
+# attestor, note, occurrence and key roles it needs, nothing while this is off.
+# Images under us-docker.pkg.dev/cloudrun/container/ (the hello placeholder)
+# and gcr.io/cloud-builders/ stay allowed without a signature.
+#
+# Roll it out in dry-run first: DRYRUN_AUDIT_LOG_ONLY logs what would be
+# refused and refuses nothing. Rebuild every service and job through its
+# trigger, check the audit log is clean, then switch to
+# ENFORCED_BLOCK_AND_AUDIT_LOG (docs/cloudbuild-pipeline.md).
+# An inline: false pipeline is not signed by this stack: sign it yourself or
+# its deploys are refused once the policy enforces.
+# COST: one software KMS key version and its signing calls, cents a month.
+# Pro only; dev and stg leave it off.
+# binary_authorization:
+#   enabled: true                                   # [OPTIONAL] Default: false
+#   evaluation_mode: "REQUIRE_ATTESTATION"          # [OPTIONAL] Default: REQUIRE_ATTESTATION
+#                                                   #   ALWAYS_ALLOW / ALWAYS_DENY are accepted, and leave the signature unused
+#   enforcement_mode: "ENFORCED_BLOCK_AND_AUDIT_LOG"  # [OPTIONAL] Default: DRYRUN_AUDIT_LOG_ONLY
+#                                                   #   DRYRUN_AUDIT_LOG_ONLY = log only, ENFORCED_BLOCK_AND_AUDIT_LOG = refuse
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # 22. WORKLOAD IDENTITY FEDERATION (EXTERNAL CI WITHOUT KEYS)
 # ═══════════════════════════════════════════════════════════════════════════════
 # Lets GitHub Actions, GitLab CI or any OIDC issuer act as a service account with

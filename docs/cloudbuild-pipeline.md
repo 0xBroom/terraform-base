@@ -88,6 +88,7 @@ error, never a step that silently stops running.
 | `deploy_service` | the entry is a service (or a raw build) and `deploy` is not `false` |
 | `deploy_job` | the entry is a Cloud Run job and `deploy` is not `false` |
 | `update_companion_job` | a service declared `job_name` |
+| `sign_image` | `binary_authorization.enabled` in the workspace; adds `sign-image` and the two `_BINAUTH_*` substitutions |
 
 Because the `x-*` keys are not Cloud Build syntax, the file is a **Terraform-only
 artifact**: `gcloud builds submit --config cloudbuild_files/cloudbuild.yaml` rejects it.
@@ -146,6 +147,66 @@ python3 bin/cloudbuild-render-test.py    # exit 0 required
 - **Cloud Run pins the image digest at deploy time.** A job that shares a service's image
   keeps running the digest it was created with until something updates it, and that is what
   `job_name` is for.
+
+## Signing for Binary Authorization
+
+With `binary_authorization.enabled: true` (`gcp.binary_auth.tf`) the workspace gets
+an attestor backed by a KMS key, a policy that requires its attestation, and
+`binary_authorization { use_default = true }` on every Cloud Run service and job.
+The inline pipeline adds one step, `sign-image`, after `push`:
+
+1. it reads the digest of `${_IMAGE}:${SHORT_SHA}` from Artifact Registry;
+2. `gcloud beta container binauthz attestations sign-and-create` signs that digest
+   with `_BINAUTH_KMS_KEY_VERSION` and stores the attestation for
+   `_BINAUTH_ATTESTOR`.
+
+`deploy-service`, `deploy-job` and `update-companion-job` wait for it, so nothing
+rolls out a digest before it is signed. A build that only pushes (`deploy: false`)
+is signed too. The two substitutions exist only while the flag is on, and are built
+from names (`projects/<project>/attestors/<client>-<workspace>-attestor`, key ring
+`<client>-<workspace>-binauth`, key `attestor-signer`, version 1), so the renderer
+shows them before the first apply. The Cloud Build account gets
+`binaryauthorization.attestorsViewer` on the attestor,
+`containeranalysis.notes.attacher` on the note, `containeranalysis.occurrences.editor`
+on the project and `cloudkms.signerVerifier` on the key, only while it is on.
+
+The hello placeholder (`us-docker.pkg.dev/cloudrun/container/*`) is on the policy
+whitelist, which is what lets the first apply of an enforcing workspace create its
+services and jobs before any build has run.
+
+### Rolling it out
+
+Pro ships with `enforcement_mode: ENFORCED_BLOCK_AND_AUDIT_LOG`, which is right for
+a new project. For a project that already serves images built before signing, go
+through a dry-run first:
+
+1. Optional rehearsal in pre (or stg): set `binary_authorization.enabled: true`
+   with `enforcement_mode: DRYRUN_AUDIT_LOG_ONLY`, apply, run every trigger once,
+   and check that the builds sign and the deploys log no violation. It costs one
+   KMS key version; turn it off again afterwards.
+2. Pro in dry-run: apply with `DRYRUN_AUDIT_LOG_ONLY`, then rebuild every service
+   and job through its trigger so each one runs a signed digest.
+3. Read the dry-run entries: Binary Authorization writes a Cloud Audit Log entry
+   for every deploy it would have refused (Cloud Logging, search for
+   `binaryauthorization` in the Cloud Run revision and job logs). Nothing left:
+   switch to `ENFORCED_BLOCK_AND_AUDIT_LOG` and apply.
+
+An emergency deploy of an unsigned image uses breakglass
+(`gcloud run deploy --breakglass=<justification>`), which is logged.
+
+### Traps
+
+- **An external pipeline (`inline: false`) is not signed.** It is never handed the
+  `_BINAUTH_*` substitutions; sign in that pipeline, or its deploys are refused once
+  the policy enforces.
+- **A job whose `job-config.image` points at an image no build has signed** cannot be
+  created or updated while the policy enforces. Build it once in dry-run, or leave the
+  image unset so the job starts on the hello placeholder.
+- **A KMS key ring cannot be deleted.** Turning the flag off removes the ring from
+  state and schedules the key version for destruction (30 days). Turning it on again
+  in the same project needs `terraform import` of the ring and the key, and a new
+  key version if the old one was destroyed (then move the attestor and the
+  substitutions to it).
 
 ## Scans
 

@@ -59,9 +59,27 @@ def _resolve_image(ref: str, settings: dict, python: bool = False) -> str:
     return ref if "." in ref.split("/")[0] else f"{host}/{ref}"
 
 
+def binauth_enabled(settings: dict) -> bool:
+    return bool((settings.get("binary_authorization") or {}).get("enabled", False))
+
+
+def binauth_names(settings: dict, workspace: str) -> dict:
+    """The attestor and key version gcp.binary_auth.tf builds from names."""
+    medium = f"{settings['client']['name']}-{workspace}"
+    project = settings["project"]["id"]
+    return {
+        "_BINAUTH_ATTESTOR": f"projects/{project}/attestors/{medium}-attestor",
+        "_BINAUTH_KMS_KEY_VERSION": (
+            f"projects/{project}/locations/{settings['region_name']}/keyRings/{medium}-binauth"
+            "/cryptoKeys/attestor-signer/cryptoKeyVersions/1"
+        ),
+    }
+
+
 def collect_configs(settings: dict, workspace: str) -> dict:
     """Every build declared in the workspace, normalised: gcp.cloudbuild.tf's locals."""
     base = settings["client"]["name"]
+    sign_image = binauth_enabled(settings)
     app = settings.get("app") or {}
     sources = []
     for key, value in (settings.get("cloudbuild") or {}).items():
@@ -128,6 +146,7 @@ def collect_configs(settings: dict, workspace: str) -> dict:
                 "deploy_service": kind != "job" and deploy,
                 "deploy_job": kind == "job" and deploy,
                 "update_companion_job": kind != "job" and cb.get("job_name") is not None,
+                "sign_image": sign_image,
             },
             "job_name": prefixed if kind == "job" else cb.get("job_name"),
             "deploy_region": deploy_region,
@@ -174,6 +193,8 @@ def substitutions(config: dict, settings: dict, workspace: str, bucket: str = "<
         if config["job_name"]:
             subs["_JOB_NAME"] = config["job_name"]
             subs["_JOB_REGION"] = config["job_region"]
+        if config["capabilities"]["sign_image"]:
+            subs.update(binauth_names(settings, workspace))
     else:
         subs["_PYTHON_REPO_URL"] = f"https://{registry_host_python(settings)}/{config['prefixed_name']}/"
         subs["_ARTIFACTS_BUCKET"] = f"gs://{bucket}/artifacts"
