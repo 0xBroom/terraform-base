@@ -142,14 +142,16 @@ Pull requests run `terraform fmt` on the root files, then `terraform init
 does not format the vendored modules and it does not need a GCP login. It
 also fails while a p0 item in `docs/audit/BACKLOG.md` is still open.
 
-## Catching up with a production baseline
+## Production readiness backlog
 
-`docs/audit/BACKLOG.md` is the gap list against the current Tools Hub Terraform,
-plus the platform pieces this template deliberately does not copy (a VPC per
-product, Shieldcode, a CMEK programme, and the rest of that list). Refresh it
-with `python3 bin/audit-terraform.py --write`. How to take one item into a
-pull request: `docs/audit/OPERATING.md`. Sessions that edit this repo should
-read `AGENTS.md` first.
+`docs/audit/BACKLOG.md` is the list of work left before a public,
+production-grade release, plus the platform features this template
+deliberately leaves out (a VPC per service, a scanner that needs its own
+instance, CMEK on every resource, and the rest of that list). Every item has a
+check in `bin/audit-terraform.py`; refresh the file with
+`python3 bin/audit-terraform.py --write`. How to take one item into a pull
+request: `docs/audit/OPERATING.md`. Sessions that edit this repo should read
+`AGENTS.md` first.
 
 ## License
 

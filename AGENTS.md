@@ -111,12 +111,17 @@ Read `docs/audit/OPERATING.md`. Run:
 python3 bin/audit-terraform.py
 ```
 
-Pick one open item. Skip every item marked accepted. Those exist so a later session does
-not copy a platform feature this template does not need: a VPC per module, a `module:`
-map of products, Shieldcode, Harbor, SonarQube, the data-retention sweeper, the SQL night
-resizer, Renovate, VPC Service Controls, Model Armor, Pulumi, Cloud Identity groups, a
-full IAM role matrix, a build-failure Chat notifier, CMEK on every resource, or replacing
-the hello placeholder image.
+Take the item `python3 bin/audit-terraform.py --next` prints. Skip every item marked
+accepted. Those exist so a later session does not add a platform feature this template
+does not need: a VPC per module, a `module:` map of products, a scanner that needs its
+own instance (Harbor, SonarQube), a row-deletion job, a night stop for Cloud SQL, a
+dependency bot, VPC Service Controls, Model Armor, Cloud Identity groups, a full IAM role
+matrix, a build-failure chat notifier, CMEK on every resource, or replacing the hello
+placeholder image.
+
+Keep every tracked file generic: no company, client, product or person names, no real
+emails, project ids or billing ids. The auditor's `AUD-PUB-LEAKS` item scans for them;
+a fork adds its own private terms in a gitignored `.audit-denylist`.
 
 One backlog id, one branch, one pull request. Refresh the backlog in that same pull
 request:
