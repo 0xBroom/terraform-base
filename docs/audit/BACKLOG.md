@@ -4,7 +4,7 @@ The list of work that takes this template to a public, production-grade
 release: dev and stg cheap, pro ready for a security, backup and
 data-retention audit. Each item has a check in `bin/audit-terraform.py`.
 
-Open: 20. Done: 31. Accepted, not a gap: 22.
+Open: 20. Done: 32. Accepted, not a gap: 22.
 
 Regenerate with `python3 bin/audit-terraform.py --write` in the pull request
 that closes an item. `--next` names the item to take. How a session works an
@@ -313,4 +313,5 @@ Next change: Keep it equal to stg.
 - AUD-WIF (p1) External CI can only authenticate with a service account key
 - AUD-TF-GUARDS (p1) A minimal workspace still fails on missing keys and wrong defaults
 - AUD-CI-MATRIX (p1) CI validates only the default workspace
+- AUD-CI-RUNNER (p1) CI runs on a moving runner label with Node 20 actions
 - AUD-COST-DEFAULTS (p1) Two code defaults cost money when a key is left out
