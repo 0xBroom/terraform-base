@@ -49,14 +49,19 @@ IAM boundary.
 
 ### What lives in the ops project
 
-The `common` folder holds the ops project. It is the `project_sys` in
-`settings/default.yaml` and it owns:
+The `common` folder holds the ops project. It owns:
 
 - the Terraform state bucket, `<org>-ops-<suffix>-tfstate`, named in the gitignored
   `backend.hcl` (copied from `backend.hcl.example`) and passed with
   `terraform init -backend-config=backend.hcl`. `versions.tf` keeps an empty
   `backend "gcs" {}`; never write the bucket there;
-- anything shared by all environments, such as base images or monitoring.
+- anything shared by all environments, such as base images.
+
+`project_sys` is where the alert policies of the Cloud Run, Cloud SQL and NAT modules
+are created. Their notification channel lives in the environment project, and an alert
+policy cannot use a channel from another project, so every workspace file sets
+`project_sys` to its own project. Point it at the ops project only after that project
+has a metrics scope over the environments and its own channel.
 
 Never put the state bucket inside an environment project. A mistake in `dev` must not be
 able to delete the state for `pro`.
@@ -75,17 +80,18 @@ done
 
 # Look up each folder ID, then create one project per folder:
 gcloud projects create "$ORG-$APP-dev-$SUFFIX" --name="<App> Dev" --folder=<dev-folder-id> \
-  --labels=environment=dev,app=$APP,managed-by=terraform
+  --labels=workspace=dev,app=$APP,managed_by=terraform
 gcloud projects create "$ORG-ops-$SUFFIX" --name="<App> Ops" --folder=<common-folder-id> \
-  --labels=environment=common,app=$APP,managed-by=terraform
+  --labels=workspace=common,app=$APP,managed_by=terraform
+# The label keys match common_labels in locals.tf, so one filter finds projects and resources.
 # Repeat for stg and pro, then link billing:
 gcloud billing projects link "$ORG-$APP-dev-$SUFFIX" --billing-account=<billing-account-id>
 ```
 
 ### Mapping to this template
 
-- `settings/default.yaml`: `project_sys` points to the ops project, and `client.name` is the
-  app prefix.
+- `settings/default.yaml`: `client.name` is the app prefix. Each workspace file sets
+  `project_sys` to its own project (see above).
 - One file per environment: `settings/dev.yaml`, `settings/stg.yaml`, `settings/pro.yaml`,
   each with its own `project.id` and `project.name`. `project.number` is optional:
   without it, or at the all-zero placeholder, `gcp.project.tf` reads it from the project.

@@ -127,7 +127,7 @@ resource "google_compute_firewall" "allow_https" {
   }
 
   source_ranges = ["0.0.0.0/0"]
-  target_tags   = ["httpsserver"]
+  target_tags   = ["https-server"]
 
   log_config {
     metadata = "INCLUDE_ALL_METADATA"

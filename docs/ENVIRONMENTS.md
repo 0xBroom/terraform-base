@@ -2,9 +2,7 @@
 
 `AGENTS.md` names the workspaces `dev`, `stg` and `pro`, and each has its own
 cost profile: dev is the cheapest that still runs the app, stg is one step up
-with the shape of pro, pro is highly available. `settings/pre.yaml` is the stg
-profile under the older name, with project id `example-app-pre`. It stays so
-the auditor still finds a pre workspace. Use `stg` for a new project.
+with the shape of pro, pro is highly available.
 
 They describe one service: Cloud Run, a private Cloud SQL instance, one bucket,
 one shared VPC, a budget, and a GitHub Cloud Build connection. Stg and pro put
@@ -26,7 +24,7 @@ exist, which is what we want.
 
 ## What changes between them
 
-| | dev | stg (and pre) | pro |
+| | dev | stg | pro |
 |---|---|---|---|
 | Cloud Run | scale to zero, 1 vCPU, 512Mi, deletion protection off | same as dev | one warm instance, 2 vCPU, 2Gi, deletion protection on |
 | Entry point | run.app URL, `INGRESS_TRAFFIC_ALL`, IAM only (`allow_unauthenticated: false`) | HTTPS load balancer, `INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER` | same as stg |
@@ -49,7 +47,7 @@ exist, which is what we want.
 | Firestore, when a workspace adds one (`firestore`) | no point-in-time recovery, delete protection as the database has it (off when new) | same as dev | point-in-time recovery (7 days), delete protection on |
 | Bucket soft delete | 7 days (the shortest above off) | 7 days | 30 days |
 | Bucket noncurrent versions | kept | kept | deleted after 30 days (`docs/STORAGE.md`) |
-| Budget | 25 | 80 | 400 |
+| Budget | 25 | 160 | 500 |
 | _Default log retention | 30 days | 30 days | 90 days |
 | Audit log archive | none | none | locked log bucket, 365 days |
 | Log-based security alerts | none | none | seven presets, one email per event |

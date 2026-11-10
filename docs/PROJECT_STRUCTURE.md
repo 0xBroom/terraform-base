@@ -36,7 +36,6 @@ YAML files that define the infrastructure, one per workspace.
 - `default.yaml`: baseline shared by every workspace (region, client prefix, base APIs; feature APIs come from `gcp.enabled.apis.tf`).
 - `example.yaml`: commented reference, one section per feature, with defaults. `schemas/settings.schema.json` is the full list of keys.
 - `dev.yaml`, `stg.yaml` and `pro.yaml`: the reference workspaces, one small service sized for each environment. See `docs/ENVIRONMENTS.md`. Replace the placeholders before planning.
-- `pre.yaml`: the stg profile under its older name, kept as a legacy alias. Use `stg` for a new project.
 - `<workspace>.yaml`: any further project. One file per workspace.
 
 ### `modules/`

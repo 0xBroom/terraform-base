@@ -28,6 +28,17 @@ locals {
   enable_elastic_psc_dns = local.enable_elastic_psc && local.elastic_psc.dns_domain != ""
 }
 
+# The old key was settings.elastic.psc with a hardcoded cloud.es.io zone. A file
+# that still uses it would otherwise plan the destroy of a running endpoint.
+resource "terraform_data" "elastic_psc_legacy_key_guard" {
+  lifecycle {
+    precondition {
+      condition     = !contains(keys(local.settings), "elastic")
+      error_message = "settings.elastic was replaced by settings.elastic_psc (service_attachment, name, ip_address, dns_domain: cloud.es.io). Move the keys before planning."
+    }
+  }
+}
+
 # Create a Private Service Connect endpoint
 resource "google_compute_address" "elastic_psc_address" {
   count = local.enable_elastic_psc ? 1 : 0

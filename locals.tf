@@ -10,6 +10,13 @@ variable "settings_workspace" {
     condition     = var.settings_workspace == null || can(regex("^[a-z][a-z0-9-]*$", var.settings_workspace))
     error_message = "settings_workspace must be lowercase letters, digits and hyphens, like a workspace name."
   }
+
+  # terraform test always runs in the default workspace. Anywhere else this
+  # variable would plan another workspace's settings against this one's state.
+  validation {
+    condition     = var.settings_workspace == null || terraform.workspace == "default"
+    error_message = "settings_workspace is for terraform test only, which runs in the default workspace."
+  }
 }
 
 # Top-level keys a test merges over the workspace file, the same shallow way,
@@ -19,6 +26,11 @@ variable "settings_override" {
   default     = {}
   nullable    = false
   description = "Top-level settings keys merged over the workspace file. For terraform test only."
+
+  validation {
+    condition     = length(var.settings_override) == 0 || terraform.workspace == "default"
+    error_message = "settings_override is for terraform test only, which runs in the default workspace."
+  }
 }
 
 check "settings_workspace_unset" {

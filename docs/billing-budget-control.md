@@ -4,7 +4,7 @@ A `budget` section creates a Cloud Billing budget for the project, with email
 alerts at the thresholds you list. With `enable_auto_stop: true` it also deploys a
 Cloud Function that disables billing on the project once the spend reaches the
 budget. That stops every billable service in it, so it is off unless asked for,
-and the reference workspaces (`dev`, `stg`, `pre`, `pro`) keep it off.
+and the reference workspaces (`dev`, `stg`, `pro`) keep it off.
 
 ## Configuration
 

@@ -137,6 +137,10 @@ resource "google_iam_workload_identity_pool_provider" "wif" {
       error_message = "wif.pools.${each.value.pool_key}.providers.${each.value.provider_key}.type must be github, gitlab or oidc."
     }
     precondition {
+      condition     = can(regex("assertion\\.(repository|repository_owner|project_path|namespace_path|sub)", each.value.attribute_condition))
+      error_message = "wif.pools.${each.value.pool_key}.providers.${each.value.provider_key}: attribute_condition must reference a repository, owner, namespace or subject claim, otherwise the whole issuer can federate."
+    }
+    precondition {
       condition     = each.value.attribute_condition != ""
       error_message = "wif.pools.${each.value.pool_key}.providers.${each.value.provider_key} has no attribute_condition, so any identity of the issuer could use the pool. Restrict it, for example: assertion.repository == 'example-org/example-repo'."
     }

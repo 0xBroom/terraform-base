@@ -17,7 +17,7 @@ Backlog item: <!-- AUD-XXX from docs/audit/BACKLOG.md, or "none" with the issue 
 - [ ] `terraform fmt -check` on the root files and tests
 - [ ] `tflint` on the root module
 - [ ] `terraform init -backend=false` and `terraform validate`
-- [ ] `terraform validate` in dev, stg, pre and pro with a local backend override
+- [ ] `terraform validate` in dev, stg and pro with a local backend override
 - [ ] `terraform test`
 - [ ] `python3 bin/validate-settings.py`
 - [ ] `python3 bin/cloudbuild-render-test.py`

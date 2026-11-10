@@ -6,7 +6,7 @@
 # The bucket lives in the ops project (AGENTS.md), never in an environment
 # project. Turn on object versioning on it so an overwritten state can be
 # recovered.
-bucket = "example-org-ops-tfstate"
+bucket = "example-org-ops-00000-tfstate"
 
 # Optional. Path inside the bucket; the default workspace stores
 # <prefix>/default.tfstate and every other workspace <prefix>/<workspace>.tfstate.

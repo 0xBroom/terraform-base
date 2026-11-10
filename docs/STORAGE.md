@@ -51,7 +51,7 @@ every overwritten and deleted object forever.
 The `uploads` bucket holds user content, so it gets a lifecycle rule and no
 retention policy.
 
-| | dev | stg (and pre) | pro |
+| | dev | stg | pro |
 |---|---|---|---|
 | Versioning | on | on | on |
 | Noncurrent versions | kept | kept | deleted 30 days after they stop being current |
