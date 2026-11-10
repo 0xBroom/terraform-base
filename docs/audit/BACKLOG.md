@@ -4,7 +4,7 @@ The list of work that takes this template to a public, production-grade
 release: dev and stg cheap, pro ready for a security, backup and
 data-retention audit. Each item has a check in `bin/audit-terraform.py`.
 
-Open: 20. Done: 32. Accepted, not a gap: 22.
+Open: 19. Done: 33. Accepted, not a gap: 22.
 
 Regenerate with `python3 bin/audit-terraform.py --write` in the pull request
 that closes an item. `--next` names the item to take. How a session works an
@@ -98,14 +98,6 @@ Contributors get fmt and lint errors only after a push.
 Next change: Add .tflint.hcl with the google ruleset, .pre-commit-config.yaml (fmt, validate, tflint, the auditor) and a tflint step in CI.
 
 After: AUD-CI-MATRIX
-
-### AUD-COST-PROFILES (p1) dev is a copy of stg and stg a copy of pre
-
-dev runs NAT, Redis and a custom SQL tier, so the cheapest workspace is not cheap. stg and pre are the same file. The header of dev.yaml still says pre.
-
-Next change: dev: shared-core SQL, no Redis, no NAT, at most 7 backups, scale to zero. stg: one step up. pro: HA. Fix the headers and the matrix in docs/ENVIRONMENTS.md.
-
-After: AUD-COST-DEFAULTS
 
 ### AUD-COST-APIS (p3) APIs for SQL, Redis, Firestore and other features are enabled when unused
 
@@ -315,3 +307,4 @@ Next change: Keep it equal to stg.
 - AUD-CI-MATRIX (p1) CI validates only the default workspace
 - AUD-CI-RUNNER (p1) CI runs on a moving runner label with Node 20 actions
 - AUD-COST-DEFAULTS (p1) Two code defaults cost money when a key is left out
+- AUD-COST-PROFILES (p1) dev is a copy of stg and stg a copy of pre

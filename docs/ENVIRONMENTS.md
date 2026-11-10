@@ -1,13 +1,14 @@
 # Environments
 
-`AGENTS.md` names the workspaces `dev`, `stg` and `pro`. `settings/dev.yaml`
-and `settings/stg.yaml` are that shape. `settings/pre.yaml` is that same shape under the older name, with project id
-`example-app-pre`. It stays so the auditor still finds a pre workspace. Use
-`stg` for a new project.
+`AGENTS.md` names the workspaces `dev`, `stg` and `pro`, and each has its own
+cost profile: dev is the cheapest that still runs the app, stg is one step up
+with the shape of pro, pro is highly available. `settings/pre.yaml` is the stg
+profile under the older name, with project id `example-app-pre`. It stays so
+the auditor still finds a pre workspace. Use `stg` for a new project.
 
 They describe one service: Cloud Run behind the HTTPS load balancer and IAP, a
-private Cloud SQL instance, Redis, one bucket, one shared VPC with Cloud NAT,
-a budget, and a GitHub Cloud Build connection. Anything else (Pub/Sub,
+private Cloud SQL instance, one bucket, one shared VPC, a budget, and a GitHub
+Cloud Build connection. Stg and pro add Redis and Cloud NAT; dev has neither. Anything else (Pub/Sub,
 Firestore, a VM, Elastic) stays in `settings/example.yaml` until the project
 needs it.
 
@@ -22,26 +23,61 @@ exist, which is what we want.
 
 ## What changes between them
 
-| | dev and stg | pro |
-|---|---|---|
-| Cloud Run | scale to zero, 1 vCPU, 512Mi, deletion protection off | one warm instance, 2 vCPU, 2Gi, deletion protection on |
-| Cloud Run CPU (`cpu_idle` default) | only during requests (`true`) | always allocated (`false`) |
-| Deploys | a push to `main` | a tag `pro-YYYYMMDDHH` |
-| Cloud SQL | zonal, 1 vCPU, 7 backups, insights off | regional, 2 vCPU, 30 backups, insights on |
-| Cloud SQL point-in-time recovery | off, the nightly backup only | 7 days of WAL |
-| Cloud SQL audit flags | none | connections, disconnections, statements over 1 s, lock waits, pgAudit `ddl,role` |
-| Generated database passwords | letters and digits | letters, digits and `-_.~` |
-| Redis | basic, no TLS | standard HA, TLS |
-| Bucket soft delete | 7 days | 30 days |
-| Budget | 40 EUR on dev, 80 EUR on stg | 400 EUR |
-| _Default log retention | 30 days | 90 days |
-| Audit log archive | none | locked log bucket, 365 days |
-| Log-based security alerts | none | seven presets, one email per event |
-| Binary Authorization | off | dry-run, attestation required |
-| External CI federation (`wif`) | none | none, a commented example (`docs/WIF.md`) |
-| VPC | dev `10.8.1.0/24`, stg and pre `10.10.1.0/24` | `10.20.1.0/24` |
+| | dev | stg (and pre) | pro |
+|---|---|---|---|
+| Cloud Run | scale to zero, 1 vCPU, 512Mi, deletion protection off | same as dev | one warm instance, 2 vCPU, 2Gi, deletion protection on |
+| Cloud Run CPU (`cpu_idle` default) | only during requests (`true`) | only during requests (`true`) | always allocated (`false`) |
+| Cloud Run VPC egress | `PRIVATE_RANGES_ONLY`: public traffic leaves directly | `ALL_TRAFFIC` through Cloud NAT | `ALL_TRAFFIC` through Cloud NAT |
+| Cloud NAT | none | one NAT, one static address | one NAT, one static address |
+| Deploys | a push to `main` | a push to `main` | a tag `pro-YYYYMMDDHH` |
+| Cloud SQL tier | `db-f1-micro` (shared core, 0.6 GB, no SLA), zonal | `db-custom-1-3840` (1 vCPU, 3.75 GB), zonal | `db-custom-2-7680` (2 vCPU, 7.5 GB), regional |
+| Cloud SQL disk | 10 GB SSD | 10 GB SSD | 20 GB SSD |
+| Cloud SQL `max_connections` | 25 | 100 | 200 |
+| Cloud SQL backups | 7, no point-in-time recovery | 7, no point-in-time recovery | 30, 7 days of WAL |
+| Cloud SQL insights | off | off | on |
+| Cloud SQL audit flags | none | none | connections, disconnections, statements over 1 s, lock waits, pgAudit `ddl,role` |
+| Generated database passwords | letters and digits | letters and digits | letters, digits and `-_.~` |
+| Redis | none | basic, 1 GB, no TLS | standard HA, 1 GB, TLS |
+| Bucket soft delete | 7 days (the shortest above off) | 7 days | 30 days |
+| Budget | 40 | 80 | 400 |
+| _Default log retention | 30 days | 30 days | 90 days |
+| Audit log archive | none | none | locked log bucket, 365 days |
+| Log-based security alerts | none | none | seven presets, one email per event |
+| Binary Authorization | off | off | dry-run, attestation required |
+| External CI federation (`wif`) | none | none | none, a commented example (`docs/WIF.md`) |
+| VPC | `10.8.1.0/24` | `10.10.1.0/24` | `10.20.1.0/24` |
+| Monthly cost, estimate | about 45 to 60 USD | about 130 to 160 USD | about 420 to 500 USD |
 
-Both keep the database private, require SSL, protect the instance from
+The cost row is a ballpark from Google Cloud list prices in `europe-west1`
+(USD, on-demand, no free tier, no committed-use discounts), for an idle
+project with little traffic. It is not a quote: requests, egress, log volume,
+build minutes and storage growth come on top. Run the
+[pricing calculator](https://cloud.google.com/products/calculator) before
+committing to a figure. What drives it:
+
+- Every workspace pays the HTTPS load balancer forwarding rule (about 18 USD)
+  and the Cloud Armor policy with its 11 rules (about 16 USD) before anything
+  else, so about 34 USD is the floor.
+- Dev adds the shared-core instance and its disk (about 10 to 12 USD).
+- Stg adds the dedicated-core instance (about 55 USD), Redis BASIC (about 35
+  to 40 USD) and Cloud NAT with its address (about 5 to 10 USD).
+- Pro adds the regional instance, which bills both zones (about 220 to 240
+  USD), Redis STANDARD_HA (about 50 USD), one always-allocated Cloud Run
+  instance (about 95 to 105 USD), Cloud NAT and the audit archive.
+
+The `budget.amount` values are placeholders in the billing account currency.
+Set each one above the estimate for that workspace, or its alerts fire every
+month.
+
+Dev has no Redis, so the app must start without a cache; no service in
+`settings/dev.yaml` references one. Dev has no Cloud NAT either: the service
+sets `cloudrun.vpc.egress: "PRIVATE_RANGES_ONLY"`, so only private addresses
+(the Cloud SQL private IP) go through the VPC and calls to public hosts leave
+Cloud Run directly. Those calls come from a Google-owned address, not a
+static one. When a third party must allowlist the egress IP, copy the
+`network.nats` block from stg and drop the `vpc.egress` override.
+
+All of them keep the database private, require SSL, protect the instance from
 deletion, put IAP on `/*`, and refuse to disable billing when the budget is
 hit. `enable_auto_stop: false` matches the Terraform default and is written
 out so nobody turns it on by accident: `true` deploys a function that turns
@@ -55,6 +91,8 @@ timer) is throttled and may never finish. A service that needs it sets
 defaults to `false`, so its warm instance keeps its CPU.
 
 The pro audit flags write to Cloud Logging, so dev and stg leave them out.
+`db-f1-micro` and `db-g1-small` share a CPU and are not covered by the Cloud
+SQL SLA, which is fine for dev and the reason stg uses a dedicated core.
 `cloudsql.enable_pgaudit` only loads pgAudit: the application's migration
 must run `CREATE EXTENSION pgaudit;` once in each database before
 `pgaudit.log` records anything. This stack has no PostgreSQL provider and

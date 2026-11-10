@@ -1,4 +1,5 @@
-# Pre workspace. Copy of the shape pro uses, sized down.
+# Pre workspace. The older name of stg: same profile, its own project id.
+# Use stg for a new project. See docs/ENVIRONMENTS.md.
 # Replace every example-app-pre, 000000-000000-000000 and replace-me@example.com
 # before the first plan. Do not apply this file as it is.
 # project_sys is this same project: a separate monitoring project is a later choice.

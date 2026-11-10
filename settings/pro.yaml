@@ -1,4 +1,4 @@
-# Pro workspace. Same resources as pre, sized and protected for production.
+# Pro workspace. Same resources as stg, sized and protected for production.
 # Replace every example-app-pro, 000000-000000-000000 and replace-me@example.com
 # before the first plan. Do not apply this file as it is.
 # project_sys is this same project until several apps share one monitoring project.
