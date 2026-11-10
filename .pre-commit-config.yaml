@@ -1,6 +1,7 @@
 # pip install pre-commit && pre-commit install
 # Needs terraform and tflint on the PATH. CI runs the same checks
-# (.github/workflows/terraform.yml); README.md, "Checks".
+# (.github/workflows/terraform.yml); CONTRIBUTING.md, "Checks to run before a
+# pull request".
 #
 # modules/ holds vendored snapshots that change only through a new version
 # directory, so no hook rewrites or lints them.
