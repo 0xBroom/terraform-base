@@ -121,3 +121,151 @@ resource "google_monitoring_alert_policy" "log_alerts" {
 
   depends_on = [google_project_service.enabled_apis]
 }
+
+# HTTPS uptime checks, driven by settings.monitoring.uptime: one check and one
+# alert policy per entry. Without the key nothing is created.
+#
+# The host defaults to the first lb.domain. A check fails on any status code
+# outside accepted_status_codes; it does not follow redirects. Behind IAP an
+# anonymous request gets 302 (or 401), so either accept those codes, which
+# proves the load balancer, certificate and IAP answer, or point the check at
+# a path routed without IAP to prove the backend too.
+
+locals {
+  uptime_regions = ["ASIA_PACIFIC", "EUROPE", "SOUTH_AMERICA", "USA_IOWA", "USA_OREGON", "USA_VIRGINIA"]
+
+  uptime_checks = {
+    for name, check in try(local.settings.monitoring.uptime, {}) : name => {
+      host            = try(check.host, try(local.settings.lb.domain[0], null))
+      path            = try(check.path, "/")
+      port            = try(check.port, 443)
+      use_ssl         = try(check.use_ssl, true)
+      period          = try(check.period, "300s")
+      timeout         = try(check.timeout, "10s")
+      regions         = try(check.regions, [])
+      accepted        = [for code in try(check.accepted_status_codes, ["2xx"]) : lower(tostring(code))]
+      content         = try(check.content_matcher.content, null)
+      matcher         = try(check.content_matcher.matcher, "CONTAINS_STRING")
+      failing_regions = try(check.failing_regions, 2)
+      severity        = try(check.severity, "ERROR")
+    } if try(check.enabled, true)
+  }
+}
+
+resource "google_monitoring_uptime_check_config" "uptime" {
+  for_each = local.uptime_checks
+
+  project          = local.settings.project.id
+  display_name     = "${local.base_name_medium}-uptime-${replace(each.key, "_", "-")}"
+  period           = each.value.period
+  timeout          = each.value.timeout
+  selected_regions = length(each.value.regions) == 0 ? null : each.value.regions
+
+  http_check {
+    path           = each.value.path
+    port           = each.value.port
+    use_ssl        = each.value.use_ssl
+    validate_ssl   = each.value.use_ssl
+    request_method = "GET"
+
+    dynamic "accepted_response_status_codes" {
+      for_each = each.value.accepted
+
+      content {
+        status_class = can(regex("^[1-5]xx$", accepted_response_status_codes.value)) ? "STATUS_CLASS_${upper(accepted_response_status_codes.value)}" : null
+        status_value = can(regex("^[1-5]xx$", accepted_response_status_codes.value)) ? null : try(tonumber(accepted_response_status_codes.value), null)
+      }
+    }
+  }
+
+  monitored_resource {
+    type = "uptime_url"
+    labels = {
+      project_id = local.settings.project.id
+      host       = each.value.host
+    }
+  }
+
+  dynamic "content_matchers" {
+    for_each = each.value.content == null ? [] : [each.value.content]
+
+    content {
+      content = content_matchers.value
+      matcher = each.value.matcher
+    }
+  }
+
+  lifecycle {
+    precondition {
+      condition     = each.value.host != null
+      error_message = "monitoring.uptime.${each.key} needs a host, or lb.domain must list one."
+    }
+    precondition {
+      condition     = contains(["60s", "300s", "600s", "900s"], each.value.period)
+      error_message = "monitoring.uptime.${each.key}.period must be 60s, 300s, 600s or 900s."
+    }
+    precondition {
+      condition     = can(regex("^[0-9]+s$", each.value.timeout)) && try(tonumber(trimsuffix(each.value.timeout, "s")) >= 1 && tonumber(trimsuffix(each.value.timeout, "s")) <= 60, false)
+      error_message = "monitoring.uptime.${each.key}.timeout must be between 1s and 60s."
+    }
+    precondition {
+      condition     = length(each.value.regions) == 0 || (length(each.value.regions) >= 3 && length(setsubtract(each.value.regions, local.uptime_regions)) == 0)
+      error_message = "monitoring.uptime.${each.key}.regions must list at least three of ${join(", ", local.uptime_regions)}, or be omitted for all of them."
+    }
+    precondition {
+      condition     = alltrue([for code in each.value.accepted : can(regex("^([1-5]xx|[1-5][0-9][0-9])$", code))])
+      error_message = "monitoring.uptime.${each.key}.accepted_status_codes takes codes (302) or classes (2xx)."
+    }
+  }
+
+  depends_on = [google_project_service.enabled_apis]
+}
+
+# Fires when at least failing_regions regions report the check as failed in
+# the same window, so one flaky checker location does not page anyone.
+# Alert policies on uptime metrics are not billed.
+resource "google_monitoring_alert_policy" "uptime" {
+  for_each = local.uptime_checks
+
+  project      = local.settings.project.id
+  display_name = "${local.base_name_medium}-uptime-${replace(each.key, "_", "-")}"
+  combiner     = "OR"
+  severity     = each.value.severity
+  enabled      = true
+
+  conditions {
+    display_name = "${each.value.host}${each.value.path} failing"
+
+    condition_threshold {
+      filter          = "metric.type=\"monitoring.googleapis.com/uptime_check/check_passed\" AND resource.type=\"uptime_url\" AND metric.label.check_id=\"${google_monitoring_uptime_check_config.uptime[each.key].uptime_check_id}\""
+      duration        = "60s"
+      comparison      = "COMPARISON_GT"
+      threshold_value = each.value.failing_regions - 1
+
+      aggregations {
+        alignment_period     = "${2 * tonumber(trimsuffix(each.value.period, "s"))}s"
+        per_series_aligner   = "ALIGN_NEXT_OLDER"
+        cross_series_reducer = "REDUCE_COUNT_FALSE"
+        group_by_fields      = ["resource.label.host"]
+      }
+
+      trigger {
+        count = 1
+      }
+    }
+  }
+
+  documentation {
+    mime_type = "text/markdown"
+    content   = "The uptime check ${each.key} on ${each.value.use_ssl ? "https" : "http"}://${each.value.host}:${each.value.port}${each.value.path} failed from at least ${each.value.failing_regions} regions."
+  }
+
+  notification_channels = [google_monitoring_notification_channel.security_alerts.name]
+
+  lifecycle {
+    precondition {
+      condition     = each.value.failing_regions >= 1 && each.value.failing_regions <= (length(each.value.regions) == 0 ? length(local.uptime_regions) : length(each.value.regions))
+      error_message = "monitoring.uptime.${each.key}.failing_regions must be between 1 and the number of regions the check runs from."
+    }
+  }
+}

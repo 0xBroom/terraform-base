@@ -942,6 +942,10 @@ monitoring:
       trigger_count_series: 1
 
   # ── Load Balancer Monitoring ──
+  # One alert policy per key, to the security.alerts_email channel. A key needs
+  # all five fields. The two 403 alerts also create a log-based metric on the
+  # load balancer logs, a billed custom metric. Pro sets 5xx, latency and
+  # Cloud Armor 403.
   lb:
     request_count:
       duration: "180s"                              # Monitor traffic patterns
@@ -1017,6 +1021,34 @@ monitoring:
     #   filter: 'log_id("cloudaudit.googleapis.com/activity") AND protoPayload.methodName:"dns.changes.create"'  # [MANDATORY for a custom key]
     #   description: "A Cloud DNS record set changed."  # [OPTIONAL] First line of the incident text
     #   severity: "WARNING"
+
+  # ── Uptime Checks (gcp.monitoring.tf) ──
+  # One HTTPS uptime check per entry, plus an alert policy to the
+  # security.alerts_email channel when it fails from failing_regions regions.
+  # Omit uptime and nothing is created. Each regional execution is billed past
+  # 1 million per project and month: 3 regions every 300s is about 26,000. The
+  # alert policy is not billed. The reference files enable it in pro only.
+  # A path behind IAP answers 302 (or 401) to the probe and never 2xx.
+  uptime:                                           # [OPTIONAL] Map of named checks
+    site:
+      enabled: true                                 # [OPTIONAL] Default true
+      host: "app.example.com"                       # [OPTIONAL] Default: first entry of lb.domain
+      path: "/healthz"                              # [OPTIONAL] Default: /
+      port: 443                                     # [OPTIONAL] Default: 443
+      use_ssl: true                                 # [OPTIONAL] Default true; also validates the certificate
+      period: "300s"                                # [OPTIONAL] 60s, 300s, 600s or 900s (default: 300s)
+      timeout: "10s"                                # [OPTIONAL] 1s to 60s (default: 10s)
+      regions:                                      # [OPTIONAL] At least three; omit for all six
+        - "EUROPE"                                  #   ASIA_PACIFIC, EUROPE, SOUTH_AMERICA,
+        - "USA_VIRGINIA"                            #   USA_IOWA, USA_OREGON, USA_VIRGINIA
+        - "SOUTH_AMERICA"
+      accepted_status_codes:                        # [OPTIONAL] Codes or classes (default: ["2xx"])
+        - "2xx"
+      content_matcher:                              # [OPTIONAL] Response body check
+        content: "ok"
+        matcher: "CONTAINS_STRING"                  #   CONTAINS_STRING, NOT_CONTAINS_STRING, MATCHES_REGEX, NOT_MATCHES_REGEX
+      failing_regions: 2                            # [OPTIONAL] Regions that must fail before alerting (default: 2)
+      severity: "ERROR"                             # [OPTIONAL] CRITICAL, ERROR or WARNING (default: ERROR)
 
   # ── Cloud Armor IP Ban List ──
   # cloud-armor:                                    # [OPTIONAL] WAF IP blocking

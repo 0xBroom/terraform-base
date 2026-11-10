@@ -385,7 +385,7 @@ resource "google_compute_global_forwarding_rule" "lb_http_forwarding_rule" {
 module "monitoring_load_balancing" {
   count = local.lb_enabled && local.lb_monitoring ? 1 : 0
 
-  source = "./modules/tf_gcp_monitoring_lb_v2.5-202502240837"
+  source = "./modules/tf_gcp_monitoring_lb_v2.6-202611091200"
 
   gcp_project_id            = local.settings.project.id
   gcp_project_id_monitoring = local.settings.project.id
@@ -393,9 +393,9 @@ module "monitoring_load_balancing" {
   load_balancer             = google_compute_url_map.load_balancer[0].name
   repo_iac                  = local.settings.iac.repo
 
-  ### Alerts Configuration ###
-  # Note: Notification channels need to be created separately
-  # Uncomment and configure when notification channels are available
+  # One policy per key set under monitoring.lb, each with every field of the
+  # module variable (duration, threshold_value, alignment_period, severity,
+  # enabled). All of them notify the security alerts channel.
 
   latency = can(local.settings.monitoring.lb.latency) ? {
     "main" = merge(

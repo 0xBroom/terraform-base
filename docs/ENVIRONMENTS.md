@@ -46,6 +46,8 @@ exist, which is what we want.
 | _Default log retention | 30 days | 30 days | 90 days |
 | Audit log archive | none | none | locked log bucket, 365 days |
 | Log-based security alerts | none | none | seven presets, one email per event |
+| Load balancer alerts (`monitoring.lb`) | none | none | 5xx, p99 latency, Cloud Armor 403 |
+| Uptime check (`monitoring.uptime`) | none | none | the first `lb.domain` every 5 minutes from 3 regions |
 | Binary Authorization | off | off | dry-run, attestation required |
 | External CI federation (`wif`) | none | none | none, a commented example (`docs/WIF.md`) |
 | VPC | `10.8.1.0/24` | `10.10.1.0/24` | `10.20.1.0/24` |
@@ -168,6 +170,38 @@ change to an audit config also matches `iam_policy_change`, since both are a
 Log-based alert policies are not billed, and they read logs Cloud Logging
 already keeps. Dev and stg still leave the key out, so their channel only
 gets the module's alerts.
+
+Pro also sets `monitoring.lb`, read by the load balancer monitoring module in
+`gcp.lb.tf`: more than 25 responses with a 5xx code in 3 minutes (ERROR), a
+p99 latency above 3000 ms for 5 minutes (WARNING), and more than 150 requests
+blocked by Cloud Armor in 3 minutes (WARNING). Each key needs all five fields
+(`duration`, `threshold_value`, `alignment_period`, `severity`, `enabled`).
+The Cloud Armor alert counts a log-based metric the module creates on the
+load balancer request logs, which the backends already write. Tune the
+thresholds to the real traffic after the first weeks.
+
+`monitoring.uptime` adds one HTTPS uptime check per entry in
+`gcp.monitoring.tf` and an alert policy that emails the same channel when the
+check fails from `failing_regions` regions (2 by default) in the same window.
+The host defaults to the first `lb.domain`. Pro probes `/` every 5 minutes
+from three regions with a 10 second timeout. Two things to know:
+
+- **IAP answers first.** Pro puts IAP on `/*`, so an anonymous probe gets a
+  302 to the sign-in page (401 for some clients) and never reaches the app.
+  Pro accepts `2xx`, `302` and `401`: the check proves that DNS, the
+  certificate, the load balancer and IAP answer, not that the backend is
+  healthy. To cover the backend, add a load balancer rule without IAP for a
+  health path that returns no data, point `path` at it and accept `2xx` only.
+- **It fails until the domain is real.** `app.example.com` is a placeholder,
+  so the check fails and the alert fires from the first apply until
+  `lb.domain` holds the real name and its certificate is active.
+
+Each regional execution of an uptime check is billed at 0.30 USD per 1,000
+past the free 1 million per project and month; three regions every 5 minutes
+make about 26,000. Alert policies on uptime metrics are not billed. Cloud
+Monitoring has announced a charge for metric alert policies from September
+2027 at the earliest; the load balancer alerts fall under it, the uptime and
+log-based ones do not. Dev and stg leave both keys out.
 
 The first Cloud Run revision is the public hello image. Cloud Build replaces
 the digest and Terraform leaves it alone. Do not pin a real image in the YAML.
