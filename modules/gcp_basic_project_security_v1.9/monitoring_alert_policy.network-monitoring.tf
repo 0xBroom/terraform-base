@@ -1,5 +1,7 @@
-resource "google_monitoring_alert_policy" "owner-monitoring" {
-  display_name = format("%s--owner-monitoring", local.m_base_name_medium)
+resource "google_monitoring_alert_policy" "network-monitoring" {
+  count = var.metric_alerts.network ? 1 : 0
+
+  display_name = format("%s--network-monitoring", local.m_base_name_medium)
   combiner     = "OR"
 
   alert_strategy {
@@ -7,9 +9,9 @@ resource "google_monitoring_alert_policy" "owner-monitoring" {
   }
 
   conditions {
-    display_name = "owner-monitoring"
+    display_name = "network-monitoring"
     condition_threshold {
-      filter     = "resource.type = \"global\" AND metric.type = \"logging.googleapis.com/user/${google_logging_metric.owner-monitoring.name}\""
+      filter     = "resource.type = \"global\" AND metric.type = \"logging.googleapis.com/user/${google_logging_metric.network-monitoring[0].name}\""
       duration   = "0s"
       comparison = "COMPARISON_GT"
       aggregations {

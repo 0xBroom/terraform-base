@@ -1,4 +1,6 @@
 resource "google_logging_metric" "network-monitoring" {
+  count = var.metric_alerts.network ? 1 : 0
+
   name = format("%s--network-monitoring", local.m_base_name_medium)
 
   description = "Network Monitoring"

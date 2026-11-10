@@ -91,6 +91,19 @@ run "pro_shape_is_hardened" {
   }
 
   assert {
+    condition = alltrue([
+      for family, preset in local.security_metric_alert_presets :
+      contains(keys(google_monitoring_alert_policy.log_alerts), preset) && local.security_metric_alerts[family] == false
+    ])
+    error_message = "pro sends one email per change: every module family a log alert preset covers is off (pro_security.tftest.hcl checks the module creates nothing for them)."
+  }
+
+  assert {
+    condition     = local.security_metric_alerts.network && local.security_metric_alerts.routes && local.security_metric_alerts.owner && length(local.security_metric_alerts_uncovered) == 0
+    error_message = "pro keeps the module alerts no preset covers (network, routes, owner), and turns off none that is left uncovered."
+  }
+
+  assert {
     condition     = contains(keys(google_monitoring_alert_policy.log_alerts), "secret_access") && length(google_monitoring_uptime_check_config.uptime) > 0
     error_message = "pro alerts on unexpected secret reads and probes the public domain."
   }

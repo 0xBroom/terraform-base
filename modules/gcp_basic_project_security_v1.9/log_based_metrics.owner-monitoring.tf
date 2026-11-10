@@ -1,4 +1,6 @@
 resource "google_logging_metric" "owner-monitoring" {
+  count = var.metric_alerts.owner ? 1 : 0
+
   name = format("%s--owner-monitoring", local.m_base_name_medium)
 
   description = "Owner Monitoring"

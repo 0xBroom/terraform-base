@@ -1,4 +1,6 @@
 resource "google_logging_metric" "cloud-sql-monitoring" {
+  count = var.metric_alerts.cloud_sql ? 1 : 0
+
   name = format("%s--cloud-sql-monitoring", local.m_base_name_medium)
 
   description = "Cloud SQL Monitoring"

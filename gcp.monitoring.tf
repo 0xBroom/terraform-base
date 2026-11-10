@@ -10,7 +10,8 @@
 # threshold policies (firewall, custom roles, audit config, Cloud SQL, bucket
 # IAM). Those aggregate over ten minutes, cannot skip the identity that runs
 # Terraform and say nothing about who made the change. The presets of the same
-# name are the per-event version; project IAM changes beyond roles/owner and
+# name are the per-event version, and security.metric_alerts turns the module's
+# copy off (gcp.security.tf); project IAM changes beyond roles/owner and
 # service account keys are only covered here.
 
 locals {

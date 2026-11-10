@@ -1,4 +1,6 @@
 resource "google_logging_metric" "routes-monitoring" {
+  count = var.metric_alerts.routes ? 1 : 0
+
   name = format("%s--routes-monitoring", local.m_base_name_medium)
 
   description = "Routes Monitoring"

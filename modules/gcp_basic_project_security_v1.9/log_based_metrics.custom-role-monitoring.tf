@@ -1,4 +1,6 @@
 resource "google_logging_metric" "custom-roles-monitoring" {
+  count = var.metric_alerts.custom_roles ? 1 : 0
+
   name = format("%s--custom-roles-monitoring", local.m_base_name_medium)
 
   description = "Custom Roles Monitoring"

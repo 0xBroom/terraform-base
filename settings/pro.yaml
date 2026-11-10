@@ -21,6 +21,15 @@ security:
     data_read: false
     data_write: false
   artifact_scanning: true
+  # The monitoring.log_alerts presets below report these events once per
+  # change, with the principal. The module's threshold alerts on the same
+  # events would send a second email. Network, routes and owner stay on.
+  metric_alerts:
+    audit_config: false
+    cloud_sql: false
+    custom_roles: false
+    firewall: false
+    storage_permissions: false
 
 logging:
   retention_days: 90
