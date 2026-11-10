@@ -305,13 +305,40 @@ elastic_psc:
 ## 🔐 Security & Access
 
 ### Project Operators
-Define who has administrative access to the project.
+Define who runs the application day to day. `viewers` get `roles/viewer` on
+the project; `operators` get it too, plus:
 
 ```yaml
 project_access:
   operators:
     - "user:admin@example.com"
 ```
+
+| Grant | Scope |
+|---|---|
+| `roles/run.invoker` | each Cloud Run service under `app.service` |
+| `roles/iam.serviceAccountUser` | each runtime service account this stack creates for a service or a job |
+| `CloudRunJobOperatorWithOverrides` (custom: run jobs, with overrides, and read executions) | project |
+| `roles/cloudbuild.builds.editor` | project |
+
+Operators can act as the runtime accounts of the stack but not as
+`run-cloudbuild-sa`, which holds `roles/run.admin` and
+`roles/iam.serviceAccountUser` on the project. So creating, editing or running
+a Cloud Build trigger by hand needs that account's owner; pushes and tags
+still start builds. A service with `cloudrun.external_sa`, or a job with an
+external `service_account`, uses an account this stack does not manage:
+whoever owns it grants `actAs` on it.
+
+Workspaces applied before this scoping had `run.invoker`,
+`iam.serviceAccountUser` and `cloudbuild.connectionAdmin` on the whole
+project. The next apply removes those three project bindings and adds the
+per-resource ones. Operators then lose: invoking Cloud Run services this
+stack does not manage, acting as any other service account in the project
+(`run-cloudbuild-sa` and the default compute account included), running or
+editing triggers by hand, and managing repository connections (which also
+lets a caller fetch a read-write token for every linked repository). Grant
+any of those back outside `project_access`, on the one resource that needs
+it.
 
 ### Security Alerts
 ```yaml

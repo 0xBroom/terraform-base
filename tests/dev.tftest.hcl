@@ -61,3 +61,36 @@ run "dev_shape_is_cheap" {
     error_message = "dev keeps no audit archive and at most 30 days of logs."
   }
 }
+
+run "operators_are_scoped" {
+  command = plan
+
+  expect_failures = [check.settings_workspace_unset]
+
+  assert {
+    condition = (
+      length(local.operators) > 0 && length(local.app_services) > 0
+      && length(google_cloud_run_v2_service_iam_member.operator_invokers) == length(local.app_services) * length(local.operators)
+    )
+    error_message = "Each operator invokes each dev service, one binding per service."
+  }
+
+  assert {
+    condition = (
+      length(google_service_account_iam_member.operator_act_as) == length(local.operator_runtime_accounts) * length(local.operators)
+      && contains(keys(local.operator_runtime_accounts), "service/api")
+      && alltrue([for binding in values(google_service_account_iam_member.operator_act_as) : binding.role == "roles/iam.serviceAccountUser"])
+    )
+    error_message = "Operators get serviceAccountUser on each runtime account of the stack (positive control)."
+  }
+
+  assert {
+    condition = !anytrue([
+      for binding in concat(
+        values(google_project_iam_member.viewers),
+        values(google_project_iam_member.cloudbuild_editors),
+      ) : contains(["roles/iam.serviceAccountUser", "roles/run.invoker", "roles/cloudbuild.connectionAdmin"], binding.role)
+    ])
+    error_message = "No project-level serviceAccountUser, run.invoker or connectionAdmin for anyone in project_access."
+  }
+}
