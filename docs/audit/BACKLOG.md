@@ -4,7 +4,7 @@ The list of work that takes this template to a public, production-grade
 release: dev and stg cheap, pro ready for a security, backup and
 data-retention audit. Each item has a check in `bin/audit-terraform.py`.
 
-Open: 12. Done: 52. Accepted, not a gap: 22.
+Open: 11. Done: 53. Accepted, not a gap: 22.
 
 Regenerate with `python3 bin/audit-terraform.py --write` in the pull request
 that closes an item. `--next` names the item to take. How a session works an
@@ -56,12 +56,6 @@ Next change: Optional security.disable_service_account_keys enforcing iam.disabl
 Essential Contacts route mandatory notifications. Without them they go to project owners only.
 
 Next change: security.essential_contacts (email and categories), defaulting to alerts_email for SECURITY and TECHNICAL. On in pro.
-
-### AUD-DEV-SQL-DISPOSABLE (p3) dev keeps Cloud SQL deletion protection on
-
-dev is meant to be torn down, and the database is the one resource that blocks it.
-
-Next change: Set deletion_protection false on dev's database. Keep stg and pro as they are.
 
 ### AUD-FIRESTORE-PRO (p3) Firestore in pro starts without PITR or delete protection
 
@@ -279,3 +273,4 @@ Next change: Keep it equal to stg.
 - AUD-PSA (p1) Private Service Access is never created, so private Cloud SQL and Redis fail on a new project
 - AUD-IAM-OPERATORS (p1) Operators can invoke every service and act as every service account
 - AUD-DEV-NO-LB (p1) The dev reference still pays for a load balancer and Cloud Armor
+- AUD-DEV-SQL-DISPOSABLE (p3) dev keeps Cloud SQL deletion protection on

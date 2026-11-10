@@ -52,6 +52,13 @@ run "dev_shape_is_cheap" {
   }
 
   assert {
+    condition = length(module.cloud_sql) > 0 && alltrue([
+      for db in values(local.settings.database) : db.sql.deletion_protection == false
+    ])
+    error_message = "dev Cloud SQL can be destroyed: deletion_protection false (pro.tftest.hcl asserts it on in pro)."
+  }
+
+  assert {
     condition     = !anytrue(values(local.service_deletion_protection))
     error_message = "dev services can be destroyed without editing the YAML."
   }

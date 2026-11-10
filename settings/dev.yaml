@@ -139,7 +139,9 @@ database:
       availability: "ZONAL"
       ipv4_enabled: false
       ssl_mode: "ENCRYPTED_ONLY"
-      deletion_protection: true
+      # Dev is meant to be torn down: off, so terraform destroy can delete the
+      # instance. Stg and pro keep it on.
+      deletion_protection: false
       disk:
         type: "PD_SSD"
         size: 10
