@@ -242,9 +242,11 @@ module "cloud_run_services" {
   cloudrun = {
     execution_environment = try(each.value.cloudrun.execution_environment, "EXECUTION_ENVIRONMENT_GEN2")
     concurrency           = try(each.value.cloudrun.concurrency, 100)
-    ingress               = try(each.value.cloudrun.ingress, "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER")
-    timeout               = try(each.value.cloudrun.timeout, "3600s")
-    launch_stage          = local.service_launch_stages[each.key]
+    # Without a load balancer the service has no other way in, so it accepts all
+    # traffic and stays private behind IAM unless allow_unauthenticated is set.
+    ingress      = try(each.value.cloudrun.ingress, local.lb_enabled ? "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER" : "INGRESS_TRAFFIC_ALL")
+    timeout      = try(each.value.cloudrun.timeout, "3600s")
+    launch_stage = local.service_launch_stages[each.key]
 
     containers = [
       {
@@ -254,7 +256,7 @@ module "cloud_run_services" {
         # Pass-through so a service can override the image's ENTRYPOINT/CMD from YAML.
         # Observed in practice: Cloud Run injects PORT=<container_port>, and an image whose
         # entrypoint runs an app server behind its own internal proxy may read that PORT
-        # and try to bind the port the proxy already holds — EADDRINUSE, crash loop, and a
+        # and try to bind the port the proxy already holds: EADDRINUSE, crash loop, and a
         # 502 from the proxy. `command`/`args` let you adjust the startup (e.g. unset PORT)
         # for that one service without forking the image.
         command = try(each.value.cloudrun.command, null)

@@ -4,7 +4,7 @@ resource "google_monitoring_notification_channel" "security_alerts" {
   type         = "email"
 
   labels = {
-    email_address = local.settings.security.alerts_email
+    email_address = try(local.settings.security.alerts_email, "")
   }
 
   description = "Email notification channel for security alerts in ${local.base_name} project"
@@ -12,6 +12,15 @@ resource "google_monitoring_notification_channel" "security_alerts" {
   # Keep enabled: every alert policy in the repo (security, Cloud Run, LB, NAT)
   # points here, so a disabled channel silently mutes all of them.
   enabled = true
+
+  lifecycle {
+    # merge() in locals.tf is shallow: a workspace that sets any security key
+    # replaces the whole map and must repeat alerts_email.
+    precondition {
+      condition     = can(regex("^[^@[:space:]]+@[^@[:space:]]+\\.[^@[:space:]]+$", try(local.settings.security.alerts_email, "")))
+      error_message = "Set security.alerts_email to a valid address in settings/default.yaml or the workspace file. A workspace that declares security: must repeat it, because the merge is shallow."
+    }
+  }
 }
 
 module "basic_security" {
