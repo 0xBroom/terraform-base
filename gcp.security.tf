@@ -42,6 +42,20 @@ module "basic_security" {
   ]
 }
 
+# Data Access logs for Secret Manager only, so the secret_access alert in
+# gcp.monitoring.tf has entries to match. The module above owns the
+# allServices audit config; a config per service is a separate entry in the
+# project IAM policy, and no resource here manages the policy as a whole.
+resource "google_project_iam_audit_config" "secret_manager_data_read" {
+  count   = local.secret_access_enabled ? 1 : 0
+  project = local.settings.project.id
+  service = "secretmanager.googleapis.com"
+
+  audit_log_config {
+    log_type = "DATA_READ"
+  }
+}
+
 # Artifact Registry automatic scanning. This is the Container Scanning API,
 # not a registry product that has to be installed beside the project.
 resource "google_project_service" "container_scanning" {

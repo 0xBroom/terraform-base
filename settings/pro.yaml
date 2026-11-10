@@ -92,6 +92,13 @@ monitoring:
         - 302
         - 401
       failing_regions: 2
+  # Data Access logs for Secret Manager and one email per secret read by an
+  # identity this stack does not grant access to. The service accounts of the
+  # services, jobs and Cloud Build are skipped already, and so is the
+  # Terraform identity above. Add any other expected reader here.
+  secret_access:
+    enabled: true
+    allowed_principals: []
 
 # Dry-run until images are signed. The hello image is on the whitelist.
 binary_authorization:

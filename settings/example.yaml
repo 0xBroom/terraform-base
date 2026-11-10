@@ -1050,6 +1050,32 @@ monitoring:
       failing_regions: 2                            # [OPTIONAL] Regions that must fail before alerting (default: 2)
       severity: "ERROR"                             # [OPTIONAL] CRITICAL, ERROR or WARNING (default: ERROR)
 
+  # ── Secret Access Alert (gcp.monitoring.tf, gcp.security.tf) ──
+  # Turns on Data Access (DATA_READ) audit logs for secretmanager.googleapis.com
+  # only, and adds one log-based alert policy that emails the security.alerts_email
+  # channel when a secret version is read (AccessSecretVersion) by an identity
+  # not skipped below. Omit secret_access and nothing is created. The alert is
+  # not billed; the log entries are, past the free 50 GiB of logs per project
+  # and month, and they are also kept by logging.audit_archive when set. A
+  # secret read is one small entry, so the volume follows how often instances
+  # start, jobs run and builds read secrets. The reference files enable it in
+  # pro only.
+  # Skipped always: monitoring.excluded_principals (put the Terraform identity
+  # there: every refresh of a secret version reads it) and allowed_principals.
+  # Skipped by default: the service account of each app.service and app.job
+  # (the external one when set), run-cloudbuild-sa and the Cloud Build service
+  # agent that reads the repository connection tokens.
+  secret_access:                                    # [OPTIONAL] Omit to disable
+    enabled: true                                   # [OPTIONAL] Default true
+    exclude_stack_principals: true                  # [OPTIONAL] Default true; false alerts on the stack's own readers too
+    allowed_principals:                             # [OPTIONAL] Other expected readers (service account or user emails)
+      - "secret-reader@my-project.iam.gserviceaccount.com"
+    secrets:                                        # [OPTIONAL] Secret ids to watch; omit to watch every secret
+      - "my-db-password"
+    severity: "ERROR"                               # [OPTIONAL] CRITICAL, ERROR or WARNING (default: ERROR)
+    notification_rate_limit: "300s"                 # [OPTIONAL] At most one email per period (default: 300s)
+    auto_close: "1800s"                             # [OPTIONAL] Incident auto close, at least 1800s (default: 1800s)
+
   # ── Cloud Armor IP Ban List ──
   # cloud-armor:                                    # [OPTIONAL] WAF IP blocking
   #   ban-ip:                                       #   List of IPs/CIDRs to block

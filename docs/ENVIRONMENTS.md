@@ -48,6 +48,7 @@ exist, which is what we want.
 | Log-based security alerts | none | none | seven presets, one email per event |
 | Load balancer alerts (`monitoring.lb`) | none | none | 5xx, p99 latency, Cloud Armor 403 |
 | Uptime check (`monitoring.uptime`) | none | none | the first `lb.domain` every 5 minutes from 3 regions |
+| Secret read alert (`monitoring.secret_access`) | none | none | Secret Manager Data Access logs, one email per unexpected reader |
 | Binary Authorization | off | off | dry-run, attestation required |
 | External CI federation (`wif`) | none | none | none, a commented example (`docs/WIF.md`) |
 | VPC | `10.8.1.0/24` | `10.10.1.0/24` | `10.20.1.0/24` |
@@ -202,6 +203,32 @@ make about 26,000. Alert policies on uptime metrics are not billed. Cloud
 Monitoring has announced a charge for metric alert policies from September
 2027 at the earliest; the load balancer alerts fall under it, the uptime and
 log-based ones do not. Dev and stg leave both keys out.
+
+Pro sets `monitoring.secret_access`. A secret read (`AccessSecretVersion`) is
+only logged as a Data Access audit log entry, and pro keeps
+`security.audit_logging.data_read` off for every service, so the key adds a
+`google_project_iam_audit_config` with `DATA_READ` for
+`secretmanager.googleapis.com` alone (`gcp.security.tf`). The basic security
+module keeps the `allServices` entry; both are separate service entries of the
+project audit config, and no resource here manages the IAM policy as a whole.
+`gcp.monitoring.tf` then adds a log-based alert, `secret_access`, that emails
+the security channel once per read with the principal and the secret version,
+unless the reader is expected:
+
+- the service account of each Cloud Run service and job (the `external_sa` or
+  the external job account when one is set), `run-cloudbuild-sa` and the
+  Cloud Build service agent that reads the repository connection tokens
+  (`exclude_stack_principals: false` drops these);
+- `monitoring.excluded_principals`, where the Terraform identity goes: a
+  refresh of a `google_secret_manager_secret_version` reads the payload;
+- `monitoring.secret_access.allowed_principals`.
+
+`secrets` limits the alert to a list of secret ids. The alert policy is not
+billed. The log entries are: Data Access logs count towards the free 50 GiB of
+log ingestion per project and month and cost 0.50 USD per GiB past it, and pro
+also keeps them for 365 days in the locked audit archive. One read is a small
+entry, written when an instance starts, a job runs or a build reads a secret,
+so the volume is low, but it is not zero. Dev and stg leave the key out.
 
 The first Cloud Run revision is the public hello image. Cloud Build replaces
 the digest and Terraform leaves it alone. Do not pin a real image in the YAML.
