@@ -228,11 +228,11 @@ def main() -> int:
         shutil.rmtree(root, ignore_errors=True)
 
     if failures:
-        print(f"FAIL — {len(failures)} check(s):")
+        print(f"FAIL: {len(failures)} check(s):")
         for f in failures:
             print(f"  ✗ {f}")
         return 1
-    print("PASS — cloudbuild renderer and pipeline agree on every check")
+    print("PASS: cloudbuild renderer and pipeline agree on every check")
     return 0
 
 

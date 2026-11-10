@@ -84,4 +84,6 @@ every workspace needs it.
 ## Vendored modules
 
 `modules/*` are snapshots. Do not edit a module in place without giving the
-directory a new version suffix.
+directory a new version suffix. The one exception is a comment or documentation fix
+(a translation, a typo) that changes no argument, default or expression: it may be
+made in place, because a new directory would only churn every `source` for nothing.

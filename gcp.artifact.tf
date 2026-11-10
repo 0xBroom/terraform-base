@@ -1,5 +1,5 @@
 # ===================================================================
-# CLEANUP POLICY — every repository, both kinds
+# CLEANUP POLICY: every repository, both kinds
 # ===================================================================
 # Observed in practice: the module's default ("keep 5, delete untagged") with
 # cleanup_policy_dry_run = true deletes NOTHING. And "untagged" barely matches anyway
@@ -23,7 +23,7 @@
 #
 # PROVIDER TRAP (observed with google provider 6.42): an apply that REMOVES a policy whose
 # block has a `condition` fails with `Error 400: invalid cleanup policy: policy  is missing
-# a condition` — the SDK leaves a blank element in the set (note the empty name). Adding
+# a condition`: the SDK leaves a blank element in the set (note the empty name). Adding
 # and changing policies works; the API itself accepts the removal. So renaming a policy id
 # here fails on every repository: delete the old id first with
 #   gcloud artifacts repositories delete-cleanup-policies <repo> --policynames=<old-id>
@@ -57,7 +57,7 @@ locals {
           most_recent_versions = null
         }
       },
-      # TAGGED with an empty prefix list would keep every tagged version — i.e. everything.
+      # TAGGED with an empty prefix list would keep every tagged version, i.e. everything.
       length(c.keep_tags) == 0 ? {} : {
         "keep-tags" = {
           action               = "KEEP"

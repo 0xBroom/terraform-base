@@ -5,7 +5,7 @@
 # --config cloudbuild_files/cloudbuild.yaml` rejects this file. Render it instead with
 #     bin/cloudbuild-render.py <workspace> <service>
 #
-# It carries NO service-specific knowledge — no build args, no image names, no timeouts,
+# It carries NO service-specific knowledge: no build args, no image names, no timeouts,
 # no framework flags. Everything that differs between services arrives as a substitution
 # Terraform computes from settings/<workspace>.yaml (docs/cloudbuild-pipeline.md):
 #
@@ -15,7 +15,7 @@
 #   _DOCKERFILE_PATH     cloudbuild.dockerfile_path
 #   _BUILD_CONTEXT_PATH  cloudbuild.build_context_path
 #   _PREFIXED_NAME       the Cloud Run service to deploy
-#   _DEPLOY_REGION       where that service lives — NOT always the project's region
+#   _DEPLOY_REGION       where that service lives, NOT always the project's region
 #   _JOB_NAME            the Cloud Run job to update
 #   _JOB_REGION          where that job lives
 #
@@ -25,7 +25,7 @@
 # flag that is not a real capability is a plan error, never a step that silently stops
 # running.
 #
-# Mind the dollars: Cloud Build reads `$WORD` anywhere in this file — comments included —
+# Mind the dollars: Cloud Build reads `$WORD` anywhere in this file (comments included)
 # as a substitution. Shell variables here are lowercase, and a literal dollar for the
 # shell is written `$$`.
 steps:

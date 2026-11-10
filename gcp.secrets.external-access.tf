@@ -1,6 +1,6 @@
 # Access to secrets this project did NOT create
 #
-# `gcp.secrets.standalone.tf` owns the secrets declared under `secrets:` — it CREATES the
+# `gcp.secrets.standalone.tf` owns the secrets declared under `secrets:`. It CREATES the
 # container and a placeholder version, then leaves the payload alone. That is the right
 # shape for a secret this workspace is the source of.
 #

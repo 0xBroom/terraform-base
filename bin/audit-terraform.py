@@ -128,18 +128,31 @@ def leak_hits() -> list[str]:
     return hits
 
 
-SPANISH = re.compile(r"[áéíóúñ¿¡]|\b(para|los|las|una|esta|este|desde|cuando|también)\b", re.IGNORECASE)
+SPANISH = re.compile(
+    r"[áéíóúñ¿¡]|\b(para|los|las|una|esta|este|desde|cuando|también"
+    r"|permite|ejecutar|servicios?|despliegue|usuarios?|cuentas?|configuracion)\b",
+    re.IGNORECASE,
+)
+EM_DASH = re.compile("\u2014")
 
 
-def spanish_hits() -> list[str]:
+def prose_hits(pattern: re.Pattern) -> list[str]:
     hits = []
     for rel, text in tracked_text():
         if rel.startswith("docs/audit/") or rel == "bin/audit-terraform.py":
             continue
         for number, line in enumerate(text.splitlines(), 1):
-            if SPANISH.search(line):
+            if pattern.search(line):
                 hits.append(f"{rel}:{number}")
     return hits
+
+
+def spanish_hits() -> list[str]:
+    return prose_hits(SPANISH)
+
+
+def em_dash_hits() -> list[str]:
+    return prose_hits(EM_DASH)
 
 
 def yaml_has(name: str, *pieces: str) -> bool:
@@ -452,7 +465,7 @@ def clean_names() -> bool:
 
 
 def english_only() -> bool:
-    return not spanish_hits()
+    return not spanish_hits() and not em_dash_hits()
 
 
 def readme_showcase() -> bool:
@@ -673,9 +686,11 @@ ITEMS: list[Item] = [
          "gcp.repository.github-extra.tf mix hyphens into a dotted pattern.",
          "Rename modules to modules/gcp_<name>_v<major.minor> and update every source. Rename the two root files "
          "with dots. Module addresses in state do not change.", clean_names),
-    Item("AUD-LANG", "p1", "Docs and comments mix Spanish with English",
-         "A public template has one language. docs/cloudrun-service-resources.md and several comments are Spanish.",
-         "Translate to English.", english_only),
+    Item("AUD-LANG", "p1", "Docs and comments mix Spanish with English, and use em dashes",
+         "A public template has one language. docs/cloudrun-service-resources.md and several comments are Spanish, "
+         "and many files use the em dash (U+2014), which many readers take as a sign of machine-written text.",
+         "Translate to English and replace every em dash with a comma, colon, parentheses or hyphen "
+         "(`--leaks` prints `lang` and `dash` lines).", english_only),
     Item("AUD-DOC-OSS", "p2", "The repository has no contributor, security or change files",
          "A public project needs to say how to contribute, how to report a vulnerability and what changed.",
          "Add CONTRIBUTING.md, SECURITY.md, CHANGELOG.md, a pull request template and issue templates.", oss_files),
@@ -833,7 +848,7 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--fail-on", choices=tuple(SEVERITY_RANK), help="exit 1 on an open item at this severity or above")
     parser.add_argument("--id", help="print one item; exit 1 while it is open")
     parser.add_argument("--next", action="store_true", help="print the next item to work on; exit 1 when none is left")
-    parser.add_argument("--leaks", action="store_true", help="print every leak and language hit")
+    parser.add_argument("--leaks", action="store_true", help="print every leak, language and em dash hit")
     args = parser.parse_args(argv)
 
     if args.leaks:
@@ -841,6 +856,8 @@ def main(argv: list[str]) -> int:
             print(f"leak  {hit}")
         for hit in spanish_hits():
             print(f"lang  {hit}")
+        for hit in em_dash_hits():
+            print(f"dash  {hit}")
         print(f"denylist patterns loaded: {len(denylist())}", file=sys.stderr)
         return 0
 

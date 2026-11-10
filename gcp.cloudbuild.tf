@@ -1,5 +1,5 @@
 # =============================================================================
-# CLOUD BUILD — one generic pipeline, everything else declared in YAML
+# CLOUD BUILD: one generic pipeline, everything else declared in YAML
 # =============================================================================
 # Every service, job and standalone build in this project renders the same file,
 # `cloudbuild_files/cloudbuild.yaml`. That file knows nothing about any particular
@@ -14,9 +14,9 @@
 locals {
   # ---------------------------------------------------------------------------
   # The three places a build can be declared, normalised to one shape.
-  #   raw  — settings.cloudbuild.<key>               (build only, no Cloud Run resource)
-  #   app  — settings.app.service.<key>.cloudbuild   (builds and deploys a service)
-  #   job  — settings.app.job.<key>.cloudbuild       (builds and updates a Cloud Run job)
+  #   raw: settings.cloudbuild.<key>                 (build only, no Cloud Run resource)
+  #   app: settings.app.service.<key>.cloudbuild     (builds and deploys a service)
+  #   job: settings.app.job.<key>.cloudbuild         (builds and updates a Cloud Run job)
   # `cb` is the cloudbuild block itself; the rest is context the block needs.
   # ---------------------------------------------------------------------------
   cloudbuild_sources = merge(
@@ -130,7 +130,7 @@ locals {
   }
 
   # ---------------------------------------------------------------------------
-  # Capability flags — what `x-when` in the pipeline is filtered against.
+  # Capability flags: what `x-when` in the pipeline is filtered against.
   # Derived, never a new boolean in settings when the answer is already there.
   # ---------------------------------------------------------------------------
   cloudbuild_capabilities = {
@@ -155,7 +155,7 @@ locals {
   }
 
   # ---------------------------------------------------------------------------
-  # Build arguments — the whole point of the refactor. Anything an image needs at
+  # Build arguments: the whole point of the refactor. Anything an image needs at
   # build time is a key under `cloudbuild.build_args` in the workspace YAML, and it
   # arrives as one deterministic, POSIX-quoted string.
   #
@@ -209,7 +209,7 @@ locals {
           _DOCKER_TARGET = value.docker_target == null ? "" : "--target=${value.docker_target}"
         },
         # Where the rollout lands. A service may sit outside the project's region
-        # (three of them do, in us-east1) — deploying it to region_name would create a
+        # (three of them do, in us-east1); deploying it to region_name would create a
         # second service instead of updating the one that exists. Jobs are all created
         # in region_name by gcp.jobs.tf, so they say so separately.
         local.cloudbuild_capabilities[key].deploy_service ? { _DEPLOY_REGION = try(local.service_regions[key], local.settings.region_name) } : {},
@@ -323,7 +323,7 @@ resource "google_cloudbuild_trigger" "cloudbuild_triggers" {
     for_each = each.value.inline ? [1] : []
     content {
 
-      # 1. STEPS — only those whose x-when capabilities are on for this service.
+      # 1. STEPS: only those whose x-when capabilities are on for this service.
       dynamic "step" {
         for_each = local.cloudbuild_steps[each.key]
         content {
@@ -349,7 +349,7 @@ resource "google_cloudbuild_trigger" "cloudbuild_triggers" {
         }
       }
 
-      # 2. GLOBAL SETTINGS — the YAML value is the default, settings may override it.
+      # 2. GLOBAL SETTINGS: the YAML value is the default, settings may override it.
       timeout = coalesce(each.value.build_timeout, try(local.parsed_yaml_configs[each.key].timeout, "1800s"))
       tags    = try(local.parsed_yaml_configs[each.key].tags, [])
       images  = try(local.parsed_yaml_configs[each.key].images, [])
@@ -413,7 +413,7 @@ resource "google_cloudbuild_trigger" "cloudbuild_triggers" {
         }
       }
 
-      # 5. AVAILABLE SECRETS — narrowed to what the surviving steps consume.
+      # 5. AVAILABLE SECRETS: narrowed to what the surviving steps consume.
       dynamic "available_secrets" {
         for_each = length(local.cloudbuild_secret_envs[each.key]) > 0 ? try([local.parsed_yaml_configs[each.key].availableSecrets], []) : []
         content {

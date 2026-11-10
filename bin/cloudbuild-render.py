@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Show the pipeline a service actually builds with — and prove Terraform agrees.
+"""Show the pipeline a service actually builds with, and prove Terraform agrees.
 
 `cloudbuild_files/cloudbuild.yaml` is one file shared by every build in the project.
 What a given service ends up running depends on its capability flags (which steps
@@ -13,7 +13,7 @@ script exists to remove:
 
 Terraform is the source of truth; this is a reader for it. `--check-plan` is what keeps
 the two honest: it takes `terraform show -json <plan>` and fails if a single planned
-trigger disagrees with what this file renders — same steps, same order, same waitFor,
+trigger disagrees with what this file renders: same steps, same order, same waitFor,
 same substitutions.
 """
 
@@ -35,7 +35,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # --------------------------------------------------------------------------- settings
 def load_settings(root: str, workspace: str) -> dict:
-    """default.yaml overlaid by <workspace>.yaml — the merge locals.tf does."""
+    """default.yaml overlaid by <workspace>.yaml: the merge locals.tf does."""
     with open(os.path.join(root, "settings", "default.yaml")) as fh:
         settings = yaml.safe_load(fh) or {}
     path = os.path.join(root, "settings", f"{workspace}.yaml")
@@ -60,7 +60,7 @@ def _resolve_image(ref: str, settings: dict, python: bool = False) -> str:
 
 
 def collect_configs(settings: dict, workspace: str) -> dict:
-    """Every build declared in the workspace, normalised — gcp.cloudbuild.tf's locals."""
+    """Every build declared in the workspace, normalised: gcp.cloudbuild.tf's locals."""
     base = settings["client"]["name"]
     app = settings.get("app") or {}
     sources = []
@@ -211,7 +211,7 @@ def rewrite_wait_for(steps: list) -> list:
 
 def apply_substitutions(text: str, subs: dict) -> str:
     """What Cloud Build does to the step text. Unset custom substitutions become empty
-    strings — ALLOW_LOOSE is forced on every triggered build."""
+    strings: ALLOW_LOOSE is forced on every triggered build."""
 
     def one(match):
         name = match.group(1) or match.group(2)
@@ -269,7 +269,7 @@ def render(config: dict, settings: dict, workspace: str, root: str, resolve: boo
 def print_human(config: dict, result: dict) -> None:
     print(f"── {config['key']}  ({config['type']})  trigger: {config['trigger']}")
     if "external" in result:
-        print(f"   pipeline: {result['external']} — read from the application repository")
+        print(f"   pipeline: {result['external']} (read from the application repository)")
         print("   substitutions:")
         for k, v in sorted(result["substitutions"].items()):
             print(f"     {k} = {v}")
@@ -350,11 +350,11 @@ def check_plan(plan_path: str, configs: dict, settings: dict, workspace: str, ro
                 problems.append(f"{key}: {want.get('id')} args differ from the plan")
 
     if problems:
-        print(f"FAIL — {len(problems)} disagreement(s) between the plan and this renderer:")
+        print(f"FAIL: {len(problems)} disagreement(s) between the plan and this renderer:")
         for p in problems:
             print(f"  - {p}")
         return 1
-    print(f"PASS — {checked} trigger(s) in the plan render exactly as this script does")
+    print(f"PASS: {checked} trigger(s) in the plan render exactly as this script does")
     return 0
 
 
