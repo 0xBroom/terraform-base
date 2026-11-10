@@ -102,6 +102,10 @@ backup and data-retention audit.
 - A settings file that still uses the old `elastic.psc` key stops the plan with
   the new `elastic_psc` keys in the message, instead of destroying the endpoint.
 - The HTTPS firewall rule targets the standard `https-server` tag.
+- A `dns_zones` entry with `visibility: private` is attached to the shared VPC
+  and stops the plan without one, instead of failing at apply.
+- The stop-billing function's account no longer holds
+  `roles/cloudfunctions.developer`; it only needs the Billing API.
 - `settings_workspace` and `settings_override` are refused outside the default
   workspace, so a plan cannot mix one workspace's settings with another's state.
 - A WIF provider `attribute_condition` must name a repository, owner, namespace

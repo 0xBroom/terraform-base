@@ -45,14 +45,14 @@ resource "google_project_iam_member" "stop_billing_service_usage_consumer" {
   depends_on = [google_service_account.stop_billing_sa]
 }
 
-# 5.3 Cloud Functions Developer - allows access to Cloud APIs
-resource "google_project_iam_member" "stop_billing_cloud_functions_developer" {
-  count   = local.enable_stop_billing ? 1 : 0
-  project = local.settings.project.id
-  role    = "roles/cloudfunctions.developer"
-  member  = "serviceAccount:${google_service_account.stop_billing_sa[0].email}"
+# The function's own account held roles/cloudfunctions.developer, which let it
+# deploy functions. It only calls the Billing API, so the grant is gone.
+removed {
+  from = google_project_iam_member.stop_billing_cloud_functions_developer
 
-  depends_on = [google_service_account.stop_billing_sa]
+  lifecycle {
+    destroy = true
+  }
 }
 
 # 6. Function Source Code Preparation

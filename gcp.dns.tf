@@ -1,8 +1,10 @@
 # ===================================================================
 # CLOUD DNS MANAGED ZONES
 # ===================================================================
-# Public DNS zones hosted in this project. Driven by `dns_zones` in
-# settings/${workspace}.yaml, like every other resource here.
+# DNS zones hosted in this project. Driven by `dns_zones` in
+# settings/${workspace}.yaml, like every other resource here. A zone with
+# `visibility: private` is attached to the shared VPC, so it needs
+# network.services_cidr.
 #
 # A zone created here is NOT reachable until its parent domain delegates to it:
 # take the name servers from the `dns_zone_name_servers` output and create the
@@ -30,8 +32,34 @@ resource "google_dns_managed_zone" "zone" {
 
   visibility = try(each.value.visibility, "public")
 
-  dnssec_config {
-    state = try(each.value.dnssec, "off")
+  # Cloud DNS refuses a private zone with no network. The shared VPC is the
+  # only network this template creates.
+  dynamic "private_visibility_config" {
+    for_each = try(each.value.visibility, "public") == "private" ? [1] : []
+    content {
+      networks {
+        network_url = module.network[0].network_id
+      }
+    }
+  }
+
+  # DNSSEC is for public zones only.
+  dynamic "dnssec_config" {
+    for_each = try(each.value.visibility, "public") == "private" ? [] : [1]
+    content {
+      state = try(each.value.dnssec, "off")
+    }
+  }
+
+  lifecycle {
+    precondition {
+      condition     = contains(["public", "private"], try(each.value.visibility, "public"))
+      error_message = "dns_zones.${each.key}.visibility must be public or private."
+    }
+    precondition {
+      condition     = try(each.value.visibility, "public") != "private" || local.network_enabled
+      error_message = "dns_zones.${each.key} is private and needs network.services_cidr: a private zone is attached to the shared VPC."
+    }
   }
 }
 

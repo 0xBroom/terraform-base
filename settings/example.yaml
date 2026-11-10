@@ -1219,8 +1219,8 @@ monitoring:
 #   example-com:                                    # Zone name in Cloud DNS (the key)
 #     dns_name: "example.com"                       # [MANDATORY] Trailing dot optional
 #     description: "Public zone of example.com"     # [OPTIONAL] Default: "Managed by Terraform"
-#     visibility: "public"                          # [OPTIONAL] Default: public
-#     dnssec: "off"                                 # [OPTIONAL] off | on | transfer (default: off)
+#     visibility: "public"                          # [OPTIONAL] public | private (default: public). private attaches the shared VPC and needs network.services_cidr
+#     dnssec: "off"                                 # [OPTIONAL] off | on | transfer (default: off). Public zones only
 #     default_ttl: 300                              # [OPTIONAL] TTL of records without one (default: 300)
 #     records:                                      # [OPTIONAL] One record set per name and type
 #       - name: "www.example.com"
