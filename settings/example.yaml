@@ -560,7 +560,7 @@ bucket:
     # Lifecycle rules for automatic object management
     lifecycle_rules:                                # [OPTIONAL] Map of lifecycle rules
       delete_tmp_files:                             #   Rule identifier (descriptive name)
-        age: 30                                     #   [MANDATORY per rule] Delete objects older than N days
+        age: 30                                     #   [CONDITION] Delete objects older than N days
         action_type: "Delete"                       #   [MANDATORY per rule] Action: "Delete" or "SetStorageClass"
         # action_sc: "NEARLINE"                     #   [OPTIONAL] Target class (only for SetStorageClass)
         prefixes:                                   #   [OPTIONAL] Only apply to objects with these prefixes
@@ -571,6 +571,31 @@ bucket:
         # matches_suffix:                           #   [OPTIONAL] Only apply to objects with these suffixes
         #   - ".log"
         #   - ".tmp"
+      # Each rule needs at least one condition: age, days_since_noncurrent_time
+      # or num_newer_versions. The last two only match noncurrent versions, so
+      # they matter only with enable_versioning: true.
+      delete_noncurrent_versions:                   #   Data minimisation on a versioned bucket (pro uses it)
+        days_since_noncurrent_time: 30              #   [CONDITION] Days since the version was replaced or deleted (>= 1)
+        # num_newer_versions: 3                     #   [CONDITION] Or: keep only the 3 newest noncurrent versions (>= 1)
+        action_type: "Delete"
+
+    # Retention policy (Bucket Lock): no object can be deleted or replaced
+    # before it is retention_days old. Use it only for records a law or a
+    # contract says must be kept (invoices, signed documents, audit exports),
+    # never for user content that may have to be erased on request. To get rid
+    # of data after a while, use a lifecycle rule instead. Off unless set.
+    # retention_policy:                             # [OPTIONAL]
+    #   retention_days: 3650                        #   [MANDATORY] Days, converted to seconds (< 100 years)
+    #   is_locked: false                            #   [OPTIONAL] Default false. true is IRREVERSIBLE: the
+                                                    #   period can only grow, and the bucket cannot be deleted
+                                                    #   until every object is older than it. Try it unlocked first.
+
+    # Usage and storage logs (CSV objects, written hourly into another bucket).
+    # Prefer Data Access audit logs (security.audit_logging) for "who read or
+    # changed what": see docs/STORAGE.md. Off unless set.
+    # access_logs:                                  # [OPTIONAL]
+    #   log_bucket: "example-app-pro-gcs-logs"      #   [MANDATORY] Name of an existing bucket, not a key of this map
+    #   log_object_prefix: "uploads"                #   [OPTIONAL] Default: the name of this bucket
 
     # IAM permissions for bucket access
     permissions:                                    # [OPTIONAL] Map of permission groups

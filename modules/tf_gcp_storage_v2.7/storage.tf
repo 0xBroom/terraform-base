@@ -24,15 +24,33 @@ resource "google_storage_bucket" "base" {
     for_each = var.lifecycle_rules
     content {
       condition {
-        age                   = lifecycle_rule.value.age
-        matches_prefix        = lifecycle_rule.value.matches_prefixes
-        matches_storage_class = lifecycle_rule.value.matches_storage_class
-        matches_suffix        = lifecycle_rule.value.matches_suffix
+        age                        = lifecycle_rule.value.age
+        days_since_noncurrent_time = lifecycle_rule.value.days_since_noncurrent_time
+        num_newer_versions         = lifecycle_rule.value.num_newer_versions
+        matches_prefix             = lifecycle_rule.value.matches_prefixes
+        matches_storage_class      = lifecycle_rule.value.matches_storage_class
+        matches_suffix             = lifecycle_rule.value.matches_suffix
       }
       action {
         type          = lifecycle_rule.value.action_type
         storage_class = lifecycle_rule.value.action_sc
       }
+    }
+  }
+
+  dynamic "retention_policy" {
+    for_each = var.retention_policy != null ? [var.retention_policy] : []
+    content {
+      retention_period = tostring(retention_policy.value.retention_period)
+      is_locked        = retention_policy.value.is_locked
+    }
+  }
+
+  dynamic "logging" {
+    for_each = var.logging != null ? [var.logging] : []
+    content {
+      log_bucket        = logging.value.log_bucket
+      log_object_prefix = logging.value.log_object_prefix
     }
   }
 

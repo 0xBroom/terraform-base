@@ -64,14 +64,26 @@ variable "public_access_prevention" {
 variable "lifecycle_rules" {
   type = map(
     object({
-      age                   = number
-      action_type           = string
-      action_sc             = optional(string, null)
-      matches_prefixes      = optional(list(string), [])
-      matches_storage_class = optional(list(string), [])
-      matches_suffix        = optional(list(string), [])
+      age                        = optional(number, null)
+      days_since_noncurrent_time = optional(number, null)
+      num_newer_versions         = optional(number, null)
+      action_type                = string
+      action_sc                  = optional(string, null)
+      matches_prefixes           = optional(list(string), [])
+      matches_storage_class      = optional(list(string), [])
+      matches_suffix             = optional(list(string), [])
     })
   )
+
+  validation {
+    condition     = alltrue([for item in var.lifecycle_rules : item.age != null || item.days_since_noncurrent_time != null || item.num_newer_versions != null])
+    error_message = "Each lifecycle rule needs at least one of age, days_since_noncurrent_time or num_newer_versions."
+  }
+
+  validation {
+    condition     = alltrue([for item in var.lifecycle_rules : (item.days_since_noncurrent_time == null || try(item.days_since_noncurrent_time >= 1, false)) && (item.num_newer_versions == null || try(item.num_newer_versions >= 1, false))])
+    error_message = "days_since_noncurrent_time and num_newer_versions must be at least 1 (the provider does not send a 0)."
+  }
 
   validation {
     condition     = alltrue([for item in var.lifecycle_rules : (item.action_sc == null && item.action_type != "SetStorageClass") || (item.action_sc != null && item.action_type == "SetStorageClass")])
@@ -128,6 +140,34 @@ variable "autoclass" {
   })
   description = "Autoclass configuration for the bucket. Set to null to disable."
   default     = null
+}
+
+variable "retention_policy" {
+  type = object({
+    retention_period = number
+    is_locked        = optional(bool, false)
+  })
+  description = "Bucket retention policy: no object can be deleted or replaced before it is retention_period seconds old. is_locked = true is irreversible. Null for none."
+  default     = null
+
+  validation {
+    condition     = var.retention_policy == null || try(var.retention_policy.retention_period >= 1 && var.retention_policy.retention_period < 3155760000 && floor(var.retention_policy.retention_period) == var.retention_policy.retention_period, false)
+    error_message = "retention_period is a whole number of seconds, at least 1 and less than 3,155,760,000 (100 years)."
+  }
+}
+
+variable "logging" {
+  type = object({
+    log_bucket        = string
+    log_object_prefix = optional(string, null)
+  })
+  description = "Usage and storage logs: the bucket that receives the log objects and an optional object prefix (default: this bucket's name). Null for none."
+  default     = null
+
+  validation {
+    condition     = var.logging == null || can(regex("^[a-z0-9][a-z0-9._-]{1,220}[a-z0-9]$", var.logging.log_bucket))
+    error_message = "log_bucket is a bucket name (lowercase letters, digits, dots, hyphens, underscores), without gs://."
+  }
 }
 
 variable "use_random_suffix" {

@@ -80,7 +80,7 @@ locals {
 # Only created when stop billing is enabled.
 module "stop_billing_code_bucket" {
   count  = local.enable_stop_billing ? 1 : 0
-  source = "./modules/tf_gcp_storage_v2.6-202611091700"
+  source = "./modules/tf_gcp_storage_v2.7"
 
   base_name      = "${local.base_name_medium}-stop-billing-code"
   region_name    = local.settings.region_name

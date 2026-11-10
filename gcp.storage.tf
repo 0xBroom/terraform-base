@@ -40,7 +40,7 @@ locals {
 module "storage_buckets" {
   for_each = local.buckets
 
-  source = "./modules/tf_gcp_storage_v2.6-202611091700"
+  source = "./modules/tf_gcp_storage_v2.7"
 
   # If custom_name is set, use the exact bucket name; otherwise use standard naming convention
   base_name      = try(each.value.custom_name, null) != null ? each.value.custom_name : "${local.base_name_medium}-${try(each.value.name, each.key)}"
@@ -70,14 +70,28 @@ module "storage_buckets" {
   lifecycle_rules = {
     for rule_name, rule_config in try(each.value.lifecycle_rules, {}) :
     rule_name => {
-      age                   = rule_config.age
-      action_type           = rule_config.action_type
-      action_sc             = try(rule_config.action_sc, null)
-      matches_prefixes      = try(rule_config.prefixes, [])
-      matches_storage_class = try(rule_config.matches_storage_class, [])
-      matches_suffix        = try(rule_config.matches_suffix, [])
+      age                        = try(rule_config.age, null)
+      days_since_noncurrent_time = try(rule_config.days_since_noncurrent_time, null)
+      num_newer_versions         = try(rule_config.num_newer_versions, null)
+      action_type                = rule_config.action_type
+      action_sc                  = try(rule_config.action_sc, null)
+      matches_prefixes           = try(rule_config.prefixes, [])
+      matches_storage_class      = try(rule_config.matches_storage_class, [])
+      matches_suffix             = try(rule_config.matches_suffix, [])
     }
   }
+
+  # Bucket Lock. The YAML takes days, the API takes seconds. Off unless set.
+  retention_policy = try(each.value.retention_policy, null) != null ? {
+    retention_period = each.value.retention_policy.retention_days * 86400
+    is_locked        = try(each.value.retention_policy.is_locked, false)
+  } : null
+
+  # Usage and storage logs written as CSV objects into another, existing bucket.
+  logging = try(each.value.access_logs, null) != null ? {
+    log_bucket        = each.value.access_logs.log_bucket
+    log_object_prefix = try(each.value.access_logs.log_object_prefix, null)
+  } : null
 
   # Dynamic permissions with Cloud Run service account transformation
   permissions = try(local.bucket_permissions[each.key], {})
