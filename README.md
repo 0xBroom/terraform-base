@@ -137,10 +137,19 @@ says it was destroyed, so confirm with `gcloud` afterwards.
 
 ## Checks
 
-Pull requests run `terraform fmt` on the root files, then `terraform init
--backend=false` and `terraform validate` on the default workspace. The job
-does not format the vendored modules and it does not need a GCP login. It
-also fails while a p0 item in `docs/audit/BACKLOG.md` is still open.
+Pull requests and pushes to `main` run `.github/workflows/terraform.yml`,
+with no GCP login:
+
+- `fmt`: `terraform fmt -check` on the root files (not the vendored modules).
+- `validate`: `terraform validate` once per workspace, `default`, `dev`,
+  `stg`, `pre` and `pro`, each with `TF_WORKSPACE` set, so a broken settings
+  file fails its own job. `default` runs `terraform init -backend=false`; the
+  others write a `backend_override.tf` with a local backend first.
+- `scripts`: `python3 bin/cloudbuild-render-test.py` (needs PyYAML) and
+  `python3 bin/audit-terraform.py --fail-on p0`, which fails while a p0 item
+  in `docs/audit/BACKLOG.md` is still open.
+
+A newer push to the same branch cancels the run it replaces.
 
 ## Production readiness backlog
 

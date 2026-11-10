@@ -4,7 +4,7 @@ The list of work that takes this template to a public, production-grade
 release: dev and stg cheap, pro ready for a security, backup and
 data-retention audit. Each item has a check in `bin/audit-terraform.py`.
 
-Open: 22. Done: 29. Accepted, not a gap: 22.
+Open: 21. Done: 30. Accepted, not a gap: 22.
 
 Regenerate with `python3 bin/audit-terraform.py --write` in the pull request
 that closes an item. `--next` names the item to take. How a session works an
@@ -90,12 +90,6 @@ The settings merge and the feature toggles have no regression test.
 Next change: Add tests/*.tftest.hcl with mock_provider for the empty, dev and pro shapes, and run terraform test in CI.
 
 After: AUD-CI-MATRIX
-
-### AUD-CI-MATRIX (p1) CI validates only the default workspace
-
-dev, stg and pro read different files. One of them can break while default stays green. The Cloud Build render test exists and does not run.
-
-Next change: Validate a matrix of default, dev, stg and pro with TF_WORKSPACE and a local backend override, and run bin/cloudbuild-render-test.py.
 
 ### AUD-LINT (p3) No tflint or pre-commit configuration
 
@@ -324,3 +318,4 @@ Next change: Keep it equal to stg.
 - AUD-MON-LOG-ALERTS (p1) No alert fires on IAM, firewall, service account key or audit config changes
 - AUD-WIF (p1) External CI can only authenticate with a service account key
 - AUD-TF-GUARDS (p1) A minimal workspace still fails on missing keys and wrong defaults
+- AUD-CI-MATRIX (p1) CI validates only the default workspace

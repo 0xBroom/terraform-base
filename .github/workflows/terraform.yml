@@ -8,8 +8,13 @@ on:
 permissions:
   contents: read
 
+# A new push to the same branch or pull request cancels the run it supersedes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  validate:
+  fmt:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,9 +24,49 @@ jobs:
           terraform_wrapper: false
       - name: Format the root files
         run: find . -name '*.tf' -not -path './modules/*' -print0 | xargs -0 terraform fmt -check -diff
+
+  validate:
+    name: validate (${{ matrix.workspace }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        workspace: [default, dev, stg, pre, pro]
+    env:
+      # locals.tf reads settings/<terraform.workspace>.yaml, so each workspace
+      # validates a different merge of the settings files.
+      TF_WORKSPACE: ${{ matrix.workspace }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.14.5"
+          terraform_wrapper: false
       - name: Init without a backend
+        if: matrix.workspace == 'default'
         run: terraform init -backend=false -input=false
-      - name: Validate the default workspace
+      - name: Init with a local backend
+        if: matrix.workspace != 'default'
+        # Workspaces need a backend. The override replaces the gcs backend of
+        # versions.tf, and init creates the TF_WORKSPACE workspace in it.
+        run: |
+          printf 'terraform {\n  backend "local" {}\n}\n' > backend_override.tf
+          terraform init -input=false
+      - name: Check the selected workspace
+        run: test "$(terraform workspace show)" = "$TF_WORKSPACE"
+      - name: Validate
         run: terraform validate
+
+  scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install PyYAML
+        run: python3 -m pip install --quiet pyyaml
+      - name: Cloud Build render self-test
+        run: python3 bin/cloudbuild-render-test.py
       - name: Fail on an open p0
         run: python3 bin/audit-terraform.py --fail-on p0
