@@ -87,9 +87,10 @@ committing to a figure. What drives it:
   instance (about 95 to 105 USD), Cloud NAT and the audit archive. The
   Binary Authorization signing key is one KMS key version, cents a month.
 
-The `budget.amount` values are placeholders in the billing account currency.
-Set each one above the estimate for that workspace, or its alerts fire every
-month.
+The `budget.amount` values are placeholders. `gcp.billing.tf` sends them in EUR,
+and Cloud Billing refuses a budget whose currency differs from the billing
+account's. Set each one above the estimate for that workspace, or its alerts
+fire every month.
 
 Dev has no Redis, so the app must start without a cache; no service in
 `settings/dev.yaml` references one. Dev has no Cloud NAT either: the service
@@ -306,8 +307,8 @@ may be a person who left or a group nobody reads. The value is `true` for
 `security.alerts_email` on `SECURITY` and `TECHNICAL`, or a list of entries
 with `email` (default `alerts_email`), `categories` (default `SECURITY` and
 `TECHNICAL`) and `language_tag` (default `en`); absent or `false` creates
-none. Pro lists the placeholder address with `SECURITY`, `TECHNICAL` and
-`SUSPENSION`. Notes:
+none. Pro lists one entry with no `email`, so it follows `alerts_email`, with
+`SECURITY`, `TECHNICAL` and `SUSPENSION`. Notes:
 
 - `BILLING` on a project contact only gets the notices about that project.
   Invoices and payment problems go to the contacts of the billing account,

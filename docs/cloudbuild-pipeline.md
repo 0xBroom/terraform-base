@@ -20,9 +20,9 @@ settings/<workspace>.yaml          gcp.cloudbuild.tf              cloudbuild.yam
 ```yaml
 app:
   service:
-    leader-web:
+    web:
       cloudbuild:
-        repo_name: "leader-web"
+        repo_name: "example-web"
         build_args:
           SITE_ENV: "dev"
 ```
@@ -70,8 +70,9 @@ entry. `settings/example.yaml` carries the same list with inline comments.
 | `deploy` | `true` | `false` builds and pushes without touching Cloud Run |
 | `job_name` | none | a Cloud Run **job** that shares this service's image; the build repoints it at the digest it just pushed |
 | `cloudrun.region` (outside the `cloudbuild` block) | `region_name` | where the service lives, and therefore where the build deploys it |
-| `branch_pattern` / `tag_pattern` | tag `^<workspace>-YYYYMMDDNN$` | what fires the trigger |
+| `branch_pattern` / `tag_pattern` | tag `^<workspace>-YYYYMMDDNN$`, no tag pattern once `branch_pattern` is set | what fires the trigger (`docs/cloudbuild-tag-patterns.md`) |
 | `build_filter_paths` | none | only build when these paths changed (branch triggers) |
+| `scan` | all off | gitleaks, semgrep and trivy steps before `docker build` (`docs/SCANNING.md`) |
 | `substitutions` | `{}` | raw Cloud Build substitutions, for a pipeline this repository cannot see |
 
 ## Optional steps: `x-when`
@@ -89,6 +90,8 @@ error, never a step that silently stops running.
 | `deploy_job` | the entry is a Cloud Run job and `deploy` is not `false` |
 | `update_companion_job` | a service declared `job_name` |
 | `sign_image` | `binary_authorization.enabled` in the workspace; adds `sign-image` and the two `_BINAUTH_*` substitutions |
+| `scan_secrets`, `scan_sast`, `scan_deps` | `scan.secrets`, `scan.sast`, `scan.deps` without the blocking flag of the same tool |
+| `scan_secrets_blocking`, `scan_sast_blocking`, `scan_deps_blocking` | `scan.secrets_blocking`, `scan.sast_blocking`, `scan.deps_blocking` (`docs/SCANNING.md`) |
 
 Because the `x-*` keys are not Cloud Build syntax, the file is a **Terraform-only
 artifact**: `gcloud builds submit --config cloudbuild_files/cloudbuild.yaml` rejects it.
@@ -129,9 +132,9 @@ python3 bin/cloudbuild-render-test.py    # exit 0 required
   step are lowercase; a literal dollar for the shell is `$$`.
 - **`ALLOW_LOOSE` is forced on triggered builds**: an unset custom substitution becomes
   an empty string instead of an error. Nothing tells you a variable never arrived; the
-  image just builds with the Dockerfile's default. This is exactly how the dev door of
-  `leader-web` was served with production's `robots.txt`: the value was declared under
-  `substitutions:` while the shared pipeline only ever passed a fixed list of build args.
+  image just builds with the Dockerfile's default. A value declared under
+  `substitutions:` instead of `build_args:` fails this way: an inline build never passes
+  it to docker, so a dev image can ship with the production default of that argument.
 - **A substitution is not expanded inside another substitution.** Everything is resolved
   in Terraform, in full, which is why `_IMAGE` is a literal path and not a template.
 - **An external pipeline (`inline: false`) is handed as little as possible**: the naming
@@ -139,16 +142,17 @@ python3 bin/cloudbuild-render-test.py    # exit 0 required
   `_IMAGE`, `_BUILD_ARGS`, `_DOCKER_TARGET` or `_JOB_NAME`. A file this repository cannot
   read may treat an unset substitution as a signal; a common pattern is one that
   falls back to `${_IMAGE_BASE}:${SHORT_SHA}` when `$_IMAGE` is empty. Defining one for
-  it would quietly change what it builds.
-- **The rollout goes where the resource is.** Three services live in `us-east1` while the
-  project's region is `europe-west1`, so the deploy step uses `_DEPLOY_REGION` (the
-  service's own `cloudrun.region`) and the job steps use `_JOB_REGION`. `gcloud run
+  it would change what it builds, with no error to show it.
+- **The rollout goes where the resource is.** A service may set its own `cloudrun.region`,
+  different from the project's `region_name`, so the deploy step uses `_DEPLOY_REGION`
+  (the service's region) and the job steps use `_JOB_REGION` (`region_name`, where
+  `gcp.jobs.tf` creates every job). `gcloud run
   deploy` with the wrong region does not fail: it creates a second service.
 - **Cloud Run pins the image digest at deploy time.** A job that shares a service's image
   keeps running the digest it was created with until something updates it, and that is what
   `job_name` is for.
 
-## Signing for Binary Authorization
+## Image signing
 
 With `binary_authorization.enabled: true` (`gcp.binary_auth.tf`) the workspace gets
 an attestor backed by a KMS key, a policy that requires its attestation, and
@@ -180,7 +184,7 @@ Pro ships with `enforcement_mode: ENFORCED_BLOCK_AND_AUDIT_LOG`, which is right 
 a new project. For a project that already serves images built before signing, go
 through a dry-run first:
 
-1. Optional rehearsal in pre (or stg): set `binary_authorization.enabled: true`
+1. Optional rehearsal in stg: set `binary_authorization.enabled: true`
    with `enforcement_mode: DRYRUN_AUDIT_LOG_ONLY`, apply, run every trigger once,
    and check that the builds sign and the deploys log no violation. It costs one
    KMS key version; turn it off again afterwards.
