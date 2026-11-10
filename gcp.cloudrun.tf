@@ -26,6 +26,11 @@ locals {
     for key, config in local.app_services : key => try(config.cloudrun.region, local.settings.region_name)
   }
 
+  # Protected from destroy by default in pro only
+  service_deletion_protection = {
+    for key, config in local.app_services : key => try(config.cloudrun.deletion_protection, local.workspace == "pro")
+  }
+
   # Extract environment variables per service from YAML configuration
   service_env_vars = {
     for key, config in local.app_services : key => [
@@ -227,7 +232,7 @@ module "cloud_run_services" {
   gcp_project_id      = local.settings.project.id
   gcp_project_sys_id  = local.settings.project_sys.id
   region_name         = local.service_regions[each.key]
-  deletion_protection = try(each.value.cloudrun.deletion_protection, terraform.workspace == "pro")
+  deletion_protection = local.service_deletion_protection[each.key]
 
   # Service account: use external SA if specified, otherwise create a dedicated one
   service_account = try(each.value.cloudrun.external_sa, null) != null ? {
@@ -286,7 +291,7 @@ module "cloud_run_services" {
           # true = CPU only while a request is served (request-based billing); work
           # left running after the response is throttled. Pro keeps CPU allocated
           # so its warm instances can run background work.
-          cpu_idle = try(each.value.cloudrun.cpu_idle, terraform.workspace != "pro")
+          cpu_idle = try(each.value.cloudrun.cpu_idle, local.workspace != "pro")
         }
 
         # Environment variables

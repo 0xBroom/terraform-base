@@ -34,7 +34,7 @@ resource "google_logging_project_bucket_config" "default" {
   project        = local.settings.project.id
   location       = "global"
   bucket_id      = "_Default"
-  retention_days = try(local.settings.logging.retention_days, terraform.workspace == "pro" ? 90 : 30)
+  retention_days = try(local.settings.logging.retention_days, local.workspace == "pro" ? 90 : 30)
 
   depends_on = [google_project_service.enabled_apis]
 }

@@ -186,7 +186,7 @@ module "certificate_main" {
   count = local.lb_enabled ? 1 : 0
 
   source         = "./modules/gcp_managed_ssl_certificate_v1.1"
-  base_name      = format("%s--%s-main", local.base_name, terraform.workspace)
+  base_name      = format("%s--%s-main", local.base_name, local.workspace)
   region_name    = local.settings.region_name
   gcp_project_id = local.settings.project.id
   domain         = try(local.settings.lb.domain, [])

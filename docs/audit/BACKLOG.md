@@ -4,7 +4,7 @@ The list of work that takes this template to a public, production-grade
 release: dev and stg cheap, pro ready for a security, backup and
 data-retention audit. Each item has a check in `bin/audit-terraform.py`.
 
-Open: 5. Done: 47. Accepted, not a gap: 22.
+Open: 4. Done: 48. Accepted, not a gap: 22.
 
 Regenerate with `python3 bin/audit-terraform.py --write` in the pull request
 that closes an item. `--next` names the item to take. How a session works an
@@ -12,14 +12,6 @@ item: `docs/audit/OPERATING.md`.
 
 
 ## Open
-
-### AUD-TF-TESTS (p3) There are no terraform tests
-
-The settings merge and the feature toggles have no regression test.
-
-Next change: Add tests/*.tftest.hcl with mock_provider for the empty, dev and pro shapes, and run terraform test in CI.
-
-After: AUD-CI-MATRIX
 
 ### AUD-LINT (p3) No tflint or pre-commit configuration
 
@@ -227,6 +219,7 @@ Next change: Keep it equal to stg.
 - AUD-TF-OUTPUTS (p2) The root module has no outputs
 - AUD-TF-BACKEND (p2) The state bucket is a literal in versions.tf
 - AUD-TF-SCHEMA (p2) Nothing validates the settings files before a plan
+- AUD-TF-TESTS (p3) There are no terraform tests
 - AUD-CI-MATRIX (p1) CI validates only the default workspace
 - AUD-CI-RUNNER (p1) CI runs on a moving runner label with Node 20 actions
 - AUD-COST-DEFAULTS (p1) Two code defaults cost money when a key is left out

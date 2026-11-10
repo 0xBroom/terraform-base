@@ -18,10 +18,10 @@ locals {
   # Topic names built from the naming convention
   topic_names = {
     for k, v in local.topic_config : k => join(".", [
-      terraform.workspace, # {env}
-      v.domain,            # {domain}
-      v.context,           # {context}
-      v.event              # {event}
+      local.workspace, # {env}
+      v.domain,        # {domain}
+      v.context,       # {context}
+      v.event          # {event}
     ])
   }
 
@@ -83,7 +83,7 @@ resource "google_pubsub_topic" "topics" {
   message_retention_duration = try(local.settings.pubsub.message_retention, "604800s") # default 7 days
 
   labels = merge(local.common_labels, {
-    environment = terraform.workspace
+    environment = local.workspace
     domain      = local.topic_config[each.key].domain
     context     = local.topic_config[each.key].context
     event       = local.topic_config[each.key].event
@@ -102,7 +102,7 @@ resource "google_pubsub_topic" "dead_letter" {
   message_retention_duration = "${each.value.retention_days * 86400}s" # days to seconds
 
   labels = merge(local.common_labels, {
-    environment = terraform.workspace
+    environment = local.workspace
     type        = "dead-letter"
   })
 

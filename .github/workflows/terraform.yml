@@ -22,8 +22,23 @@ jobs:
         with:
           terraform_version: "1.14.5"
           terraform_wrapper: false
-      - name: Format the root files
-        run: find . -name '*.tf' -not -path './modules/*' -print0 | xargs -0 terraform fmt -check -diff
+      - name: Format the root files and the tests
+        run: find . \( -name '*.tf' -o -name '*.tftest.hcl' \) -not -path './modules/*' -print0 | xargs -0 terraform fmt -check -diff
+
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: "1.14.5"
+          terraform_wrapper: false
+      - name: Init without a backend
+        run: terraform init -backend=false -input=false
+      # tests/*.tftest.hcl plan the default, dev and pro shapes with mock
+      # providers: no GCP login, no API call, a few seconds.
+      - name: Terraform test
+        run: terraform test
 
   validate:
     name: validate (${{ matrix.workspace }})
