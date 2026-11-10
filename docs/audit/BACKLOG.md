@@ -4,7 +4,7 @@ The list of work that takes this template to a public, production-grade
 release: dev and stg cheap, pro ready for a security, backup and
 data-retention audit. Each item has a check in `bin/audit-terraform.py`.
 
-Open: 13. Done: 39. Accepted, not a gap: 22.
+Open: 12. Done: 40. Accepted, not a gap: 22.
 
 Regenerate with `python3 bin/audit-terraform.py --write` in the pull request
 that closes an item. `--next` names the item to take. How a session works an
@@ -12,12 +12,6 @@ item: `docs/audit/OPERATING.md`.
 
 
 ## Open
-
-### AUD-TLS (p2) The TLS profile is hardcoded
-
-Pro should be able to require RESTRICTED without a code change.
-
-Next change: Read lb.ssl_policy.profile and min_tls_version, MODERN by default, RESTRICTED in pro.
 
 ### AUD-TF-ALWAYS-ON (p2) Some resources are created in every workspace whether used or not
 
@@ -268,6 +262,7 @@ Next change: Keep it equal to stg.
 - AUD-SECRET-ACCESS (p2) Nobody is alerted when a secret is read by an unexpected principal
 - AUD-WIF (p1) External CI can only authenticate with a service account key
 - AUD-BINAUTH-PRO (p2) Pro turns Binary Authorization on but never blocks
+- AUD-TLS (p2) The TLS profile is hardcoded
 - AUD-TF-GUARDS (p1) A minimal workspace still fails on missing keys and wrong defaults
 - AUD-CI-MATRIX (p1) CI validates only the default workspace
 - AUD-CI-RUNNER (p1) CI runs on a moving runner label with Node 20 actions

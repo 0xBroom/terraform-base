@@ -125,6 +125,16 @@ lb:
     - my-app-alt.example.com                        #   Additional domain (optional, add as many as needed)
   timeout_sec: 30                                   # [MANDATORY] Backend service timeout in seconds
                                                     #   Applies globally to all backend services
+  ssl_policy:                                       # [OPTIONAL] TLS policy of the HTTPS proxy. Omitted: MODERN + TLS_1_2
+    profile: "RESTRICTED"                           # [OPTIONAL] COMPATIBLE | MODERN | RESTRICTED | CUSTOM (default MODERN)
+                                                    #   RESTRICTED drops clients without AES-GCM or ChaCha20 suites
+                                                    #   (very old Android, Java 7, Windows 7). In-place update.
+    min_tls_version: "TLS_1_2"                      # [OPTIONAL] TLS_1_0 | TLS_1_1 | TLS_1_2 | TLS_1_3 (default TLS_1_2)
+                                                    #   TLS_1_3 needs profile RESTRICTED and refuses every TLS 1.2 client
+    # custom_features:                              # [MANDATORY with CUSTOM, not allowed otherwise] Cipher suites to enable
+    #   - "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256"
+    #   - "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
+                                                    # Port 80 always answers with a 301 to HTTPS (no setting).
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

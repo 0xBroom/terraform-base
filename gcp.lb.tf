@@ -6,6 +6,13 @@ locals {
   # Check if LB and monitoring configuration exists in settings
   lb_enabled    = can(local.settings.lb)
   lb_monitoring = can(local.settings.monitoring.lb)
+
+  # TLS policy of the HTTPS proxy, from lb.ssl_policy. MODERN with TLS 1.2 by default.
+  lb_ssl_policy = {
+    profile         = try(local.settings.lb.ssl_policy.profile, "MODERN")
+    min_tls_version = try(local.settings.lb.ssl_policy.min_tls_version, "TLS_1_2")
+    custom_features = try(local.settings.lb.ssl_policy.custom_features, [])
+  }
 }
 
 # ===================================================================
@@ -190,15 +197,33 @@ resource "google_compute_ssl_policy" "lb_ssl_policy" {
   count = local.lb_enabled ? 1 : 0
 
   name            = "${local.base_name_medium}-ssl-policy"
-  profile         = "MODERN"  # Security profile: COMPATIBLE, MODERN, RESTRICTED, or CUSTOM
-  min_tls_version = "TLS_1_2" # Minimum TLS version: TLS_1_0, TLS_1_1, TLS_1_2, TLS_1_3
-
-  # For CUSTOM profile, you can specify custom_features as a list:
-  # custom_features = ["TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256", "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"]
+  profile         = local.lb_ssl_policy.profile
+  min_tls_version = local.lb_ssl_policy.min_tls_version
+  custom_features = local.lb_ssl_policy.profile == "CUSTOM" ? local.lb_ssl_policy.custom_features : null
 
   # Lifecycle rule to prevent premature destruction
   lifecycle {
     create_before_destroy = true
+
+    precondition {
+      condition     = contains(["COMPATIBLE", "MODERN", "RESTRICTED", "CUSTOM"], local.lb_ssl_policy.profile)
+      error_message = "lb.ssl_policy.profile must be COMPATIBLE, MODERN, RESTRICTED or CUSTOM."
+    }
+
+    precondition {
+      condition     = contains(["TLS_1_0", "TLS_1_1", "TLS_1_2", "TLS_1_3"], local.lb_ssl_policy.min_tls_version)
+      error_message = "lb.ssl_policy.min_tls_version must be TLS_1_0, TLS_1_1, TLS_1_2 or TLS_1_3."
+    }
+
+    precondition {
+      condition     = local.lb_ssl_policy.min_tls_version != "TLS_1_3" || local.lb_ssl_policy.profile == "RESTRICTED"
+      error_message = "lb.ssl_policy.min_tls_version TLS_1_3 needs profile RESTRICTED."
+    }
+
+    precondition {
+      condition     = (local.lb_ssl_policy.profile == "CUSTOM") == (length(local.lb_ssl_policy.custom_features) > 0)
+      error_message = "lb.ssl_policy.custom_features is required with profile CUSTOM and not allowed with any other profile."
+    }
   }
 }
 

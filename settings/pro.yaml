@@ -124,6 +124,12 @@ lb:
   domain:
     - "app.example.com"
   timeout_sec: 30
+  # RESTRICTED keeps only AES-GCM and ChaCha20 suites with forward secrecy;
+  # clients without them (very old Android, Java 7, Windows 7) fail the
+  # handshake. Changing the profile is an in-place update of the policy.
+  ssl_policy:
+    profile: "RESTRICTED"
+    min_tls_version: "TLS_1_2"
 
 iap:
   admin_access:

@@ -46,6 +46,7 @@ exist, which is what we want.
 | _Default log retention | 30 days | 30 days | 90 days |
 | Audit log archive | none | none | locked log bucket, 365 days |
 | Log-based security alerts | none | none | seven presets, one email per event |
+| Load balancer TLS policy (`lb.ssl_policy`) | `MODERN`, TLS 1.2 minimum (default) | `MODERN`, TLS 1.2 minimum (default) | `RESTRICTED`, TLS 1.2 minimum |
 | Load balancer alerts (`monitoring.lb`) | none | none | 5xx, p99 latency, Cloud Armor 403 |
 | Uptime check (`monitoring.uptime`) | none | none | the first `lb.domain` every 5 minutes from 3 regions |
 | Secret read alert (`monitoring.secret_access`) | none | none | Secret Manager Data Access logs, one email per unexpected reader |
@@ -102,6 +103,17 @@ deletion, put IAP on `/*`, and refuse to disable billing when the budget is
 hit. `enable_auto_stop: false` matches the Terraform default and is written
 out so nobody turns it on by accident: `true` deploys a function that turns
 billing off, and every service in the project with it.
+
+Every workspace answers HTTP on port 80 with a 301 redirect to HTTPS, and the
+HTTPS proxy uses the SSL policy set by `lb.ssl_policy` (`profile`,
+`min_tls_version`, and `custom_features` with `CUSTOM` only). Without the
+block it is `MODERN` with TLS 1.2 as the minimum, which is what dev and stg
+use. Pro sets `RESTRICTED`: only AES-GCM and ChaCha20 suites with forward
+secrecy, so clients without them (very old Android, Java 7, Windows 7, some
+embedded HTTP libraries) fail the handshake. Check the load balancer logs for
+such clients before tightening another workspace. `TLS_1_3` as the minimum
+needs `RESTRICTED` and refuses every TLS 1.2 client. A profile or version
+change is an in-place update of the policy, with no new cost and no downtime.
 
 `cloudrun.cpu_idle` defaults to `true` in every workspace but pro: a service
 gets CPU only while it serves a request and is billed per request. Work that
