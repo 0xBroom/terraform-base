@@ -6,9 +6,11 @@ with the shape of pro, pro is highly available. `settings/pre.yaml` is the stg
 profile under the older name, with project id `example-app-pre`. It stays so
 the auditor still finds a pre workspace. Use `stg` for a new project.
 
-They describe one service: Cloud Run behind the HTTPS load balancer and IAP, a
-private Cloud SQL instance, one bucket, one shared VPC, a budget, and a GitHub
-Cloud Build connection. Stg and pro add Redis and Cloud NAT; dev has neither. Anything else (Pub/Sub,
+They describe one service: Cloud Run, a private Cloud SQL instance, one bucket,
+one shared VPC, a budget, and a GitHub Cloud Build connection. Stg and pro put
+the service behind the HTTPS load balancer, Cloud Armor and IAP, and add Redis
+and Cloud NAT; dev has none of them and serves its run.app URL behind IAM
+("Reaching dev" below). Anything else (Pub/Sub,
 Firestore, a VM, Elastic) stays in `settings/example.yaml` until the project
 needs it.
 
@@ -27,6 +29,8 @@ exist, which is what we want.
 | | dev | stg (and pre) | pro |
 |---|---|---|---|
 | Cloud Run | scale to zero, 1 vCPU, 512Mi, deletion protection off | same as dev | one warm instance, 2 vCPU, 2Gi, deletion protection on |
+| Entry point | run.app URL, `INGRESS_TRAFFIC_ALL`, IAM only (`allow_unauthenticated: false`) | HTTPS load balancer, `INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER` | same as stg |
+| Load balancer, Cloud Armor, IAP | none | yes, IAP on `/*` | yes, IAP on `/*` |
 | Cloud Run CPU (`cpu_idle` default) | only during requests (`true`) | only during requests (`true`) | always allocated (`false`) |
 | Cloud Run VPC egress | `PRIVATE_RANGES_ONLY`: public traffic leaves directly | `ALL_TRAFFIC` through Cloud NAT | `ALL_TRAFFIC` through Cloud NAT |
 | Cloud NAT | none | one NAT, one static address | one NAT, one static address |
@@ -43,11 +47,11 @@ exist, which is what we want.
 | Redis RDB snapshots | no Redis | off | every 12 hours |
 | Bucket soft delete | 7 days (the shortest above off) | 7 days | 30 days |
 | Bucket noncurrent versions | kept | kept | deleted after 30 days (`docs/STORAGE.md`) |
-| Budget | 40 | 80 | 400 |
+| Budget | 25 | 80 | 400 |
 | _Default log retention | 30 days | 30 days | 90 days |
 | Audit log archive | none | none | locked log bucket, 365 days |
 | Log-based security alerts | none | none | seven presets, one email per event |
-| Load balancer TLS policy (`lb.ssl_policy`) | `MODERN`, TLS 1.2 minimum (default) | `MODERN`, TLS 1.2 minimum (default) | `RESTRICTED`, TLS 1.2 minimum |
+| Load balancer TLS policy (`lb.ssl_policy`) | no load balancer (run.app serves Google's own TLS) | `MODERN`, TLS 1.2 minimum (default) | `RESTRICTED`, TLS 1.2 minimum |
 | Load balancer alerts (`monitoring.lb`) | none | none | 5xx, p99 latency, Cloud Armor 403 |
 | Uptime check (`monitoring.uptime`) | none | none | the first `lb.domain` every 5 minutes from 3 regions |
 | Secret read alert (`monitoring.secret_access`) | none | none | Secret Manager Data Access logs, one email per unexpected reader |
@@ -55,7 +59,7 @@ exist, which is what we want.
 | External CI federation (`wif`) | none | none | none, a commented example (`docs/WIF.md`) |
 | VPC | `10.8.1.0/24` | `10.10.1.0/24` | `10.20.1.0/24` |
 | Private Service Access range (no charge) | `10.9.0.0/16` | `10.11.0.0/16` | `10.21.0.0/16` |
-| Monthly cost, estimate | about 45 to 60 USD | about 130 to 160 USD | about 420 to 500 USD |
+| Monthly cost, estimate | about 10 to 25 USD | about 130 to 160 USD | about 420 to 500 USD |
 
 The cost row is a ballpark from Google Cloud list prices in `europe-west1`
 (USD, on-demand, no free tier, no committed-use discounts), for an idle
@@ -64,10 +68,13 @@ build minutes and storage growth come on top. Run the
 [pricing calculator](https://cloud.google.com/products/calculator) before
 committing to a figure. What drives it:
 
-- Every workspace pays the HTTPS load balancer forwarding rule (about 18 USD)
-  and the Cloud Armor policy with its 11 rules (about 16 USD) before anything
-  else, so about 34 USD is the floor.
-- Dev adds the shared-core instance and its disk (about 10 to 12 USD).
+- Stg and pro pay the HTTPS load balancer forwarding rule (about 18 USD) and
+  the Cloud Armor policy with its 11 rules (about 16 USD) before anything else,
+  so about 34 USD is their floor. Dev has no load balancer.
+- Dev pays the shared-core instance and its disk (about 10 to 12 USD). The
+  rest (Cloud Run scaled to zero, Secret Manager, Artifact Registry storage,
+  logs under 30 days) is cents to a few dollars at dev traffic, hence the
+  upper end of about 25 USD.
 - Stg adds the dedicated-core instance (about 55 USD), Redis BASIC (about 35
   to 40 USD) and Cloud NAT with its address (about 5 to 10 USD).
 - Pro adds the regional instance, which bills both zones (about 220 to 240
@@ -101,16 +108,16 @@ instance. Stg leaves them off because its cache can be rebuilt, not to save
 money.
 
 All of them keep the database private, require SSL, protect the instance from
-deletion, put IAP on `/*`, and refuse to disable billing when the budget is
-hit. `enable_auto_stop: false` matches the Terraform default and is written
+deletion, require an identity in front of the service (IAP on `/*` in stg and
+pro, IAM on the run.app URL in dev), and refuse to disable billing when the
+budget is hit. `enable_auto_stop: false` matches the Terraform default and is written
 out so nobody turns it on by accident: `true` deploys a function that turns
 billing off, and every service in the project with it.
 
-Every workspace answers HTTP on port 80 with a 301 redirect to HTTPS, and the
+Stg and pro answer HTTP on port 80 with a 301 redirect to HTTPS, and the
 HTTPS proxy uses the SSL policy set by `lb.ssl_policy` (`profile`,
 `min_tls_version`, and `custom_features` with `CUSTOM` only). Without the
-block it is `MODERN` with TLS 1.2 as the minimum, which is what dev and stg
-use. Pro sets `RESTRICTED`: only AES-GCM and ChaCha20 suites with forward
+block it is `MODERN` with TLS 1.2 as the minimum, which is what stg uses. Pro sets `RESTRICTED`: only AES-GCM and ChaCha20 suites with forward
 secrecy, so clients without them (very old Android, Java 7, Windows 7, some
 embedded HTTP libraries) fail the handshake. Check the load balancer logs for
 such clients before tightening another workspace. `TLS_1_3` as the minimum
@@ -252,6 +259,34 @@ The database name `api-db` and the user `api-app-user` are the default, built
 from the service name `api`, because these files omit `databases` and `users`.
 Set those lists on the instance (siblings of `sql`) when a service should not
 get a database, or when the names should differ.
+
+## Reaching dev
+
+Dev has no load balancer, so the service answers only on its run.app URL
+(`terraform output cloud_run_service_urls`). It accepts traffic from the
+internet (`INGRESS_TRAFFIC_ALL`) but `allow_unauthenticated` stays `false`:
+Cloud Run refuses any request without a Google identity token of a principal
+that holds `roles/run.invoker` on the service. `project_access.operators` get
+that role on each service; viewers do not. Two ways in, with the operator's
+own login:
+
+```bash
+# A local proxy that adds the token: open http://localhost:8080
+gcloud run services proxy <client.name>-api --project example-app-dev \
+  --region europe-west1 --port 8080
+
+# One request with an identity token
+curl -H "Authorization: Bearer $(gcloud auth print-identity-token)" \
+  "$(terraform output -json cloud_run_service_urls | jq -r .api)/"
+```
+
+A browser cannot send the token by itself, so a web front end is tested
+through the proxy. A caller that is not a person (another service, a job, a
+CI step) needs `roles/run.invoker` on the service and an identity token whose
+audience is the service URL. When dev needs a domain, a browser login or
+Cloud Armor, copy the `lb` and `iap` blocks and the service's
+`loadbalancer.rules` from stg and set the ingress back to
+`INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER`; that brings the 34 USD floor back.
 
 ## What this is not
 

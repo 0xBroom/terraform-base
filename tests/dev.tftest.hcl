@@ -60,6 +60,31 @@ run "dev_shape_is_cheap" {
     condition     = length(google_logging_project_bucket_config.audit_archive) == 0 && google_logging_project_bucket_config.default.retention_days <= 30
     error_message = "dev keeps no audit archive and at most 30 days of logs."
   }
+
+  assert {
+    condition = (
+      !local.lb_enabled
+      && length(google_compute_url_map.load_balancer) == 0
+      && length(google_compute_global_address.lb_static_ip) == 0
+      && length(google_compute_security_policy.cloud_armor_waf) == 0
+      && length(google_project_service_identity.iap_sa) == 0
+    )
+    error_message = "dev has no load balancer, Cloud Armor policy or IAP: about 34 USD a month."
+  }
+
+  assert {
+    condition = length(local.app_services) > 0 && alltrue([
+      for key, service in local.app_services :
+      service.cloudrun.ingress == "INGRESS_TRAFFIC_ALL" && !try(service.cloudrun.allow_unauthenticated, false)
+      && !contains(keys(local.service_permissions[key]), "cloudrun_all")
+    ])
+    error_message = "dev services take traffic on run.app and still require IAM (no allUsers invoker)."
+  }
+
+  assert {
+    condition     = local.settings.budget.amount >= 25
+    error_message = "The dev budget is at or above the cost estimate in docs/ENVIRONMENTS.md."
+  }
 }
 
 run "operators_are_scoped" {

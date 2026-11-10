@@ -94,4 +94,14 @@ run "pro_shape_is_hardened" {
     condition     = contains(keys(google_monitoring_alert_policy.log_alerts), "secret_access") && length(google_monitoring_uptime_check_config.uptime) > 0
     error_message = "pro alerts on unexpected secret reads and probes the public domain."
   }
+
+  assert {
+    condition = (
+      local.lb_enabled
+      && length(google_compute_url_map.load_balancer) == 1
+      && length(google_compute_security_policy.cloud_armor_waf) == 1
+      && length(google_project_service_identity.iap_sa) == 1
+    )
+    error_message = "pro keeps the load balancer, Cloud Armor and IAP (positive control for the dev check)."
+  }
 }
