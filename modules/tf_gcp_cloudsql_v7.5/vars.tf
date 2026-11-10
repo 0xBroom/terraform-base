@@ -108,9 +108,21 @@ variable "backup_configuration" {
     start_time       = optional(string, "03:00")
     retained_backups = optional(number, 7)
     location         = optional(string, null)
+    # null keeps the previous behaviour: MySQL follows dbe.binary_log_enabled, other engines stay off.
+    point_in_time_recovery_enabled = optional(bool, null)
+    # Days of transaction logs (WAL or binary log) kept for point-in-time recovery. null uses the GCP default.
+    transaction_log_retention_days = optional(number, null)
   })
   description = "Cloud SQL Backup configuration"
   default     = {}
+
+  validation {
+    condition = (
+      var.backup_configuration.transaction_log_retention_days == null ||
+      try(var.backup_configuration.transaction_log_retention_days >= 1 && var.backup_configuration.transaction_log_retention_days <= 35, false)
+    )
+    error_message = "backup_configuration.transaction_log_retention_days must be between 1 and 35 (7 at most on the ENTERPRISE edition)."
+  }
 }
 
 variable "maintenance_window" {

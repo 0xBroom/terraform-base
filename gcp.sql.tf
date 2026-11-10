@@ -20,7 +20,7 @@ check "private_sql_needs_shared_vpc" {
 
 # Create Cloud SQL instances for each database configuration
 module "cloud_sql" {
-  source = "./modules/tf_gcp_cloudsql_v7.4-202506180832"
+  source = "./modules/tf_gcp_cloudsql_v7.5"
 
   # Loop through each database configuration in the sql section
   for_each = try(local.settings.database, {})

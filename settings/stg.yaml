@@ -148,7 +148,7 @@ database:
         start_time: "03:00"
         retained_backups: 7
         location: "eu"
-        point_in_time_recovery_enabled: true
+        point_in_time_recovery_enabled: false
       maintenance:
         day: 2
         hour: 4

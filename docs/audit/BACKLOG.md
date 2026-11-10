@@ -4,7 +4,7 @@ The list of work that takes this template to a public, production-grade
 release: dev and stg cheap, pro ready for a security, backup and
 data-retention audit. Each item has a check in `bin/audit-terraform.py`.
 
-Open: 28. Done: 23. Accepted, not a gap: 22.
+Open: 27. Done: 24. Accepted, not a gap: 22.
 
 Regenerate with `python3 bin/audit-terraform.py --write` in the pull request
 that closes an item. `--next` names the item to take. How a session works an
@@ -12,12 +12,6 @@ item: `docs/audit/OPERATING.md`.
 
 
 ## Open
-
-### AUD-SQL-PITR (p1) Point-in-time recovery in the YAML never reaches Cloud SQL
-
-settings/pro.yaml sets backup.point_in_time_recovery_enabled, but the vendored Cloud SQL module has no such argument, so pro restores only from the nightly backup. Any audit asks for an RPO measured in minutes.
-
-Next change: Copy the module to a new version directory, add point_in_time_recovery_enabled and transaction_log_retention_days to backup_configuration, and point gcp.sql.tf at it.
 
 ### AUD-SQL-HARDEN (p1) Pro PostgreSQL has no connection or statement audit trail
 
@@ -356,3 +350,4 @@ Next change: Keep it equal to stg.
 - AUD-AGENTS (p1) A session that opens this repo has no operating rules
 - AUD-PUB-LEAKS (p0) Tracked files name private companies, products, people or real addresses
 - AUD-PUB-ELASTIC (p1) The Elastic Private Service Connect target is a literal project path
+- AUD-SQL-PITR (p1) Point-in-time recovery in the YAML never reaches Cloud SQL
