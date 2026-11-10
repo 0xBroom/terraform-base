@@ -58,7 +58,7 @@ graph LR
 | `dns` | Managed zones and records |
 | `budget` | Billing budget with optional automatic billing shutdown |
 | `compute_instances`, `compute_nats` | VMs and NAT for the default network (IAP SSH firewall rules are always created) |
-| `elastic`, `binary_authorization`, `repo_providers` | PSC to Elastic Cloud, Binary Authorization, GitHub/Bitbucket connections |
+| `elastic_psc`, `binary_authorization`, `repo_providers` | PSC to Elastic Cloud, Binary Authorization, GitHub/Bitbucket connections |
 | `oracle` | OCI instances, VCN and security lists |
 
 Every key is documented in `settings/example.yaml`. `docs/CONFIGURATION_GUIDE.md` covers

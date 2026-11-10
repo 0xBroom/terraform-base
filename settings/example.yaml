@@ -35,7 +35,7 @@
 # │ 14  │ pubsub                           │ Pub/Sub Topics, Subscriptions, IAM bindings                 │
 # │ 15  │ monitoring                       │ Alert Policies (Cloud Run, LB), Notification Channels,     │
 # │     │                                  │ Cloud Armor WAF Security Policy                             │
-# │ 16  │ elastic                          │ Private Service Connect Endpoint, Forwarding Rule,          │
+# │ 16  │ elastic_psc                      │ Private Service Connect Endpoint, Forwarding Rule,          │
 # │     │                                  │ DNS Zone, DNS Record                                        │
 # │ 17  │ project_access                   │ Project IAM Bindings (Viewer, Operator roles)               │
 # │ 18  │ billing                          │ (reference only - BigQuery export table)                    │
@@ -922,12 +922,16 @@ monitoring:
 # 16. ELASTIC CLOUD PRIVATE SERVICE CONNECT
 # ═══════════════════════════════════════════════════════════════════════════════
 # Private connectivity to Elastic Cloud via Google Private Service Connect.
-# NOTE: Omit this section if you don't use Elasticsearch.
-# elastic:
-#   psc: true                                       # [MANDATORY] Enable Elastic PSC (default: false)
-#   domain: "my-deployment.es.europe-west1.gcp.cloud.es.io"  # Elastic deployment domain
-#   service_attachment_uri: "projects/elastic-prod-platform/regions/europe-west1/serviceAttachments/sa-elastic-cloud-service-attachment"
-#   project_number: "123456789012"                  # Elastic Cloud GCP project number
+# Needs the network section: the endpoint IP comes from the services subnet, so
+# the endpoint lives in region_name and the attachment must be in that region.
+# NOTE: Omit this section if you don't use Elasticsearch: nothing is created.
+# The service attachment is published by the provider for your deployment's
+# region; copy it from the provider's console or documentation.
+# elastic_psc:
+#   service_attachment: "projects/example-provider-project/regions/europe-west1/serviceAttachments/example-attachment"  # [MANDATORY] Provider PSC service attachment
+#   name: "elastic-psc"                             # [OPTIONAL] Name stem: <base>-<name>-address / -endpoint (default: elastic-psc)
+#   ip_address: "10.10.1.50"                        # [OPTIONAL] Fixed internal IP inside services_cidr (default: allocated)
+#   dns_domain: "psc.example-provider.example.com"  # [OPTIONAL] Private zone with apex and wildcard A records to the endpoint (default: no DNS)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
