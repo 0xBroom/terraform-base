@@ -487,6 +487,103 @@ def readme_showcase() -> bool:
         and "docs/README.md" in readme
         and exists("docs/README.md")
         and all(p.name in read("docs/README.md") for p in globbed("docs/*.md") if p.name != "README.md")
+        and "`dns_zones`" in readme
+        and "sops_kms_key" in readme
+        and "always created" not in lower
+        and "platform features" not in lower
+        and "rules i'd" not in lower
+    )
+
+
+# ------------------------------------------------------- round 2 checks
+
+
+def module_source(rootfile: str, block_name: str) -> str:
+    text = read(rootfile)
+    match = re.search(r'module "' + re.escape(block_name) + r'"\s*\{[^}]*?source\s*=\s*"\./([^"]+)"', text, re.S)
+    return read_any(f"{match.group(1)}/*.tf") if match else ""
+
+
+def private_service_access() -> bool:
+    module = module_source("gcp.network.tf", "network")
+    root = root_tf()
+    created = "google_service_networking_connection" in module or "google_service_networking_connection" in root
+    return created and "google_compute_global_address" in (module + root) and "services_ip_ranges" in (module + root)
+
+
+def project_number_resolved() -> bool:
+    tf = root_tf()
+    return 'data "google_project"' in tf or 'check "project_number' in tf
+
+
+def operators_scoped() -> bool:
+    iam = read("gcp.iam.tf")
+    return not re.search(r'google_project_iam_member"\s+"run_invokers"', iam) and not re.search(
+        r'resource "google_project_iam_member"[^}]*roles/iam\.serviceAccountUser', iam, re.S
+    )
+
+
+def dev_without_lb() -> bool:
+    dev = read("settings/dev.yaml")
+    amount = re.search(r"amount:\s*(\d+)", dev)
+    return "\nlb:" not in dev and bool(amount) and int(amount.group(1)) >= 25 and "INTERNAL_LOAD_BALANCER" not in dev
+
+
+def security_metric_alerts_toggle() -> bool:
+    return "metric_alerts" in read("gcp.security.tf") and "metric_alerts" in module_source("gcp.security.tf", "basic_security")
+
+
+def secret_alert_yaml_readers() -> bool:
+    text = read("gcp.monitoring.tf")
+    return "standalone" in text and "external" in text and "secret_access_stack_principals" in text
+
+
+def input_guards() -> bool:
+    elastic = read("gcp.elastic.psc.tf")
+    monitoring = read("gcp.monitoring.tf")
+    return (
+        re.search(r"condition\s*=[^\n]*network_enabled", elastic) is not None
+        and re.search(r"condition\s*=[^\n]*>=\s*300", monitoring) is not None
+        and re.search(r"condition\s*=[^\n]*>=\s*1800", monitoring) is not None
+    )
+
+
+def sa_key_policy() -> bool:
+    return "iam.disableServiceAccountKeyCreation" in root_tf()
+
+
+def essential_contacts() -> bool:
+    return "google_essential_contacts_contact" in root_tf()
+
+
+def dev_sql_disposable() -> bool:
+    dev = read("settings/dev.yaml")
+    section = dev.split("\ndatabase:", 1)[-1] if "\ndatabase:" in dev else ""
+    return "deletion_protection: false" in section.split("\nredis:", 1)[0]
+
+
+def firestore_pro_defaults() -> bool:
+    text = read("gcp.firestore.tf")
+    return "local.workspace == \"pro\"" in text and "DELETE_PROTECTION_ENABLED" in text
+
+
+def docs_current() -> bool:
+    tags = read("docs/cloudbuild-tag-patterns.md")
+    cloudrun = read("docs/cloudrun-service-resources.md")
+    structure = read("docs/PROJECT_STRUCTURE.md")
+    example = read("settings/example.yaml")
+    return (
+        "project.cloudbuild.tf" not in tags
+        and "gcp.cloudbuild.tf" in tags
+        and "dns_zones" in example
+        and re.search(r"^#?\s*sops:", example, re.M) is not None
+        and "PRIVATE_RANGES_ONLY" in cloudrun
+        and "pre-2025" not in cloudrun
+        and "The first plan after this change" not in read("docs/CONFIGURATION_GUIDE.md")
+        and all(name in structure for name in ("dev.yaml", "stg.yaml", "pro.yaml"))
+        and "production baseline" not in read("AGENTS.md").lower()
+        and "another platform" not in read("docs/SOPS.md")
+        and "Pre leaves" not in read("docs/SCANNING.md")
     )
 
 
@@ -700,17 +797,78 @@ ITEMS: list[Item] = [
     Item("AUD-DOC-OSS", "p2", "The repository has no contributor, security or change files",
          "A public project needs to say how to contribute, how to report a vulnerability and what changed.",
          "Add CONTRIBUTING.md, SECURITY.md, CHANGELOG.md, a pull request template and issue templates.", oss_files),
+    # Round 2: found by a second full audit after the first list was closed.
+    Item("AUD-PSA", "p1", "Private Service Access is never created, so private Cloud SQL and Redis fail on a new project",
+         "gcp.network.tf passes services_ip_ranges to the networking module, but the module creates only the VPC "
+         "and subnets: no reserved range and no servicenetworking connection. A private-IP Cloud SQL instance or a "
+         "PRIVATE_SERVICE_ACCESS Redis fails at apply on a fresh project, and nothing warns at plan time.",
+         "Copy the networking module to a new version that creates google_compute_global_address and "
+         "google_service_networking_connection from services_ip_ranges, expose the connection, and make Cloud SQL "
+         "and Redis wait for it. Add a check when a private data store has no range.", private_service_access),
+    Item("AUD-PROJECT-NUMBER", "p1", "A workspace that sets project with only an id loses the project number",
+         "The settings merge is shallow, so project: {id: x} drops project.number from default.yaml, and several "
+         "files interpolate local.settings.project.number without a fallback.",
+         "Read the number from data.google_project when the YAML leaves it out, or stop the plan with a check "
+         "that names the key.", project_number_resolved),
+    Item("AUD-IAM-OPERATORS", "p1", "Operators can invoke every service and act as every service account",
+         "gcp.iam.tf grants project_access.operators roles/run.invoker and roles/iam.serviceAccountUser on the "
+         "whole project. serviceAccountUser on the project lets an operator deploy as any account, including the "
+         "Cloud Build one. Least privilege is the first IAM question of an audit.",
+         "Grant run.invoker per service and serviceAccountUser per runtime service account, only where the "
+         "operator needs it. Document the change for existing users.", operators_scoped),
+    Item("AUD-DEV-NO-LB", "p1", "The dev reference still pays for a load balancer and Cloud Armor",
+         "The load balancer and its policy are a fixed cost of about 34 USD a month, most of dev's bill, and the "
+         "dev budget is below the estimate in docs/ENVIRONMENTS.md.",
+         "dev: no lb section, services reached on their run.app URL with IAM (allow_unauthenticated false), and a "
+         "budget at or above the estimate. Keep the LB in stg and pro and update the matrix.", dev_without_lb),
+    Item("AUD-MON-SECURITY-DUP", "p2", "The security module's metric alerts cannot be turned off and duplicate the log alerts",
+         "Pro gets two emails for a firewall, custom role, audit config, SQL or bucket IAM change.",
+         "Add a metric_alerts switch to a new security module version and turn it off where monitoring.log_alerts "
+         "covers the same events.", security_metric_alerts_toggle),
+    Item("AUD-SECRET-READERS", "p2", "Secret readers granted from YAML trigger the secret access alert",
+         "Accessors set in the standalone and external secret settings are not in the default exclusion list.",
+         "Add them to secret_access_stack_principals.", secret_alert_yaml_readers, after=["AUD-SECRET-ACCESS"]),
+    Item("AUD-INPUT-GUARDS", "p3", "Two settings fail late or silently",
+         "elastic_psc without a network creates nothing and says nothing. A log alert with a rate limit under "
+         "300s or an auto close under 1800s fails only at the API.",
+         "Add a check for elastic_psc without network, and preconditions for the two durations.", input_guards),
+    Item("AUD-SA-KEY-POLICY", "p2", "Nothing prevents service account key creation",
+         "The template only alerts after a key exists. A project-level organization policy can refuse it.",
+         "Optional security.disable_service_account_keys enforcing iam.disableServiceAccountKeyCreation on the "
+         "project, on in pro. Document the permission it needs.", sa_key_policy),
+    Item("AUD-ESSENTIAL-CONTACTS", "p2", "Google has nobody to tell about security, legal or billing notices",
+         "Essential Contacts route mandatory notifications. Without them they go to project owners only.",
+         "security.essential_contacts (email and categories), defaulting to alerts_email for SECURITY and "
+         "TECHNICAL. On in pro.", essential_contacts),
+    Item("AUD-DEV-SQL-DISPOSABLE", "p3", "dev keeps Cloud SQL deletion protection on",
+         "dev is meant to be torn down, and the database is the one resource that blocks it.",
+         "Set deletion_protection false on dev's database. Keep stg and pro as they are.", dev_sql_disposable),
+    Item("AUD-FIRESTORE-PRO", "p3", "Firestore in pro starts without PITR or delete protection",
+         "A pro workspace that adds a firestore section gets the unprotected defaults.",
+         "Default point-in-time recovery and DELETE_PROTECTION_ENABLED to on in pro, off elsewhere, still "
+         "overridable from YAML.", firestore_pro_defaults),
+    Item("AUD-DOC-STALE", "p1", "Several docs describe files, keys and names that changed",
+         "cloudbuild-tag-patterns.md names project.cloudbuild.tf, example.yaml lacks dns_zones and sops, the "
+         "Cloud Run doc states one egress default and a pre tag, CONFIGURATION_GUIDE keeps a one-off migration "
+         "note, PROJECT_STRUCTURE lists only pre and pro, AGENTS.md talks about a production baseline, SOPS.md "
+         "and SCANNING.md use old wording.",
+         "Rewrite each passage against the current code.", docs_current),
     Item("AUD-DOC-COMPLIANCE", "p1", "Nothing maps the pro settings to audit controls",
          "An auditor or a buyer asks which control covers backups, retention, logging, encryption and access.",
          "Add docs/COMPLIANCE.md mapping each pro setting to ISO 27001 Annex A, SOC 2 and GDPR article 32, "
          "with the gaps a user still owns, and link it from the README.", compliance_doc,
-         after=["AUD-SQL-HARDEN", "AUD-AUDIT-ARCHIVE", "AUD-MON-LOG-ALERTS", "AUD-WIF"]),
+         after=["AUD-SQL-HARDEN", "AUD-AUDIT-ARCHIVE", "AUD-MON-LOG-ALERTS", "AUD-WIF", "AUD-PSA",
+                "AUD-IAM-OPERATORS", "AUD-SA-KEY-POLICY", "AUD-ESSENTIAL-CONTACTS", "AUD-MON-SECURITY-DUP"]),
     Item("AUD-DOC-README", "p1", "The README does not explain the project at a glance",
          "A first-time visitor needs what it is, a diagram, a quick start, the environment and cost matrix, the "
          "security posture and where the docs are, in one screen.",
          "Rewrite README.md with badges, a mermaid diagram, quick start, an environment matrix for dev, stg and "
-         "pro, cost and security sections, and a docs index in docs/README.md that lists every docs page.",
-         readme_showcase, after=["AUD-DOC-COMPLIANCE", "AUD-COST-PROFILES", "AUD-NAMES", "AUD-LANG", "AUD-DOC-OSS"]),
+         "pro, cost and security sections, and a docs index in docs/README.md that lists every docs page. Fix "
+         "the key table (dns_zones), list every root output (sops_kms_key too), say firewall rules exist only "
+         "with a network, keep the tone impersonal, and separate the adopter's path from the maintainer's "
+         "backlog in docs/audit/.",
+         readme_showcase, after=["AUD-DOC-COMPLIANCE", "AUD-COST-PROFILES", "AUD-NAMES", "AUD-LANG", "AUD-DOC-OSS",
+                                 "AUD-DOC-STALE", "AUD-DEV-NO-LB"]),
 
     # Decisions: these are not gaps. Do not reopen them.
     Item("OK-MODULE-VPC", "p1", "Do not create one VPC per service or per module",
