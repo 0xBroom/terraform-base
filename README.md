@@ -75,7 +75,9 @@ the common ones if you don't want to read 900 lines of comments.
    gcloud projects create my-project --name="My Project"
    gcloud storage buckets create gs://my-project-tfstate --project=my-project --location=europe-west1
    ```
-3. Put that bucket name in the `backend "gcs"` block of `versions.tf`.
+3. Copy `backend.hcl.example` to `backend.hcl` (gitignored) and set `bucket`, plus
+   `prefix` if several stacks share the bucket. `versions.tf` keeps an empty
+   `backend "gcs" {}`, so no tracked file holds the bucket name.
 4. Edit `settings/default.yaml`. Set the region, the enabled APIs, and `client.name`, which
    is the short prefix every resource name starts with.
 5. Start from `settings/pre.yaml` or `settings/pro.yaml` (see `docs/ENVIRONMENTS.md`),
@@ -84,7 +86,7 @@ the common ones if you don't want to read 900 lines of comments.
    `project.id`, `project.name`, `project.number` and `security.alerts_email`.
 6. Plan and apply:
    ```bash
-   terraform init
+   terraform init -backend-config=backend.hcl
    terraform workspace new my-workspace
    terraform plan -detailed-exitcode   # exit 0 = nothing to change, 2 = changes pending
    terraform apply
@@ -117,7 +119,8 @@ before you plan a workspace that uses it.
 | `settings/<workspace>.yaml` | One file per project, and the file you'll edit most |
 | `gcp.<type>.tf` | One root file per resource type, each a `for_each` over its YAML section |
 | `oracle.*.tf` | The OCI side |
-| `locals.tf` · `providers.tf` · `versions.tf` | YAML loading, provider config and pins, state backend |
+| `locals.tf` · `providers.tf` · `versions.tf` | YAML loading, provider config and pins, state backend (partial) |
+| `backend.hcl.example` | Template of the gitignored `backend.hcl`: state bucket and prefix |
 | `outputs.tf` | Root outputs: load balancer IP and domains, service URLs, SQL connection names, registries, federation |
 | `modules/` | 9 vendored modules, with the version in the directory name |
 | `cloudbuild_files/` | The one Cloud Build pipeline every service shares (see `docs/cloudbuild-pipeline.md`) |

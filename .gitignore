@@ -9,6 +9,10 @@
 # .tfplan files
 *.tfplan
 
+# Per-clone backend settings (terraform init -backend-config=backend.hcl).
+# backend.hcl.example is the tracked template.
+backend.hcl
+
 # Crash log files
 crash.log
 
