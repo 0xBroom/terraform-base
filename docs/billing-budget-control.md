@@ -135,18 +135,25 @@ gcloud billing projects link your-project-id \
 
 ## ⚙️ Configuration
 
-The system is configured in your `settings/pre.yaml` file:
+The system is configured in the `budget` section of the workspace file
+(`settings/<workspace>.yaml`). The budget and its alerts are created whenever
+the section exists. The stop billing function is **opt-in**: it is deployed
+only when `enable_auto_stop: true` is set. Leaving the key out, or setting it
+to `false`, gives alerts only.
 
 ```yaml
 budget:
   billing_account: "your-billing-account-id"
   amount: your-monthly-limit
-  currency_code: "EUR" 
+  currency_code: "EUR"
   alert_spent_percents:
     - 0.5  # Warning at 50%
-    - 0.9  # Warning at 90%  
-    - 1.0  # Disable at 100%
+    - 0.9  # Warning at 90%
+    - 1.0  # Disable at 100% (only with enable_auto_stop: true)
+  enable_auto_stop: true  # Default false. Deploys the function that disables billing.
 ```
+
+The reference workspaces (`dev`, `stg`, `pre`, `pro`) keep `enable_auto_stop: false`.
 
 
 **⚠️ Important**: This system will completely shut down your project when the budget is exceeded. Make sure your budget is set appropriately for your expected usage.

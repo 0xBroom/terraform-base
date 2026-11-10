@@ -109,8 +109,9 @@ budget:
     - 0.9                                           #   90% - Critical warning
     - 1.0                                           #   100% - Budget exceeded
   enable_auto_stop: false                           # [OPTIONAL] Enable Cloud Function to disable billing
-                                                    #   Default: true. Set false to only get alerts.
-                                                    #   WARNING: true = billing DISABLED when budget hit!
+                                                    #   Default: false (alerts only). Opt in with true.
+                                                    #   WARNING: true = billing DISABLED when budget hit,
+                                                    #   which stops every billable service in the project!
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -261,6 +262,10 @@ app:
                                                     #   Values: 1, 2, 4, 6, 8
         ram: "512Mi"                                # [OPTIONAL] Memory allocation (default: "2048Mi")
                                                     #   Values: "128Mi", "256Mi", "512Mi", "1Gi", "2Gi", "4Gi", etc.
+        # cpu_idle: true                            # [OPTIONAL] Default true outside pro, false in pro
+                                                    #   true = CPU only during requests (request-based billing);
+                                                    #   background work after the response is throttled
+                                                    #   false = CPU always allocated (instance-based billing)
 
         # Additional IAM roles granted to the service's auto-generated service account
         additional_roles:                           # [OPTIONAL] Extra IAM roles for the service account
