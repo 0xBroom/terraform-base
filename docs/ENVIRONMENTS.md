@@ -247,8 +247,13 @@ unless the reader is expected:
 
 - the service account of each Cloud Run service and job (the `external_sa` or
   the external job account when one is set), `run-cloudbuild-sa` and the
-  Cloud Build service agent that reads the repository connection tokens
-  (`exclude_stack_principals: false` drops these);
+  Cloud Build service agent that reads the repository connection tokens,
+  and the `user:` and `serviceAccount:` accessors granted in
+  `secrets.<id>.accessors` and `external_secret_access.<id>.accessors`
+  (`exclude_stack_principals: false` drops these). A `group:`, `domain:` or
+  `principalSet://` accessor is not skipped: the log entry names the member
+  who read the secret, not the group, so list that member in
+  `allowed_principals`;
 - `monitoring.excluded_principals`, where the Terraform identity goes: a
   refresh of a `google_secret_manager_secret_version` reads the payload;
 - `monitoring.secret_access.allowed_principals`.

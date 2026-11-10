@@ -1098,8 +1098,12 @@ monitoring:
   # Skipped always: monitoring.excluded_principals (put the Terraform identity
   # there: every refresh of a secret version reads it) and allowed_principals.
   # Skipped by default: the service account of each app.service and app.job
-  # (the external one when set), run-cloudbuild-sa and the Cloud Build service
-  # agent that reads the repository connection tokens.
+  # (the external one when set), run-cloudbuild-sa, the Cloud Build service
+  # agent that reads the repository connection tokens, and the user: and
+  # serviceAccount: members of secrets.<id>.accessors and
+  # external_secret_access.<id>.accessors. A group:, domain: or principalSet://
+  # accessor cannot be matched: the log records the member who read, so list
+  # those readers in allowed_principals.
   secret_access:                                    # [OPTIONAL] Omit to disable
     enabled: true                                   # [OPTIONAL] Default true
     exclude_stack_principals: true                  # [OPTIONAL] Default true; false alerts on the stack's own readers too

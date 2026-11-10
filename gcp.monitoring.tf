@@ -81,14 +81,30 @@ locals {
 # alone (gcp.security.tf), not for every service. The alert skips the
 # identities this stack gives secret access to: the service account of every
 # Cloud Run service and job (the external one when set), the Cloud Build
-# service account and the Cloud Build service agent that reads the repository
-# connection tokens. allowed_principals and monitoring.excluded_principals
-# (the Terraform identity, which reads secret versions on every refresh) are
-# skipped too.
+# service account, the Cloud Build service agent that reads the repository
+# connection tokens, and the accessors granted in YAML on standalone secrets
+# (secrets.<id>.accessors) and external ones
+# (external_secret_access.<id>.accessors). allowed_principals and
+# monitoring.excluded_principals (the Terraform identity, which reads secret
+# versions on every refresh) are skipped too.
+#
+# The audit log names the identity that made the call, in principalEmail. Only
+# user: and serviceAccount: members are that identity. A group:, domain: or
+# principalSet:// grant is read by one of its members, whose email this stack
+# does not know, so such a reader still alerts until it is listed in
+# allowed_principals.
 
 locals {
   secret_access_settings = try(local.settings.monitoring.secret_access, null)
   secret_access_enabled  = local.secret_access_settings != null && try(local.secret_access_settings.enabled, true)
+
+  secret_access_yaml_readers = distinct([
+    for member in concat(
+      [for grant in values(local.standalone_secret_accessors) : grant.member],
+      [for grant in values(local.external_secret_accessors) : grant.member],
+    ) : regex("^(?:user|serviceAccount):([^:?]+)$", member)[0]
+    if can(regex("^(?:user|serviceAccount):([^:?]+)$", member))
+  ])
 
   secret_access_stack_principals = concat(
     [
@@ -103,6 +119,7 @@ locals {
       format("run-cloudbuild-sa@%s.iam.gserviceaccount.com", local.settings.project.id),
       format("service-%s@gcp-sa-cloudbuild.iam.gserviceaccount.com", local.settings.project.number),
     ],
+    local.secret_access_yaml_readers,
   )
 
   secret_access_secrets = try(local.secret_access_settings.secrets, [])
