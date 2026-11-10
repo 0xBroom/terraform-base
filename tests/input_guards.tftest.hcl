@@ -222,3 +222,51 @@ run "essential_contacts_not_a_list_is_refused" {
     google_monitoring_notification_channel.security_alerts,
   ]
 }
+
+run "private_dns_zone_without_network_is_refused" {
+  command = plan
+
+  variables {
+    settings_override = {
+      dns_zones = {
+        internal = {
+          dns_name   = "internal.example"
+          visibility = "private"
+        }
+      }
+    }
+  }
+
+  expect_failures = [
+    check.settings_workspace_unset,
+    google_dns_managed_zone.zone,
+  ]
+}
+
+run "private_dns_zone_with_network_attaches_the_vpc" {
+  command = plan
+
+  variables {
+    settings_workspace = "dev"
+    settings_override = {
+      dns_zones = {
+        internal = {
+          dns_name   = "internal.example"
+          visibility = "private"
+        }
+      }
+    }
+  }
+
+  expect_failures = [check.settings_workspace_unset]
+
+  assert {
+    condition     = length(google_dns_managed_zone.zone["internal"].private_visibility_config) == 1
+    error_message = "A private zone attaches the shared VPC."
+  }
+
+  assert {
+    condition     = length(google_dns_managed_zone.zone["internal"].dnssec_config) == 0
+    error_message = "A private zone has no DNSSEC config."
+  }
+}
