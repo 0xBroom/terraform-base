@@ -6,8 +6,37 @@ This guide explains how to manage infrastructure using the YAML settings in the 
 
 1. Open `settings/${workspace}.yaml`.
 2. Add or modify the desired resource block.
-3. Run `terraform plan` to verify the changes.
-4. Run `terraform apply` to deploy.
+3. Run `python3 bin/validate-settings.py` (see below).
+4. Run `terraform plan` to verify the changes.
+5. Run `terraform apply` to deploy.
+
+## ✅ Validating the settings
+
+The root files read most keys through `try()`, so a misspelled key (`netwrok:`,
+`min_instance:`) is not an error in Terraform: the default applies and the plan
+looks fine. `bin/validate-settings.py` checks every `settings/*.yaml` against
+`schemas/settings.schema.json` before a plan:
+
+```bash
+python3 -m pip install pyyaml jsonschema   # jsonschema is optional
+python3 bin/validate-settings.py
+```
+
+- Each workspace file is validated merged over `default.yaml`, the shallow merge of
+  `locals.tf`. `example.yaml` is also validated alone, without the required keys.
+- An unknown top-level key is an error. So is an unknown key in the sections whose
+  shape the root files fix (`project`, `security`, `logging`, `monitoring`, `lb`,
+  `network`, `budget`, `database.<name>`, `redis.<name>`, `wif`, ...). Entries passed
+  whole to a module (`app.service.<name>.cloudrun`, `job-config`, `bucket.<name>`,
+  `database.<name>.sql`) have their known keys typed and accept others.
+- It also fails when a root `.tf` file reads a top-level key the schema does not
+  list: a new setting goes into the schema in the same change, and into
+  `settings/example.yaml`.
+- The YAML is read like Terraform's `yamldecode` (YAML 1.2): `on`, `yes` and
+  unquoted `02:00` are strings, and a duplicated key is an error.
+- Without jsonschema a built-in validator handles the keywords the schema uses.
+  Without PyYAML only the key cross-checks run and the script exits 2;
+  `SETTINGS_SCHEMA_OPTIONAL=1` turns that into exit 0 with a `skipped` notice.
 
 ## 🏷️ Labels
 

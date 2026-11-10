@@ -41,8 +41,11 @@ when a full audit adds no new item.
    override, `*_override.tf`, is gitignored).
 6. CI repeats part of this on the pull request: `terraform fmt -check`,
    `terraform validate` in `default`, `dev`, `stg`, `pre` and `pro`,
-   `python3 bin/cloudbuild-render-test.py` and
-   `python3 bin/audit-terraform.py --fail-on p0`. It does not run
+   `python3 bin/cloudbuild-render-test.py`,
+   `python3 bin/validate-settings.py` and
+   `python3 bin/audit-terraform.py --fail-on p0`. A key you add to the
+   settings goes into `schemas/settings.schema.json` and
+   `settings/example.yaml` in the same pull request. It does not run
    `--id <ID>` or `--leaks`; run those yourself.
 7. Open the pull request with a Summary, the list of changes, how you
    validated, and how to roll it back. Do not apply.

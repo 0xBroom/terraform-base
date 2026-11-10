@@ -106,9 +106,8 @@ bitbucket_workspace: "my-workspace"                 # [MANDATORY] Bitbucket work
 # NOTE: Omit this entire section if you don't want budget management.
 budget:
   billing_account: "XXXXXX-XXXXXX-XXXXXX"          # [MANDATORY] GCP Billing Account ID
-  billing_name: "My-Billing-Account-Name"           # [OPTIONAL] Display name for the budget
-  amount: 500                                       # [MANDATORY] Monthly budget amount (numeric)
-  currency_code: "EUR"                              # [OPTIONAL] Currency code (default: EUR)
+  amount: 500                                       # [MANDATORY] Monthly budget amount in EUR (numeric)
+                                                    #   The currency is fixed to EUR in gcp.billing.tf
   alert_spent_percents:                             # [MANDATORY] Alert thresholds as decimal percentages
     - 0.5                                           #   50% - Early warning
     - 0.75                                          #   75% - Moderate warning
@@ -820,35 +819,35 @@ database:
       #   end_date: "2026-01-05"                    #   End date (YYYY-MM-DD)
       #   time: "23:59:00"                          #   Time (HH:MM:SS)
 
-    # Database monitoring alerts
-    # All monitoring entries are optional. Omit to use defaults.
-    monitoring:
-      cpu:
-        duration: "1800s"                           # Alert if condition persists for this duration
-        threshold_value: 0.85                       # Alert if CPU > 85% (0.0-1.0)
-        alignment_period: "900s"                    # Data sampling interval
-      memory:
-        duration: "300s"
-        threshold_value: 0.85                       # Alert if memory > 85%
-        limit_ram: null                             # Custom memory limit (null = system default)
-        alignment_period: "900s"
-      connections:
-        duration: "120s"
-        threshold_value: 0.85                       # Alert if connections > 85% of max
-        max_connections: null                        # Custom max (null = use flags.max_connections)
-        alignment_period: "60s"
-      disk_space:
-        duration: "600s"
-        threshold_value: 0.85                       # Alert if disk > 85% full
-        alignment_period: "300s"
-      disk_iops:
-        duration: "1800s"
-        threshold_value: 0.85                       # Alert if IOPS > 85% of limit
-        alignment_period: "60s"
-      log_entries:
-        duration: "60s"
-        threshold_value: 0                          # Alert on any error log entry
-        alignment_period: "60s"
+      # Database monitoring alerts, under sql (gcp.sql.tf reads sql.monitoring)
+      # All monitoring entries are optional. Omit to use defaults.
+      monitoring:
+        cpu:
+          duration: "1800s"                         # Alert if condition persists for this duration
+          threshold_value: 0.85                     # Alert if CPU > 85% (0.0-1.0)
+          alignment_period: "900s"                  # Data sampling interval
+        memory:
+          duration: "300s"
+          threshold_value: 0.85                     # Alert if memory > 85%
+          limit_ram: null                           # Custom memory limit (null = system default)
+          alignment_period: "900s"
+        connections:
+          duration: "120s"
+          threshold_value: 0.85                     # Alert if connections > 85% of max
+          max_connections: null                     # Custom max (null = use flags.max_connections)
+          alignment_period: "60s"
+        disk_space:
+          duration: "600s"
+          threshold_value: 0.85                     # Alert if disk > 85% full
+          alignment_period: "300s"
+        disk_iops:
+          duration: "1800s"
+          threshold_value: 0.85                     # Alert if IOPS > 85% of limit
+          alignment_period: "60s"
+        log_entries:
+          duration: "60s"
+          threshold_value: 0                        # Alert on any error log entry
+          alignment_period: "60s"
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

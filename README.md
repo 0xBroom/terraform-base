@@ -158,9 +158,11 @@ with no GCP login:
   `stg`, `pre` and `pro`, each with `TF_WORKSPACE` set, so a broken settings
   file fails its own job. `default` runs `terraform init -backend=false`; the
   others write a `backend_override.tf` with a local backend first.
-- `scripts`: `python3 bin/cloudbuild-render-test.py` (needs PyYAML) and
-  `python3 bin/audit-terraform.py --fail-on p0`, which fails while a p0 item
-  in `docs/audit/BACKLOG.md` is still open.
+- `scripts`: `python3 bin/cloudbuild-render-test.py` (needs PyYAML),
+  `python3 bin/validate-settings.py` (every `settings/*.yaml` against
+  `schemas/settings.schema.json`, with jsonschema and again with its built-in
+  validator) and `python3 bin/audit-terraform.py --fail-on p0`, which fails
+  while a p0 item in `docs/audit/BACKLOG.md` is still open.
 
 A newer push to the same branch cancels the run it replaces.
 

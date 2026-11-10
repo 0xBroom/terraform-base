@@ -64,9 +64,17 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      - name: Install PyYAML
-        run: python3 -m pip install --quiet pyyaml
+      - name: Install PyYAML and jsonschema
+        run: python3 -m pip install --quiet pyyaml jsonschema
       - name: Cloud Build render self-test
         run: python3 bin/cloudbuild-render-test.py
+      - name: Validate the settings files
+        run: python3 bin/validate-settings.py
+      # The built-in validator is what a contributor without jsonschema runs;
+      # it has to agree with jsonschema on the same files.
+      - name: Validate the settings files (built-in validator)
+        run: python3 bin/validate-settings.py
+        env:
+          SETTINGS_SCHEMA_ENGINE: builtin
       - name: Fail on an open p0
         run: python3 bin/audit-terraform.py --fail-on p0

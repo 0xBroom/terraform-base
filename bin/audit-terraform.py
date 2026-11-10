@@ -165,9 +165,11 @@ def block(text: str, start: str, size: int = 600) -> str:
     return text[index : index + size] if index >= 0 else ""
 
 
-def runs_ok(*cmd: str) -> bool:
+def runs_ok(*cmd: str, env: dict[str, str] | None = None) -> bool:
     try:
-        return subprocess.run(list(cmd), cwd=ROOT, capture_output=True, timeout=120).returncode == 0
+        return subprocess.run(
+            list(cmd), cwd=ROOT, capture_output=True, timeout=120, env={**os.environ, **(env or {})}
+        ).returncode == 0
     except (OSError, subprocess.TimeoutExpired):
         return False
 
@@ -389,11 +391,15 @@ def partial_backend() -> bool:
 
 
 def settings_schema() -> bool:
+    # SETTINGS_SCHEMA_OPTIONAL=1: without PyYAML the validator still runs its
+    # cross-checks (keys read by the .tf files and top-level keys of every
+    # settings file against the schema) and skips only the full validation, so
+    # the status does not depend on the local Python packages. CI runs it all.
     return (
         exists("schemas/settings.schema.json")
         and exists("bin/validate-settings.py")
         and "validate-settings.py" in workflows()
-        and runs_ok(sys.executable, "bin/validate-settings.py")
+        and runs_ok(sys.executable, "bin/validate-settings.py", env={"SETTINGS_SCHEMA_OPTIONAL": "1"})
     )
 
 
