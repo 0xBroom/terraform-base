@@ -203,6 +203,16 @@ resource "google_monitoring_alert_policy" "log_alerts" {
       condition     = each.key != "secret_access" || alltrue([for secret in local.secret_access_secrets : can(regex("^[A-Za-z0-9_-]{1,255}$", secret))])
       error_message = "monitoring.secret_access.secrets takes secret ids (letters, digits, - and _), not resource names."
     }
+    # Cloud Monitoring refuses a log match policy that notifies more often than
+    # every 5 minutes or auto closes before 30 minutes, but only at apply.
+    precondition {
+      condition     = can(regex("^[0-9]+(\\.[0-9]+)?s$", each.value.rate_limit)) && try(tonumber(trimsuffix(each.value.rate_limit, "s")) >= 300, false)
+      error_message = "The notification_rate_limit of the ${each.key} alert is ${each.value.rate_limit}: it takes seconds (\"300s\") and at least 300s."
+    }
+    precondition {
+      condition     = can(regex("^[0-9]+(\\.[0-9]+)?s$", each.value.auto_close)) && try(tonumber(trimsuffix(each.value.auto_close, "s")) >= 1800, false)
+      error_message = "The auto_close of the ${each.key} alert is ${each.value.auto_close}: it takes seconds (\"1800s\") and at least 1800s."
+    }
     precondition {
       condition     = try(length(each.value.filter), 0) + 70 + length(join(" OR ", [for principal in each.value.excluded : "\"${principal}\""])) <= 20000
       error_message = "monitoring.log_alerts.${each.key}: the filter with its excluded principals is longer than the 20000 characters Cloud Logging accepts."

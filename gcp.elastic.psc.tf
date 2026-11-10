@@ -9,12 +9,14 @@
 # 2. Optionally, a private DNS zone and records resolving the provider domain to the private IP
 #
 # Everything comes from settings.elastic_psc. Without that key nothing is created.
+# The endpoint takes its IP from the services subnet, so the key also needs
+# network.services_cidr: without it the plan stops at the address precondition.
 # Cloud Run services can then connect to Elastic using the private endpoint address
 
 locals {
   elastic_psc_settings = try(local.settings.elastic_psc, null)
 
-  enable_elastic_psc = local.elastic_psc_settings != null && local.network_enabled
+  enable_elastic_psc = local.elastic_psc_settings != null
 
   elastic_psc = {
     service_attachment = try(local.elastic_psc_settings.service_attachment, "")
@@ -39,6 +41,13 @@ resource "google_compute_address" "elastic_psc_address" {
   description  = "Private Service Connect IP address for Elastic Cloud"
 
   labels = local.common_labels
+
+  lifecycle {
+    precondition {
+      condition     = local.network_enabled
+      error_message = "elastic_psc needs the shared VPC: set network.services_cidr, or remove elastic_psc. The endpoint IP comes from the services subnet."
+    }
+  }
 }
 
 resource "google_compute_forwarding_rule" "elastic_psc_endpoint" {
