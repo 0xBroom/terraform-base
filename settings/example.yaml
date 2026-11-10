@@ -888,8 +888,11 @@ database:
 #     type: "FIRESTORE_NATIVE"                     # [MANDATORY] FIRESTORE_NATIVE or DATASTORE_MODE
 #     location_id: "europe-west1"                  # [OPTIONAL] Defaults to region_name
 #     concurrency_mode: "OPTIMISTIC"               # [OPTIONAL]
-#     point_in_time_recovery: true                 # [OPTIONAL] Default false
-#     delete_protection_state: "DELETE_PROTECTION_DISABLED"  # [OPTIONAL]
+#     point_in_time_recovery: true                 # [OPTIONAL] Default true in pro, false elsewhere. 7 days of
+#                                                  #   versions, billed as storage
+#     delete_protection_state: "DELETE_PROTECTION_DISABLED"  # [OPTIONAL] Default DELETE_PROTECTION_ENABLED in pro,
+#                                                  #   unset elsewhere: kept as the database has it
+#     deletion_policy: "DELETE"                    # [OPTIONAL] Default ABANDON: a destroy leaves the database in GCP
 #     indexes_file: "./settings/firestore/default.indexes.json" # [OPTIONAL]
 #     permissions:                                 # [OPTIONAL] Project-level IAM bindings
 #       readers:
