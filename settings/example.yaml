@@ -33,7 +33,8 @@
 # │ 13  │ database                         │ Cloud SQL Instance, Databases, Users, Passwords (secrets),  │
 # │     │                                  │ Monitoring Alert Policies, Private IP                       │
 # │ 14  │ pubsub                           │ Pub/Sub Topics, Subscriptions, IAM bindings                 │
-# │ 15  │ monitoring                       │ Alert Policies (Cloud Run, LB), Notification Channels,     │
+# │ 15  │ monitoring                       │ Alert Policies (Cloud Run, LB, audit log events),           │
+# │     │                                  │ Notification Channels,                                      │
 # │     │                                  │ Cloud Armor WAF Security Policy                             │
 # │ 16  │ elastic_psc                      │ Private Service Connect Endpoint, Forwarding Rule,          │
 # │     │                                  │ DNS Zone, DNS Record                                        │
@@ -861,7 +862,7 @@ database:
 # ═══════════════════════════════════════════════════════════════════════════════
 # 15. MONITORING & ALERTING CONFIGURATION
 # ═══════════════════════════════════════════════════════════════════════════════
-# Alert policies for Cloud Run services and Load Balancer.
+# Alert policies for Cloud Run services, the Load Balancer and audit log events.
 # Monitoring is applied globally to all services in the environment.
 monitoring:
 
@@ -929,6 +930,38 @@ monitoring:
       alignment_period: "60s"
       severity: "ERROR"
       enabled: true
+
+  # ── Log-based Alerts (gcp.monitoring.tf) ──
+  # One alert policy per enabled entry, matched on Admin Activity audit logs and
+  # sent to the security.alerts_email channel once per event, with the principal,
+  # method and resource. Omit log_alerts and nothing is created. Log-based
+  # alert policies are not billed; the reference files enable them in pro only.
+  excluded_principals:                              # [OPTIONAL] Identities never alerted on, in every log alert
+    - "terraform@my-project.iam.gserviceaccount.com"  #   The account that runs terraform apply or CI
+  log_alerts:                                       # [OPTIONAL] Map of named alerts
+    # Presets: set the key and enabled: true, no filter needed.
+    #   iam_policy_change            SetIamPolicy on the project
+    #   service_account_key_created  A service account key created or uploaded
+    #   firewall_change              compute.firewalls insert, patch, update or delete
+    #   audit_config_change          SetIamPolicy that changes auditConfigs
+    #   custom_role_change           Custom IAM role create, update, delete or undelete
+    #   sql_instance_change          Cloud SQL instance create, update or delete
+    #   bucket_iam_change            storage.setIamPermissions on a bucket
+    iam_policy_change:
+      enabled: true                                 # [OPTIONAL] Default true; false keeps the entry without a policy
+    service_account_key_created:
+      enabled: true
+      severity: "CRITICAL"                          # [OPTIONAL] CRITICAL, ERROR or WARNING (preset default)
+      notification_rate_limit: "300s"               # [OPTIONAL] At most one email per period (default: 300s)
+      auto_close: "1800s"                           # [OPTIONAL] Incident auto close, at least 1800s (default: 1800s)
+      excluded_principals:                          # [OPTIONAL] Added to monitoring.excluded_principals
+        - "key-rotator@my-project.iam.gserviceaccount.com"
+    # Custom alert: any other key needs a Logging query language filter.
+    # dns_change:
+    #   enabled: true
+    #   filter: 'log_id("cloudaudit.googleapis.com/activity") AND protoPayload.methodName:"dns.changes.create"'  # [MANDATORY for a custom key]
+    #   description: "A Cloud DNS record set changed."  # [OPTIONAL] First line of the incident text
+    #   severity: "WARNING"
 
   # ── Cloud Armor IP Ban List ──
   # cloud-armor:                                    # [OPTIONAL] WAF IP blocking

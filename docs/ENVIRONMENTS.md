@@ -35,6 +35,7 @@ exist, which is what we want.
 | Budget | 40 EUR on dev, 80 EUR on stg | 400 EUR |
 | _Default log retention | 30 days | 90 days |
 | Audit log archive | none | locked log bucket, 365 days |
+| Log-based security alerts | none | seven presets, one email per event |
 | Binary Authorization | off | dry-run, attestation required |
 | VPC | dev `10.8.1.0/24`, stg and pre `10.10.1.0/24` | `10.20.1.0/24` |
 
@@ -70,6 +71,39 @@ first apply:
 
 The bucket is in the same project as the sink, so no IAM grant is needed for
 the sink's writer identity.
+
+Pro sets `monitoring.log_alerts`: `gcp.monitoring.tf` turns each enabled entry
+into an alert policy that matches Admin Activity audit log entries and emails
+the `security.alerts_email` channel once per event, with the principal, the
+method and the resource in the incident. The presets are:
+
+| Preset | Fires on |
+|---|---|
+| `iam_policy_change` | `SetIamPolicy` on the project |
+| `service_account_key_created` | a service account key created or uploaded |
+| `firewall_change` | a VPC firewall rule inserted, patched, updated or deleted |
+| `audit_config_change` | a `SetIamPolicy` that changes the audit log configuration |
+| `custom_role_change` | a custom role created, updated, deleted or restored |
+| `sql_instance_change` | a Cloud SQL instance created, updated or deleted |
+| `bucket_iam_change` | `storage.setIamPermissions` on a bucket |
+
+Any other key is a custom alert and needs its own `filter`. Entries take
+`enabled`, `severity`, `notification_rate_limit` (one email per period, 5
+minutes by default) and `excluded_principals`. `monitoring.excluded_principals`
+applies to every alert: put the identity that runs `terraform apply` there,
+or each apply that touches IAM or a firewall pages the channel. Pro lists a
+placeholder Terraform service account; replace it.
+
+The basic security module still keeps its own threshold alerts on firewall,
+custom role, audit config, Cloud SQL and bucket IAM changes, so a manual
+change can reach the channel twice. The log-based ones are the ones to read:
+they arrive per event, name who did it and skip the Terraform identity. A
+change to an audit config also matches `iam_policy_change`, since both are a
+`SetIamPolicy`.
+
+Log-based alert policies are not billed, and they read logs Cloud Logging
+already keeps. Dev and stg still leave the key out, so their channel only
+gets the module's alerts.
 
 The first Cloud Run revision is the public hello image. Cloud Build replaces
 the digest and Terraform leaves it alone. Do not pin a real image in the YAML.

@@ -4,7 +4,7 @@ The list of work that takes this template to a public, production-grade
 release: dev and stg cheap, pro ready for a security, backup and
 data-retention audit. Each item has a check in `bin/audit-terraform.py`.
 
-Open: 25. Done: 26. Accepted, not a gap: 22.
+Open: 24. Done: 27. Accepted, not a gap: 22.
 
 Regenerate with `python3 bin/audit-terraform.py --write` in the pull request
 that closes an item. `--next` names the item to take. How a session works an
@@ -24,12 +24,6 @@ Next change: Copy the storage module to a new version with retention_policy and 
 prevent_destroy = true is a literal, so dev cannot be torn down, while pro has no RDB snapshot.
 
 Next change: Replace prevent_destroy with deletion_protection from the YAML (true in pro) and add persistence_config.
-
-### AUD-MON-LOG-ALERTS (p1) No alert fires on IAM, firewall, service account key or audit config changes
-
-These are the controls an auditor samples first. The security module covers only part of them.
-
-Next change: Add gcp.monitoring.tf with log-based alert policies driven by monitoring.log_alerts. Enable them in pro.
 
 ### AUD-MON-LB (p2) Pro has no load balancer error alerts and no uptime check
 
@@ -339,3 +333,4 @@ Next change: Keep it equal to stg.
 - AUD-SQL-PITR (p1) Point-in-time recovery in the YAML never reaches Cloud SQL
 - AUD-SQL-HARDEN (p1) Pro PostgreSQL has no connection or statement audit trail
 - AUD-AUDIT-ARCHIVE (p1) Audit logs are not archived in a locked bucket
+- AUD-MON-LOG-ALERTS (p1) No alert fires on IAM, firewall, service account key or audit config changes

@@ -30,6 +30,28 @@ logging:
     retention_days: 365
     locked: true
 
+# Log-based alerts on audit log events, one email per change. Replace the
+# excluded principal with the identity that runs terraform apply, or every
+# apply that touches IAM or a firewall pages the channel.
+monitoring:
+  excluded_principals:
+    - "terraform@example-app-pro.iam.gserviceaccount.com"
+  log_alerts:
+    iam_policy_change:
+      enabled: true
+    service_account_key_created:
+      enabled: true
+    firewall_change:
+      enabled: true
+    audit_config_change:
+      enabled: true
+    custom_role_change:
+      enabled: true
+    sql_instance_change:
+      enabled: true
+    bucket_iam_change:
+      enabled: true
+
 # Dry-run until images are signed. The hello image is on the whitelist.
 binary_authorization:
   enabled: true
