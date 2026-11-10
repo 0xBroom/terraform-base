@@ -79,7 +79,7 @@ Each Cloud Run service with a `cloudbuild` block gets:
 
 *   **Build configuration**: the build is either `inline` (read from a file under `cloudbuild_files/` and stored in the trigger) or reads a `cloudbuild.yaml` from the application repository. Substitutions are generated to pass values such as the region, the service name, the Dockerfile path and the build context. See `docs/cloudbuild-pipeline.md`.
 
-*   **Cloud Build service account**: one shared account (`run-cloudbuild-sa`) runs every trigger. It holds `roles/cloudbuild.builds.builder`, `roles/run.admin`, `roles/iam.serviceAccountUser`, `roles/artifactregistry.writer` and `roles/logging.logWriter`, so it can build and push images and deploy services.
+*   **Cloud Build service account**: one shared account (`run-cloudbuild-sa`) runs every trigger. It holds `roles/cloudbuild.builds.builder`, `roles/run.admin`, `roles/iam.serviceAccountUser`, `roles/artifactregistry.writer` and `roles/logging.logWriter`, so it can build and push images and deploy services. The account and the `<base>-cloudbuild-artifacts` bucket exist only when the workspace declares at least one build (`cloudbuild`, or a `cloudbuild` block under `app.service` or `app.job`); a standalone repository listing `cloudbuild` as a writer also creates the account. A workspace with no build gets neither.
 
 ---
 
@@ -145,7 +145,8 @@ If the service must be reachable from the internet and has `loadbalancer` rules 
 
 *   **IAP (Identity-Aware Proxy)**: when a rule enables IAP (`iap.enabled: true`):
     *   the backend service is configured to use IAP;
-    *   the listed `members` (or the shared members under `iap.admin_access` when `use_default_members: true`) get `roles/iap.httpsResourceAccessor`, which allows authenticated and authorised access to the service.
+    *   the listed `members` (or the shared members under `iap.admin_access` when `use_default_members: true`) get `roles/iap.httpsResourceAccessor`, which allows authenticated and authorised access to the service;
+    *   the IAP service agent gets `roles/run.invoker` on the service. That agent, and the 60 second wait for it to propagate, are created only when at least one service enables IAP (here or under `cloudrun.iap.enabled`).
 
 ---
 

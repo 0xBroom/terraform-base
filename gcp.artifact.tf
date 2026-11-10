@@ -81,10 +81,10 @@ module "artifact_registry" {
 
   permissions = {
     cloudbuild = {
-      members = [
-        format("serviceAccount:%s@cloudbuild.gserviceaccount.com", local.settings.project.number),
-        format("serviceAccount:%s", google_service_account.cloudbuild.email)
-      ]
+      members = concat(
+        [format("serviceAccount:%s@cloudbuild.gserviceaccount.com", local.settings.project.number)],
+        local.cloudbuild_sa_enabled ? [format("serviceAccount:%s", local.cloudbuild_sa_email)] : []
+      )
       roles = [
         "roles/artifactregistry.reader",
         "roles/artifactregistry.writer",

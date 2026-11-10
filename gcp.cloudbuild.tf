@@ -230,7 +230,7 @@ locals {
       # What an external pipeline has always been handed, and nothing new.
       : {
         _PYTHON_REPO_URL  = "https://${local.registry_host_python}/${value.prefixed_name}/"
-        _ARTIFACTS_BUCKET = "gs://${module.cloudbuild_artifacts_bucket.bucket_name}/artifacts"
+        _ARTIFACTS_BUCKET = "gs://${one(module.cloudbuild_artifacts_bucket[*].bucket_name)}/artifacts"
       },
       value.substitutions
     )
@@ -447,7 +447,7 @@ resource "google_cloudbuild_trigger" "cloudbuild_triggers" {
   filename = each.value.inline ? null : each.value.cloudbuild_file_path
 
   substitutions   = local.cloudbuild_substitutions[each.key]
-  service_account = google_service_account.cloudbuild.id
+  service_account = google_service_account.cloudbuild[0].id
 
   depends_on = [
     google_cloudbuildv2_repository.bitbucket,
@@ -459,8 +459,37 @@ resource "google_cloudbuild_trigger" "cloudbuild_triggers" {
 }
 
 
+# The build account, the artifacts bucket and their grants exist only when something
+# builds: a trigger (settings.cloudbuild, or a cloudbuild block under app.service or
+# app.job), or a standalone repository that lists "cloudbuild" as a writer
+# (gcp.artifact.standalone.tf). A workspace with neither gets none of them.
+locals {
+  cloudbuild_enabled    = length(local.all_cloudbuild_configs) > 0
+  cloudbuild_sa_enabled = local.cloudbuild_enabled || length(local.standalone_artifact_legacy_writers) > 0
+  cloudbuild_sa_email   = one(google_service_account.cloudbuild[*].email)
+}
+
+# Workspaces created before these were counted keep them: the address moves, nothing
+# is destroyed. A workspace with no build then plans their removal.
+moved {
+  from = google_service_account.cloudbuild
+  to   = google_service_account.cloudbuild[0]
+}
+
+moved {
+  from = module.iam_member_permission_run_cloudbuild_sa
+  to   = module.iam_member_permission_run_cloudbuild_sa[0]
+}
+
+moved {
+  from = module.cloudbuild_artifacts_bucket
+  to   = module.cloudbuild_artifacts_bucket[0]
+}
+
 # Service Account for Cloud Build
 resource "google_service_account" "cloudbuild" {
+  count = local.cloudbuild_sa_enabled ? 1 : 0
+
   project      = local.settings.project.id
   account_id   = "run-cloudbuild-sa"
   display_name = "Cloud Build Service Account for Run services"
@@ -468,12 +497,13 @@ resource "google_service_account" "cloudbuild" {
 
 # IAM permissions for Cloud Build Service Account using standardized module
 module "iam_member_permission_run_cloudbuild_sa" {
+  count  = local.cloudbuild_sa_enabled ? 1 : 0
   source = "./modules/tf_gcp_project_iam_permissions_v2.0-202405091017"
 
   project_id = local.settings.project.id
   permissions = [
     {
-      members = [format("serviceAccount:%s", google_service_account.cloudbuild.email)]
+      members = [format("serviceAccount:%s", local.cloudbuild_sa_email)]
       roles = [
         "roles/cloudbuild.builds.builder",
         "roles/run.admin",
@@ -495,18 +525,18 @@ module "iam_member_permission_run_cloudbuild_sa" {
 # project). Off unless a workspace sets `cloudbuild_sa_self_sign_jwt: true`. Useful for a
 # build step that makes an IAP-authenticated check of a candidate revision.
 resource "google_service_account_iam_member" "cloudbuild_self_sign" {
-  count = try(local.settings.cloudbuild_sa_self_sign_jwt, false) ? 1 : 0
+  count = local.cloudbuild_sa_enabled && try(local.settings.cloudbuild_sa_self_sign_jwt, false) ? 1 : 0
 
-  service_account_id = google_service_account.cloudbuild.name
+  service_account_id = google_service_account.cloudbuild[0].name
   role               = "roles/iam.serviceAccountTokenCreator"
-  member             = format("serviceAccount:%s", google_service_account.cloudbuild.email)
+  member             = format("serviceAccount:%s", local.cloudbuild_sa_email)
 }
 
 
 # ===================================================================
 # CLOUD BUILD ARTIFACTS BUCKET
 # ===================================================================
-# This bucket is always created regardless of environment settings.
+# Created when the workspace has at least one Cloud Build trigger.
 # It stores Python packages and build dependencies for Cloud Build.
 
 # Admin members come from `cloudbuild_artifacts_admins` in the workspace yaml
@@ -522,6 +552,7 @@ locals {
 }
 
 module "cloudbuild_artifacts_bucket" {
+  count  = local.cloudbuild_enabled ? 1 : 0
   source = "./modules/tf_gcp_storage_v2.7"
 
   base_name      = "${local.base_name_medium}-cloudbuild-artifacts"

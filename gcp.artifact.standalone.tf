@@ -44,7 +44,7 @@ locals {
           repo_id = repo_id
           member = (
             member == "cloudbuild"
-            ? "serviceAccount:${google_service_account.cloudbuild.email}"
+            ? "serviceAccount:${local.cloudbuild_sa_email}"
             : member
           )
         }
