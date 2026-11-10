@@ -11,6 +11,8 @@
 project:
   id: "my-project-id"
   name: "my-project"
+  # The all-zero placeholder, or no number at all, reads the real one from
+  # project.id at plan time (gcp.project.tf).
   number: "000000000000"
 
 security:

@@ -130,7 +130,7 @@ locals {
     for key, config in local.app_services : key => merge(
       {
         cloudbuild = {
-          account     = "serviceAccount:${local.settings.project.number}@cloudbuild.gserviceaccount.com"
+          account     = "serviceAccount:${local.project_number}@cloudbuild.gserviceaccount.com"
           permissions = ["roles/run.admin"]
         }
       },

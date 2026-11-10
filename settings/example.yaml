@@ -72,14 +72,15 @@
 project:
   id: "my-gcp-project-id"                         # [MANDATORY] GCP Project ID
   name: "my-gcp-project-name"                      # [MANDATORY] Human-readable project name
-  number: "123456789012"                            # [MANDATORY] GCP Project Number (numeric, found in GCP console)
+  number: "123456789012"                            # [OPTIONAL] GCP project number. Absent or the all-zero placeholder:
+                                                    #   read from project.id at plan time (gcp.project.tf)
 
 # System project for monitoring resources (used for NAT monitoring dashboards)
 # Usually shared across environments. Defined in default.yaml.
 # project_sys:
 #   id: "my-system-project-id"                     # [MANDATORY if NAT] System/monitoring project ID
 #   name: "my-system-project-name"                 # System project name
-#   number: "987654321098"                         # System project number
+#   number: "987654321098"                         # System project number (not read by any root file)
 
 # APIs. default.yaml lists the base (`active-apis`); each section below turns on
 # its own APIs when it exists (local.feature_apis, docs/CONFIGURATION_GUIDE.md).

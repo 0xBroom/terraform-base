@@ -79,7 +79,7 @@ resource "google_secret_manager_secret_iam_binding" "github_token" {
   role      = "roles/secretmanager.secretAccessor"
 
   members = [
-    "serviceAccount:service-${local.settings.project.number}@gcp-sa-cloudbuild.iam.gserviceaccount.com"
+    "serviceAccount:service-${local.project_number}@gcp-sa-cloudbuild.iam.gserviceaccount.com"
   ]
 
   depends_on = [

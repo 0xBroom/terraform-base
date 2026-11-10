@@ -397,7 +397,7 @@
       "properties": {
         "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]{4,28}[a-z0-9]$" },
         "name": { "type": "string" },
-        "number": { "type": ["string", "integer"], "pattern": "^[0-9]+$" }
+        "number": { "type": ["string", "integer"], "pattern": "^[0-9]+$", "description": "Optional. Absent or all zeros: read from the project at plan time." }
       }
     },
     "thresholdMap": {

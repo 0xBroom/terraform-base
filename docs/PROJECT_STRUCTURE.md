@@ -9,6 +9,7 @@ This document describes how the files in this repository fit together.
 - `providers.tf` and `versions.tf`: provider configuration, version pins and the remote state backend. The backend is an empty `backend "gcs" {}`; its bucket and prefix come from the gitignored `backend.hcl` (template `backend.hcl.example`) through `terraform init -backend-config=backend.hcl`.
 - `outputs.tf`: root outputs (load balancer IP and domains, Cloud Run URLs, Cloud SQL connection names, registry paths, federation providers and accounts, audit archive bucket). Each is an empty map or null when its feature is absent; none is a secret.
 - `gcp.<type>.tf`: one root file per GCP resource type. Each one reads its section of `local.settings` and creates nothing when that section is absent.
+  - `gcp.project.tf`: the project number (`local.project_number`), from `project.number` or read from the project when the YAML leaves it out or keeps the all-zero placeholder.
   - `gcp.cloudrun.tf`: Cloud Run services, their service accounts, IAM and volumes.
   - `gcp.jobs.tf`: Cloud Run jobs.
   - `gcp.cloudbuild.tf`: Cloud Build triggers that build and deploy every image through `cloudbuild_files/cloudbuild.yaml`.
