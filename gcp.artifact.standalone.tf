@@ -28,8 +28,9 @@
 #       description: "..."                # only if it has one today
 #       immutable_tags: false             # only if it has a docker_config today
 #
-# An adopted repository keeps its description and labels: the import must declare what is
-# there, and the only change the plan may show is the cleanup policy. Removing an adopted
+# An adopted repository keeps its description and its own labels: the import must declare
+# what is there. The plan shows the cleanup policy and, in place, the provider default
+# labels (common_labels, providers.tf) added next to the labels it has. Removing an adopted
 # entry from the yaml plans a DESTROY of the repository and every image in it. The apply
 # procedure stops on destroys; take it out of state with a `removed` block instead.
 

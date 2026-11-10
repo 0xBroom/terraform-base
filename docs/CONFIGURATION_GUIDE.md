@@ -9,6 +9,43 @@ This guide explains how to manage infrastructure using the YAML settings in the 
 3. Run `terraform plan` to verify the changes.
 4. Run `terraform apply` to deploy.
 
+## 🏷️ Labels
+
+Both Google providers set `default_labels` to `local.common_labels`
+(`locals.tf`), so every resource with a `labels` field gets the same four:
+
+| Label | Value |
+|---|---|
+| `workspace` | the Terraform workspace |
+| `client` | `client.name` |
+| `managed_by` | `terraform` |
+| `repo` | `iac.repo` (default `terraform-base`) |
+
+```yaml
+client:
+  name: "app"
+iac:
+  repo: "terraform-base"
+```
+
+GCP label values take at most 63 lowercase letters, digits, `_` and `-`, so
+the values are lowercased, any other character becomes `-` and the result is
+cut to 63. A label set on the resource (Redis `labels`, a VM's `labels`) is
+merged on top and wins on the same key. Resources without labels (IAM, DNS
+records, alert policies) are not affected. Cloud SQL keeps its labels in
+`user_labels`, which the provider default does not reach.
+
+The first plan after this change shows an in-place update on every labelled
+resource that did not carry the four labels yet (buckets, Cloud Run, Pub/Sub,
+secrets, Artifact Registry, addresses and forwarding rules, Redis, VMs, KMS
+keys, DNS zones): it adds `terraform_labels` and `effective_labels`, nothing is
+replaced. Repositories adopted with `artifact_repos.<key>.adopt` get the four
+labels too, next to the ones they already have.
+
+Cloud Run domain mappings use the `google.unlabelled` provider alias, which has
+no default labels: their labels are immutable, and adding one would destroy and
+recreate the mapping and its certificate.
+
 ## 📦 Cloud Run Services
 
 Services are defined under `app.service`.

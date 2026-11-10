@@ -47,6 +47,8 @@ locals {
 
 resource "google_cloud_run_domain_mapping" "mapping" {
   for_each = local.domain_mappings
+  # Its labels are immutable: provider default labels would replace the mapping.
+  provider = google.unlabelled
 
   name     = each.value.domain
   location = try(each.value.region, local.settings.region_name)
