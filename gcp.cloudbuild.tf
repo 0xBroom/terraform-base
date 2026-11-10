@@ -81,9 +81,15 @@ locals {
       reqs_file          = try(src.cb.reqs_file, null)
 
       # ── how the build runs ──
-      build_timeout = try(src.cb.build_timeout, null)
-      machine_type  = try(src.cb.machine_type, null)
-      ar_token      = try(src.cb.artifact_registry_token, false)
+      build_timeout         = try(src.cb.build_timeout, null)
+      machine_type          = try(src.cb.machine_type, null)
+      ar_token              = try(src.cb.artifact_registry_token, false)
+      scan_secrets          = try(src.cb.scan.secrets, false) && !try(src.cb.scan.secrets_blocking, false)
+      scan_secrets_blocking = try(src.cb.scan.secrets_blocking, false)
+      scan_sast             = try(src.cb.scan.sast, false) && !try(src.cb.scan.sast_blocking, false)
+      scan_sast_blocking    = try(src.cb.scan.sast_blocking, false)
+      scan_deps             = try(src.cb.scan.deps, false) && !try(src.cb.scan.deps_blocking, false)
+      scan_deps_blocking    = try(src.cb.scan.deps_blocking, false)
 
       # ── what the build rolls out ──
       # deploy: false builds and pushes without touching Cloud Run (base images,
@@ -129,10 +135,16 @@ locals {
   # ---------------------------------------------------------------------------
   cloudbuild_capabilities = {
     for key, value in local.all_cloudbuild_configs : key => {
-      ar_token             = value.ar_token
-      deploy_service       = value.type != "job" && value.deploy
-      deploy_job           = value.type == "job" && value.deploy
-      update_companion_job = value.type != "job" && value.job_name != null
+      ar_token              = value.ar_token
+      scan_secrets          = value.scan_secrets
+      scan_secrets_blocking = value.scan_secrets_blocking
+      scan_sast             = value.scan_sast
+      scan_sast_blocking    = value.scan_sast_blocking
+      scan_deps             = value.scan_deps
+      scan_deps_blocking    = value.scan_deps_blocking
+      deploy_service        = value.type != "job" && value.deploy
+      deploy_job            = value.type == "job" && value.deploy
+      update_companion_job  = value.type != "job" && value.job_name != null
     }
   }
 

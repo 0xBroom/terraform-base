@@ -20,6 +20,7 @@ security:
     admin_read: true
     data_read: false
     data_write: false
+  artifact_scanning: true
 
 logging:
   retention_days: 90
@@ -81,6 +82,10 @@ app:
         dockerfile_path: "Dockerfile"
         build_context_path: "."
         # Default tag pattern for this workspace: ^pro-[0-9]{8}[0-9]{2}$
+        scan:
+          secrets_blocking: true
+          sast: true
+          deps: true
       cloudrun:
         allow_unauthenticated: false
         ingress: "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"

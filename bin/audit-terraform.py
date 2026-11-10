@@ -581,14 +581,13 @@ ITEMS: list[dict] = [
         "severity": "p2",
         "title": "Do not port Shieldcode, Harbor or the Sonar quality gate",
         "why": (
-            "Tools Hub builds images through a Harbor proxy and fails the build on a "
-            "Sonar gate. That stack is a platform service with its own robots, tokens "
-            "and proxy repository. A new project does not have it. Binary "
-            "Authorization, once it can require an attestation, is the control that "
-            "belongs in this template."
+            "Harbor and SonarQube need a separate instance, with robots, tokens and "
+            "a proxy repository. This template does not port them. Scans that run "
+            "inside Cloud Build (gitleaks, semgrep, trivy fs) and Artifact Registry "
+            "vulnerability scanning are opt-in and do not need that instance."
         ),
-        "evidence": "Tools Hub shieldcode.tf. This repo has no harbor or sonar resources.",
-        "change": "Leave it out. Track image policy under AUD-BINAUTH.",
+        "evidence": "No harbor or sonar resources. cloudbuild.scan and security.artifact_scanning cover the in-build scanners.",
+        "change": "Leave Harbor and Sonar out. Turn scanners on with cloudbuild.scan and security.artifact_scanning.",
         "ok": lambda: True,
         "disposition": "accepted",
     },

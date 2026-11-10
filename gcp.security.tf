@@ -32,3 +32,15 @@ module "basic_security" {
     google_monitoring_notification_channel.security_alerts.name
   ]
 }
+
+# Artifact Registry automatic scanning. This is the Container Scanning API,
+# not a registry product that has to be installed beside the project.
+resource "google_project_service" "container_scanning" {
+  count   = try(local.settings.security.artifact_scanning, false) ? 1 : 0
+  project = local.settings.project.id
+  service = "containerscanning.googleapis.com"
+
+  disable_on_destroy = false
+
+  depends_on = [google_project_service.enabled_apis]
+}
