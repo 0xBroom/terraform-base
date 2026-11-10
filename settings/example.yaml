@@ -994,3 +994,32 @@ security:
   #   admin_read: true
   #   data_read: false
   #   data_write: false
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 21. CLOUD LOGGING RETENTION AND AUDIT ARCHIVE
+# ═══════════════════════════════════════════════════════════════════════════════
+# _Default is always managed (30 days, 90 in pro, unless set). _Required is
+# only touched when required_retention_days is set.
+#
+# audit_archive creates a dedicated log bucket and a sink that copies every
+# Cloud Audit Log (activity, data_access, system_event, policy) into it. Omit
+# it and nothing is created. The bucket sits in the same project, so the sink
+# needs no IAM grant.
+#
+# WARNING: locked: true cannot be undone. A locked bucket cannot be unlocked,
+# its retention_days can only grow, and it cannot be deleted (terraform destroy
+# fails) until every entry in it is older than retention_days. Choose the
+# retention before locking.
+# COST: logs routed to this bucket count as ingestion (past the free monthly
+# allotment it is billed), and storage beyond 30 days is billed per GiB-month.
+# Keep it out of dev and stg.
+# logging:
+#   retention_days: 90                              # [OPTIONAL] _Default retention in days (default: 30, 90 in pro)
+#   required_retention_days: 400                    # [OPTIONAL] _Required retention, at least 400. Omit to leave it alone
+#   audit_archive:                                  # [OPTIONAL] Absent: no archive bucket and no sink
+#     retention_days: 365                           # [MANDATORY] Days kept, 1 to 3650
+#     locked: true                                  # [OPTIONAL] Lock the retention policy (default: false). Irreversible
+#     location: "global"                            # [OPTIONAL] Bucket location (default: global), e.g. "europe-west1"
+#     bucket_id: "audit-archive"                    # [OPTIONAL] Bucket id (default: audit-archive)
+#     filter: 'log_id("cloudaudit.googleapis.com/activity")'  # [OPTIONAL] Replaces the default filter (all four audit logs)

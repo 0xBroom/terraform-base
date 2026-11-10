@@ -34,6 +34,7 @@ exist, which is what we want.
 | Bucket soft delete | 7 days | 30 days |
 | Budget | 40 EUR on dev, 80 EUR on stg | 400 EUR |
 | _Default log retention | 30 days | 90 days |
+| Audit log archive | none | locked log bucket, 365 days |
 | Binary Authorization | off | dry-run, attestation required |
 | VPC | dev `10.8.1.0/24`, stg and pre `10.10.1.0/24` | `10.20.1.0/24` |
 
@@ -49,6 +50,26 @@ must run `CREATE EXTENSION pgaudit;` once in each database before
 does not run SQL. `pgaudit.log` stays at `ddl,role` because `write` logs the
 text of every data change, literal values included. Add it only when the
 retention and access rules of those logs allow it.
+
+Pro sets `logging.audit_archive`: a log bucket `audit-archive` and a sink that
+copies every Cloud Audit Log (admin activity, data access, system event,
+policy denied) into it for 365 days. A project owner can shorten or empty
+`_Default`; the archive is locked so nobody can. Two things to know before the
+first apply:
+
+- **A locked bucket is permanent for its retention.** It cannot be unlocked,
+  its `retention_days` can only grow, and it cannot be deleted, by Terraform or
+  by hand, until every entry in it is older than 365 days. `terraform destroy`
+  of pro fails on it. To try the archive first, apply with `locked: false`,
+  check the logs arrive, then lock it.
+- **It is billed.** Logs routed to the archive count as ingestion (billed past
+  the free monthly allotment), and log bucket storage beyond 30 days is billed
+  per GiB-month. Audit volume grows with `security.audit_logging` data reads
+  and writes. Dev and stg leave the key out and get neither the bucket nor the
+  sink.
+
+The bucket is in the same project as the sink, so no IAM grant is needed for
+the sink's writer identity.
 
 The first Cloud Run revision is the public hello image. Cloud Build replaces
 the digest and Terraform leaves it alone. Do not pin a real image in the YAML.
