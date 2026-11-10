@@ -129,6 +129,12 @@ network:
   internal_connection: true
   services_cidr: "10.8.1.0/24"
   private_google_access: true
+  # Private Service Access: the private Cloud SQL IP and Memorystore come from
+  # this block. It must not overlap services_cidr. No charge.
+  services_ip_ranges:
+    private:
+      address: "10.9.0.0"
+      prefix_length: 16
   # No Cloud NAT: Cloud Run sends public traffic outside the VPC (vpc.egress
   # above), and nothing else here needs a static outbound IP. Copy the NAT
   # block from stg only when a third party must allowlist the egress address.

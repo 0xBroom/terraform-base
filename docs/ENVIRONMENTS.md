@@ -54,6 +54,7 @@ exist, which is what we want.
 | Binary Authorization | off | off | enforced: Cloud Build signs each digest with a KMS key, unsigned images are refused |
 | External CI federation (`wif`) | none | none | none, a commented example (`docs/WIF.md`) |
 | VPC | `10.8.1.0/24` | `10.10.1.0/24` | `10.20.1.0/24` |
+| Private Service Access range (no charge) | `10.9.0.0/16` | `10.11.0.0/16` | `10.21.0.0/16` |
 | Monthly cost, estimate | about 45 to 60 USD | about 130 to 160 USD | about 420 to 500 USD |
 
 The cost row is a ballpark from Google Cloud list prices in `europe-west1`

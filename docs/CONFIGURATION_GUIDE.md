@@ -90,7 +90,7 @@ recreate the mapping and its certificate.
 | `database` | a `database` instance | `sqladmin`, `servicenetworking` |
 | `cloud_sql_mount` | a service with `cloudrun.cloud_sql_instances_mount` or a job with `job-config.cloud_sql_instances_mount`, also without a `database` section (an instance in another project) | `sqladmin` |
 | `redis` | a `redis` instance | `redis`, `servicenetworking` |
-| `network` | `network.services_cidr` | `compute`, `servicenetworking`, `vpcaccess` |
+| `network` | `network.services_cidr` | `compute`, `servicenetworking` (Private Service Access), `vpcaccess` |
 | `lb` | an `lb` section | `compute` |
 | `compute` | `compute_instances` or `compute_nats` | `compute` |
 | `iap` | a service with `cloudrun.iap.enabled` or an IAP load balancer rule | `iap` |
@@ -222,6 +222,71 @@ compute_instances:
       image: "ubuntu-os-cloud/ubuntu-2204-lts"
       size_gb: 20
 ```
+
+## 🔒 Private Service Access (private Cloud SQL and Memorystore)
+
+A Cloud SQL instance with `ipv4_enabled: false` and a redis with
+`connect_mode: PRIVATE_SERVICE_ACCESS` take their IP from a range reserved in
+the shared VPC and reached through one peering to the Google service network.
+`network.services_ip_ranges` lists those ranges. The networking module creates
+one `google_compute_global_address` (purpose `VPC_PEERING`) per entry and one
+`google_service_networking_connection` that carries all of them, and the
+database and the redis are created after that connection. Ranges and peering
+cost nothing.
+
+```yaml
+network:
+  services_cidr: "10.10.1.0/24"
+  services_ip_ranges:
+    private:                  # range name: <vpc>--private
+      address: "10.11.0.0"    # optional, default: Google picks a free block
+      prefix_length: 16       # 8 to 24, default 16
+```
+
+- Key left out: a workspace with a private data store gets one `/16` named
+  `private` that Google allocates from the free private space of the VPC, so it
+  cannot overlap `services_cidr`. A workspace without one gets no range and no
+  connection.
+- `services_ip_ranges: {}`: nothing is created, and a private data store stops
+  the plan with an error (a precondition on the VPC in the networking module).
+- An explicit `address` that overlaps `services_cidr` or `extra_internal_cidrs`
+  stops the plan with an error from the same place.
+- `redis.<name>.reserved_ip_range` may name a key of this map; it is passed as
+  the allocated range name.
+- On destroy the connection is abandoned (`deletion_policy = "ABANDON"`): the
+  API refuses to delete it while Cloud SQL still holds the peering, which it
+  does for some days after the instance is gone. The peering goes away with
+  the VPC.
+- A range in use cannot shrink or move. Add a second key to grow.
+
+### Workspaces that created the peering by hand
+
+Before this, the stack passed the ranges to the module but created nothing, so
+a running private database means someone made the range and the connection
+outside Terraform. Bring them into state before the first apply of this
+version instead of letting the plan create a second range. With the VPC named
+`<base_name>-vpc` and the range key `private` (`terraform state show
+'module.network[0].google_compute_network.net'` prints the name):
+
+```bash
+gcloud compute addresses list --global --filter="purpose=VPC_PEERING" --project=<project-id>
+gcloud services vpc-peerings list --network=<vpc-name> --project=<project-id>
+
+terraform import 'module.network[0].google_compute_global_address.net_private["private"]' \
+  'projects/<project-id>/global/addresses/<vpc-name>--private'
+terraform import 'module.network[0].google_service_networking_connection.net_private_connection[0]' \
+  '/projects/<project-id>/global/networks/<vpc-name>:servicenetworking.googleapis.com'
+terraform plan
+```
+
+Write the existing block in `services_ip_ranges` (`address`, `prefix_length`)
+so the plan shows no replacement. A range made by hand under a name other
+than `<vpc-name>--<key>` cannot be adopted: address names are immutable and
+the module derives them from the key. Do not apply in that case, because the
+connection update would drop a range that is in use. Import edits
+state, so it needs the same go as an apply. If the connection is not imported,
+`update_on_creation_fail` makes the create patch the existing one with the
+ranges in the settings instead of failing.
 
 ## 🔌 Private Service Connect to Elastic Cloud
 

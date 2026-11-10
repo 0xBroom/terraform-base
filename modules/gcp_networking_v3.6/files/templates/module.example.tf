@@ -18,7 +18,7 @@
 
 
 module "network" {
-  source = "./modules/gcp_networking_v3.5"
+  source = "./modules/gcp_networking_v3.6"
 
   # Base name used in module (Mandatory)
   base_name = local.base_name

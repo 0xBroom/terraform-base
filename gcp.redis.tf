@@ -26,9 +26,17 @@ resource "google_redis_instance" "redis_instances" {
   tier           = each.value.tier
 
   # Network Configuration - VPC Integration
+  # psa_network_id depends on the Private Service Access connection. With
+  # PRIVATE_SERVICE_ACCESS, reserved_ip_range may name a network.services_ip_ranges
+  # key; it is passed as the allocated range name. Left out, Google picks a block
+  # inside the connection's ranges.
   connect_mode       = each.value.connect_mode
-  authorized_network = try(module.network[0].network_id, null)
-  reserved_ip_range  = try(each.value.reserved_ip_range, null)
+  authorized_network = try(module.network[0].psa_network_id, null)
+  reserved_ip_range = try(
+    module.network[0].services_ip_range_names[each.value.reserved_ip_range],
+    each.value.reserved_ip_range,
+    null,
+  )
 
   # Security Configuration
   auth_enabled            = try(each.value.auth_enabled, true)

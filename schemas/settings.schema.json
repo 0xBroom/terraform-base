@@ -189,6 +189,22 @@
         "services_cidr": { "$ref": "#/$defs/cidr", "description": "Set: one shared VPC is created. Absent: no network." },
         "private_google_access": { "type": "boolean" },
         "extra_internal_cidrs": { "type": "array", "items": { "$ref": "#/$defs/cidr" } },
+        "services_ip_ranges": {
+          "type": "object",
+          "description": "Private Service Access ranges for private Cloud SQL and Memorystore. Absent: one Google-allocated /16 when a private data store exists. Empty: none.",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "address": { "type": "string", "pattern": "^[0-9]{1,3}(\\.[0-9]{1,3}){3}$" },
+              "description": { "type": "string" },
+              "prefix_length": { "type": "integer", "minimum": 8, "maximum": 24 },
+              "address_type": { "enum": ["INTERNAL"] },
+              "purpose": { "enum": ["VPC_PEERING"] },
+              "single_dash": { "type": "boolean" }
+            }
+          }
+        },
         "nats": {
           "type": "object",
           "description": "One router and Cloud NAT per entry. Billed.",

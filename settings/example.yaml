@@ -661,6 +661,22 @@ network:
   private_google_access: true                       # [MANDATORY] Access Google APIs without external IP
                                                     #   Must be true for serverless VPC access
 
+  # Private Service Access (PSA). A Cloud SQL instance with ipv4_enabled false and a
+  # redis with connect_mode PRIVATE_SERVICE_ACCESS take their IP from these ranges,
+  # through one peering to the Google service network. Ranges and peering are free.
+  # Default when the key is left out: one /16 named "private" that Google allocates
+  # from the free private space of the VPC, created only when such a data store
+  # exists. An explicit {} creates nothing, and a private data store then stops
+  # the plan with an error, as does an address that overlaps services_cidr or
+  # extra_internal_cidrs. A block can never shrink while instances use it: size it once.
+  services_ip_ranges:                               # [OPTIONAL] One reserved global address per entry
+    private:                                        #   Entry key, part of the range name ("<vpc>--private")
+      address: "10.11.0.0"                          #   [OPTIONAL] First IP of the block (default: Google picks one)
+                                                    #   Must not overlap services_cidr or extra_internal_cidrs
+      prefix_length: 16                             #   [OPTIONAL] 8 to 24 (default: 16). Cloud SQL needs at least /24
+      # description: "Cloud SQL and Memorystore"   #   [OPTIONAL] Address description
+      # single_dash: false                          #   [OPTIONAL] "<vpc>-private" instead of "<vpc>--private"
+
   # Cloud NAT (outbound internet from the VPC). Billed per hour plus per GB, and
   # each reserved address is billed. Needed only when Cloud Run egress is
   # "ALL_TRAFFIC" and the app calls public hosts, or when a third party must
@@ -685,7 +701,8 @@ redis:
                                                     #   "BASIC" = no HA, single zone (cheaper)
                                                     #   "STANDARD_HA" = high availability with failover
     connect_mode: "PRIVATE_SERVICE_ACCESS"          # [MANDATORY] Connection mode
-                                                    #   "PRIVATE_SERVICE_ACCESS" = VPC-connected (recommended)
+                                                    #   "PRIVATE_SERVICE_ACCESS" = VPC-connected (recommended),
+                                                    #   IP from network.services_ip_ranges
                                                     #   "DIRECT_PEERING" = VPC peering
     auth_enabled: true                              # [OPTIONAL] Require authentication (default: true)
     transit_encryption_mode: "DISABLED"              # [OPTIONAL] Encryption in transit (default: "DISABLED")
@@ -704,7 +721,9 @@ redis:
     #   rdb_snapshot_start_time: "2026-01-01T03:00:00Z"  #   [OPTIONAL] RFC 3339 UTC; snapshots align to it.
                                                     #   Default: the time persistence is enabled
     # display_name: "My Cache Instance"             # [OPTIONAL] Display name in console
-    # reserved_ip_range: "10.0.2.0/28"              # [OPTIONAL] Reserved IP range for the instance
+    # reserved_ip_range: "private"                  # [OPTIONAL] PRIVATE_SERVICE_ACCESS: a network.services_ip_ranges
+                                                    #   key (or an allocated range name). DIRECT_PEERING: a /29
+                                                    #   CIDR. Default: Google picks a free block
     # labels:                                       # [OPTIONAL] Resource labels
     #   environment: "dev"
     #   team: "backend"
