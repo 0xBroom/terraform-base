@@ -1399,7 +1399,7 @@ wif:
             - "roles/run.developer"
             - "roles/artifactregistry.writer"
         # - service_account: "existing-sa@example-app-dev.iam.gserviceaccount.com"
-        #   principal_set: "attribute.ref/refs/heads/main"
+        #   principal_set: "attribute.repository/example-org/other-repo"
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

@@ -8,13 +8,17 @@ locals {
   ]
 }
 
-check "private_sql_needs_shared_vpc" {
-  assert {
-    condition = alltrue([
-      for db in try(values(local.settings.database), []) :
-      try(db.sql.ipv4_enabled, false) || local.network_enabled
-    ])
-    error_message = "A database with ipv4_enabled false needs network.services_cidr so it can take a private IP on the shared VPC."
+# A precondition, not a check block: a failed check only warns, and the apply
+# would then fail halfway with an instance that has no IP at all.
+resource "terraform_data" "private_sql_guard" {
+  lifecycle {
+    precondition {
+      condition = alltrue([
+        for db in try(values(local.settings.database), []) :
+        try(db.sql.ipv4_enabled, false) || local.network_enabled
+      ])
+      error_message = "A database with ipv4_enabled false needs network.services_cidr so it can take a private IP on the shared VPC."
+    }
   }
 }
 

@@ -45,9 +45,10 @@ wif:
             - "roles/artifactregistry.writer"
 ```
 
-For deploys from one branch only, put it in the condition
-(`assertion.repository == 'example-org/example-repo' && assertion.ref == 'refs/heads/main'`)
-or bind `principal_set: "attribute.ref/refs/heads/main"`.
+For deploys from one branch only, put both in the condition
+(`assertion.repository == 'example-org/example-repo' && assertion.ref == 'refs/heads/main'`).
+Do not bind `attribute.ref/...` alone: it admits that branch in every repository the
+condition accepts.
 
 The pool and provider keys are their ids: 4 to 32 lowercase letters, digits or
 hyphens, not starting with `gcp-` (the plan stops otherwise). A deleted pool or

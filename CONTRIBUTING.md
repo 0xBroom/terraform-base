@@ -1,7 +1,7 @@
 # Contributing
 
-This repository is a Terraform template for Google Cloud, driven
-by YAML settings, with three reference workspaces (dev, stg and pro). Read
+This repository is a Terraform template for Google Cloud and Oracle Cloud (OCI),
+driven by YAML settings, with three reference workspaces (dev, stg and pro). Read
 `README.md`, `docs/PROJECT_STRUCTURE.md` and `AGENTS.md` before a first change;
 `AGENTS.md` holds the conventions every change follows, for people and agents alike.
 
@@ -43,16 +43,18 @@ tflint --format compact --minimum-failure-severity=warning
 terraform init -backend=false -input=false
 terraform validate
 
-# Validate dev, stg, pre and pro with a local backend override (gitignored)
+# Validate dev, stg and pro with a local backend override (gitignored). The
+# throwaway TF_DATA_DIR keeps the real .terraform/ and its gcs backend untouched:
+# without it, a clone initialised against the state bucket would end up planning
+# against an empty local state.
+export TF_DATA_DIR="$(mktemp -d)"
 printf 'terraform {\n  backend "local" {}\n}\n' > backend_override.tf
-terraform init -reconfigure -input=false
-for ws in dev stg pre pro; do
+terraform init -input=false
+for ws in dev stg pro; do
   terraform workspace select "$ws" 2>/dev/null || terraform workspace new "$ws"
   terraform validate
 done
-terraform workspace select default
-rm backend_override.tf
-terraform init -reconfigure -backend=false -input=false
+rm -rf backend_override.tf terraform.tfstate.d "$TF_DATA_DIR"; unset TF_DATA_DIR
 
 # Plan the reference shapes with mock providers
 terraform test

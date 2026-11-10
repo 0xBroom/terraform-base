@@ -211,7 +211,7 @@ ENV_KEYS = ("project:", "security:", "network:", "database:", "app:", "budget:",
 
 
 def stg_settings() -> bool:
-    return yaml_has("stg", *ENV_KEYS) or yaml_has("pre", *ENV_KEYS)
+    return yaml_has("stg", *ENV_KEYS)
 
 
 def pro_settings() -> bool:
@@ -928,8 +928,6 @@ ITEMS: list[Item] = [
     Item("OK-SQL-REPLICA", "p3", "No read replica by default in pro",
          "REGIONAL availability already gives a standby. A replica is a read scaling choice.", "Leave it.",
          disposition=ACCEPTED),
-    Item("OK-PRE-ALIAS", "p3", "settings/pre.yaml stays as the older name of stg",
-         "Existing users have a pre workspace. New projects use stg.", "Keep it equal to stg.", disposition=ACCEPTED),
 ]
 
 

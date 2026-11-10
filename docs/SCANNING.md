@@ -20,7 +20,7 @@ report-only flag of the same tool.
 | `deps_blocking` | trivy 0.76.2 `fs` | fail the build on HIGH or CRITICAL |
 
 `settings/pro.yaml` turns on `secrets_blocking`, `sast` and `deps` for the
-example service. Dev and stg (and pre) leave them off.
+example service. Dev and stg leave them off.
 
 The steps sit before `docker build` and only run in the inline pipeline
 (`inline: true`). Dropped steps are removed from `waitFor`, so a service with

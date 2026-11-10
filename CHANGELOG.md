@@ -97,6 +97,17 @@ backup and data-retention audit.
   (AUD-PUB-ELASTIC).
 - Invalid durations and an Elastic endpoint without a network stop the plan
   (AUD-INPUT-GUARDS).
+- A private Cloud SQL instance or a Redis instance without `network.services_cidr`
+  stops the plan instead of warning.
+- A settings file that still uses the old `elastic.psc` key stops the plan with
+  the new `elastic_psc` keys in the message, instead of destroying the endpoint.
+- The HTTPS firewall rule targets the standard `https-server` tag.
+- `settings_workspace` and `settings_override` are refused outside the default
+  workspace, so a plan cannot mix one workspace's settings with another's state.
+- A WIF provider `attribute_condition` must name a repository, owner, namespace
+  or subject claim.
+- `settings/pre.yaml` is gone: the workspaces are `dev`, `stg` and `pro`, as in
+  `AGENTS.md`.
 
 ### Security
 

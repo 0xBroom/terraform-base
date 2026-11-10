@@ -115,6 +115,7 @@ variable "backup_configuration" {
   })
   description = "Cloud SQL Backup configuration"
   default     = {}
+  nullable    = false
 
   validation {
     condition = (
@@ -132,6 +133,7 @@ variable "maintenance_window" {
   })
   description = "Cloud SQL maintenance window"
   default     = {}
+  nullable    = false
 }
 variable "deny_maintenance_period" {
   type = object({

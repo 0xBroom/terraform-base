@@ -135,8 +135,7 @@ read. `terraform output` prints what comes next (see [Outputs](#outputs)).
 ## Environments
 
 The three reference workspaces describe one service with a database, a bucket and a
-budget. `settings/pre.yaml` is the stg profile under its older name. Full matrix and
-reasons: [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md).
+budget. Full matrix and reasons: [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md).
 
 | | `dev` | `stg` | `pro` |
 |---|---|---|---|
@@ -253,7 +252,7 @@ secret.
 
 | Path | What |
 |---|---|
-| `settings/` | `default.yaml`, the reference `dev`, `stg`, `pre` and `pro` files, and `example.yaml` with every key |
+| `settings/` | `default.yaml`, the reference `dev`, `stg` and `pro` files, and `example.yaml` with every key |
 | `schemas/settings.schema.json` | Schema of the settings files |
 | `gcp.<type>.tf`, `oracle.<type>.tf` | One root file per resource type, each reading its own section |
 | `locals.tf`, `providers.tf`, `versions.tf`, `outputs.tf` | Settings merge, providers, version pins and backend, outputs |

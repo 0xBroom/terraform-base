@@ -62,7 +62,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        workspace: [default, dev, stg, pre, pro]
+        workspace: [default, dev, stg, pro]
     env:
       # locals.tf reads settings/<terraform.workspace>.yaml, so each workspace
       # validates a different merge of the settings files.

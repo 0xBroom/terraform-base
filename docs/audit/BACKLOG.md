@@ -4,7 +4,7 @@ The list of work that takes this template to a public, production-grade
 release: dev and stg cheap, pro ready for a security, backup and
 data-retention audit. Each item has a check in `bin/audit-terraform.py`.
 
-Open: 0. Done: 64. Accepted, not a gap: 22.
+Open: 1. Done: 63. Accepted, not a gap: 21.
 
 Regenerate with `python3 bin/audit-terraform.py --write` in the pull request
 that closes an item. `--next` names the item to take. How a session works an
@@ -13,7 +13,11 @@ item: `docs/audit/OPERATING.md`.
 
 ## Open
 
-None.
+### AUD-TF-SCHEMA (p2) Nothing validates the settings files before a plan
+
+A typo in a YAML key is silently ignored by try(). example.yaml can drift from the code.
+
+Next change: Add schemas/settings.schema.json and bin/validate-settings.py (stdlib or PyYAML), checking every settings/*.yaml including example.yaml, and run it in CI.
 
 ## Accepted, not a gap
 
@@ -143,12 +147,6 @@ REGIONAL availability already gives a standby. A replica is a read scaling choic
 
 Next change: Leave it.
 
-### OK-PRE-ALIAS (p3) settings/pre.yaml stays as the older name of stg
-
-Existing users have a pre workspace. New projects use stg.
-
-Next change: Keep it equal to stg.
-
 ## Done
 
 - AUD-NET (p0) The shared VPC is created even when the workspace has no network section
@@ -190,7 +188,6 @@ Next change: Keep it equal to stg.
 - AUD-TF-LABELS (p2) common_labels are not applied by the providers
 - AUD-TF-OUTPUTS (p2) The root module has no outputs
 - AUD-TF-BACKEND (p2) The state bucket is a literal in versions.tf
-- AUD-TF-SCHEMA (p2) Nothing validates the settings files before a plan
 - AUD-TF-TESTS (p3) There are no terraform tests
 - AUD-CI-MATRIX (p1) CI validates only the default workspace
 - AUD-CI-RUNNER (p1) CI runs on a moving runner label with Node 20 actions

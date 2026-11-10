@@ -41,7 +41,7 @@ when a full audit adds no new item.
    override, `*_override.tf`, is gitignored).
 6. CI repeats part of this on the pull request: `terraform fmt -check`,
    `tflint` on the root module, `terraform validate` in `default`, `dev`,
-   `stg`, `pre` and `pro`, `terraform test`,
+   `stg` and `pro`, `terraform test`,
    `python3 bin/cloudbuild-render-test.py`,
    `python3 bin/validate-settings.py` and
    `python3 bin/audit-terraform.py --fail-on p0`. A key you add to the
@@ -57,8 +57,7 @@ plan, in that workspace. A pull request is not that yes.
 ## The two profiles
 
 `settings/dev.yaml`, `settings/stg.yaml` and `settings/pro.yaml` are the
-reference workspaces. `settings/pre.yaml` is the older name for the stg shape
-and stays. Dev and stg are small, zonal and scale to zero. Pro is regional,
+reference workspaces. Dev and stg are small, zonal and scale to zero. Pro is regional,
 warm, protected against an accidental delete, and keeps the logs and backups
 an audit asks for. They use placeholders (`example-app-dev`,
 `example-app-stg`, `example-app-pro`, `replace-me@example.com`). Planning

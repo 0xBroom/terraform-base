@@ -27,7 +27,7 @@ logging:
 
 budget:
   billing_account: "000000-000000-000000"
-  amount: 80
+  amount: 160
   alert_spent_percents:
     - 0.5
     - 0.9

@@ -4,13 +4,6 @@
 # This file creates Redis instances based on settings configuration
 # following the same pattern as Cloud SQL module usage
 
-check "redis_needs_shared_vpc" {
-  assert {
-    condition     = length(try(local.settings.redis, {})) == 0 || local.network_enabled
-    error_message = "A redis entry needs network.services_cidr. Memorystore joins the one shared VPC."
-  }
-}
-
 # Create Redis instances for each configuration in settings
 resource "google_redis_instance" "redis_instances" {
   for_each = try(local.settings.redis, {})
@@ -90,6 +83,12 @@ resource "google_redis_instance" "redis_instances" {
   ]
 
   lifecycle {
+    # A precondition, not a check block: a failed check only warns, and the
+    # instance would then land on the default network.
+    precondition {
+      condition     = local.network_enabled
+      error_message = "redis.${each.key} needs network.services_cidr. Memorystore joins the one shared VPC."
+    }
     precondition {
       condition     = contains(["RDB", "DISABLED"], try(each.value.persistence.persistence_mode, "RDB"))
       error_message = "redis.${each.key}.persistence.persistence_mode must be RDB or DISABLED."

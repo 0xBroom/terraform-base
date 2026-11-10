@@ -131,7 +131,7 @@ binary_authorization:
 
 budget:
   billing_account: "000000-000000-000000"
-  amount: 400
+  amount: 500
   alert_spent_percents:
     - 0.5
     - 0.75

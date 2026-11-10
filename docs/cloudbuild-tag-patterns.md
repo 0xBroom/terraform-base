@@ -53,7 +53,7 @@ app:
 ```
 
 That trigger fires on `release-v1.0.0` and `release-v2.1.5`. The reference files
-use both forms: dev and stg (and pre) set `branch_pattern: "^main$"` and deploy
+use both forms: dev and stg set `branch_pattern: "^main$"` and deploy
 every push to `main`; pro keeps the default and deploys on a `pro-` tag.
 
 `build_filter_paths` limits a trigger to pushes that change those paths. It

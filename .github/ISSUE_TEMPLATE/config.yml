@@ -1,5 +1,7 @@
 blank_issues_enabled: true
 contact_links:
+  # Projects created from this template: point this URL at your own repository,
+  # and turn on private vulnerability reporting in its settings.
   - name: Report a security vulnerability
     url: https://github.com/0xBroom/terraform-base/security/advisories/new
     about: Report it privately through a GitHub security advisory, never in a public issue (SECURITY.md).
