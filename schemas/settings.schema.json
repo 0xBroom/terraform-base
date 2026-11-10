@@ -35,6 +35,22 @@
         "alerts_email": { "type": "string", "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$" },
         "artifact_scanning": { "type": "boolean" },
         "disable_service_account_keys": { "type": "boolean", "description": "Enforce the organization policies that refuse service account key creation and upload on the project." },
+        "essential_contacts": {
+          "description": "Essential Contacts of the project: true for alerts_email on SECURITY and TECHNICAL, or one entry per contact.",
+          "type": ["boolean", "array"],
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "email": { "type": "string", "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$" },
+              "categories": {
+                "type": "array",
+                "items": { "enum": ["ALL", "SUSPENSION", "SECURITY", "TECHNICAL", "BILLING", "LEGAL", "PRODUCT_UPDATES", "TECHNICAL_INCIDENTS"] }
+              },
+              "language_tag": { "type": "string", "pattern": "^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$" }
+            }
+          }
+        },
         "audit_logging": {
           "type": "object",
           "additionalProperties": false,

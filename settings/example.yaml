@@ -1192,6 +1192,16 @@ security:
   # stack uses a key. The identity that applies needs roles/orgpolicy.policyAdmin,
   # which exists only on the organization or a folder. No cost.
   # disable_service_account_keys: true              # [OPTIONAL] Default: false. true in pro
+  # Essential Contacts of the project (google_essential_contacts_contact,
+  # Essential Contacts API enabled with it): who Google tells about security
+  # incidents, outages, suspensions and legal notices. Without them only the
+  # project owners hear. No cost.
+  # essential_contacts: true                        # [OPTIONAL] Absent or false: none. true: alerts_email for SECURITY and TECHNICAL
+  # essential_contacts:                             # [OPTIONAL] Or a list, one contact per email
+  #   - email: "replace-me@example.com"             #   [OPTIONAL] Default: alerts_email. Unique per project
+  #     categories: ["SECURITY", "TECHNICAL", "SUSPENSION"]  #   [OPTIONAL] Default: SECURITY, TECHNICAL. Also ALL, BILLING,
+  #                                                 #   LEGAL, PRODUCT_UPDATES, TECHNICAL_INCIDENTS
+  #     language_tag: "en"                          #   [OPTIONAL] Default: en
   # Threshold alerts of the security baseline module, one log-based metric and
   # one alert policy per family. true (default) or false for all, or a map
   # where an omitted family stays on. Five families report the same events as

@@ -92,6 +92,17 @@ run "pro_shape_is_hardened" {
   }
 
   assert {
+    condition = (
+      keys(google_essential_contacts_contact.contacts) == ["replace-me@example.com"]
+      && google_essential_contacts_contact.contacts["replace-me@example.com"].parent == "projects/example-app-pro"
+      && toset(google_essential_contacts_contact.contacts["replace-me@example.com"].notification_category_subscriptions) == toset(["SECURITY", "TECHNICAL", "SUSPENSION"])
+      && google_essential_contacts_contact.contacts["replace-me@example.com"].language_tag == "en"
+      && contains(local.enabled_apis, "essentialcontacts.googleapis.com")
+    )
+    error_message = "pro names an Essential Contact for security, technical and suspension notices, with the API on."
+  }
+
+  assert {
     condition = alltrue([
       for name in ["iam_policy_change", "service_account_key_created", "firewall_change", "audit_config_change", "custom_role_change", "sql_instance_change", "bucket_iam_change"] :
       contains(keys(google_monitoring_alert_policy.log_alerts), name)

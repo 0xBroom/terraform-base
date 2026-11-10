@@ -162,3 +162,63 @@ run "disable_service_account_keys_not_a_bool_is_refused" {
     google_monitoring_notification_channel.security_alerts,
   ]
 }
+
+run "essential_contacts_true_uses_alerts_email" {
+  command = plan
+
+  variables {
+    settings_override = {
+      security = {
+        alerts_email       = "Replace-Me@example.com"
+        essential_contacts = true
+      }
+    }
+  }
+
+  expect_failures = [check.settings_workspace_unset]
+
+  assert {
+    condition = (
+      keys(google_essential_contacts_contact.contacts) == ["replace-me@example.com"]
+      && google_essential_contacts_contact.contacts["replace-me@example.com"].notification_category_subscriptions == tolist(["SECURITY", "TECHNICAL"])
+      && google_essential_contacts_contact.contacts["replace-me@example.com"].language_tag == "en"
+    )
+    error_message = "essential_contacts: true creates one contact for alerts_email on SECURITY and TECHNICAL (positive control)."
+  }
+}
+
+run "essential_contacts_unknown_category_is_refused" {
+  command = plan
+
+  variables {
+    settings_override = {
+      security = {
+        alerts_email       = "replace-me@example.com"
+        essential_contacts = [{ email = "replace-me@example.com", categories = ["SECURITY", "OUTAGES"] }]
+      }
+    }
+  }
+
+  expect_failures = [
+    check.settings_workspace_unset,
+    google_essential_contacts_contact.contacts,
+  ]
+}
+
+run "essential_contacts_not_a_list_is_refused" {
+  command = plan
+
+  variables {
+    settings_override = {
+      security = {
+        alerts_email       = "replace-me@example.com"
+        essential_contacts = "replace-me@example.com"
+      }
+    }
+  }
+
+  expect_failures = [
+    check.settings_workspace_unset,
+    google_monitoring_notification_channel.security_alerts,
+  ]
+}
