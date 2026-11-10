@@ -116,3 +116,9 @@ project_access:
 security:
   alerts_email: "security@example.com"
 ```
+
+### External CI without keys
+GitHub Actions, GitLab CI or another OIDC issuer authenticate through Workload
+Identity Federation (`wif`), never with a service account key. Every provider
+needs an `attribute_condition`. See [WIF.md](WIF.md) for the keys and a
+`google-github-actions/auth` workflow.

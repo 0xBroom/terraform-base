@@ -4,7 +4,7 @@ The list of work that takes this template to a public, production-grade
 release: dev and stg cheap, pro ready for a security, backup and
 data-retention audit. Each item has a check in `bin/audit-terraform.py`.
 
-Open: 24. Done: 27. Accepted, not a gap: 22.
+Open: 23. Done: 28. Accepted, not a gap: 22.
 
 Regenerate with `python3 bin/audit-terraform.py --write` in the pull request
 that closes an item. `--next` names the item to take. How a session works an
@@ -40,12 +40,6 @@ Secret reads are invisible without data access logs for Secret Manager and an al
 Next change: Add monitoring.secret_access: data access audit logs on secretmanager.googleapis.com and a log alert excluding the expected service accounts. Enable it in pro.
 
 After: AUD-MON-LOG-ALERTS
-
-### AUD-WIF (p1) External CI can only authenticate with a service account key
-
-Long-lived keys are the first finding in any cloud audit. Workload Identity Federation removes them.
-
-Next change: Add gcp.wif.tf driven by settings.wif (pool, providers for GitHub Actions or another OIDC issuer, attribute_condition, bound service account). Document it in settings/example.yaml.
 
 ### AUD-BINAUTH-PRO (p2) Pro turns Binary Authorization on but never blocks
 
@@ -334,3 +328,4 @@ Next change: Keep it equal to stg.
 - AUD-SQL-HARDEN (p1) Pro PostgreSQL has no connection or statement audit trail
 - AUD-AUDIT-ARCHIVE (p1) Audit logs are not archived in a locked bucket
 - AUD-MON-LOG-ALERTS (p1) No alert fires on IAM, firewall, service account key or audit config changes
+- AUD-WIF (p1) External CI can only authenticate with a service account key

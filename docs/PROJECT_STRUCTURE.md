@@ -16,6 +16,7 @@ This document describes how the files in this repository fit together.
   - `gcp.sql.tf`, `gcp.redis.tf`, `gcp.firestore.tf`: data stores.
   - `gcp.storage.tf`, `gcp.secrets*.tf`, `gcp.artifact*.tf`: buckets, secrets, registries.
   - `gcp.iam.tf`, `gcp.service.permissions.tf`, `gcp.security.tf`: project IAM and the security baseline.
+  - `gcp.wif.tf`: Workload Identity Federation for external CI (`docs/WIF.md`).
   - `gcp.billing.tf`: budget with optional automatic billing shutdown.
   - `gcp.dns.tf`, `gcp.pubsub.tf`, `gcp.cloudtasks.tf`, `gcp.scheduler.tf`, `gcp.compute*.tf`, `gcp.firewall.tf`, `gcp.elastic.psc.tf`, `gcp.binary_auth.tf`, `gcp.repository.*.tf`: the rest, same pattern.
 - `oracle.compute.tf`, `oracle.network.tf`, `oracle.security.tf`: the optional Oracle Cloud side (VMs, VCN, security lists), driven by the `oracle:` section.
