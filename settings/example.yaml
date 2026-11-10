@@ -676,6 +676,17 @@ redis:
                                                     #   "DISABLED" = no encryption (faster, use for non-prod)
                                                     #   "SERVER_AUTHENTICATION" = TLS encryption
     # redis_version: "REDIS_7_0"                    # [OPTIONAL] Redis version (default: "REDIS_7_0")
+    # deletion_protection: true                     # [OPTIONAL] Default true when the workspace is pro, false otherwise
+                                                    #   true = terraform destroy, or a change that replaces the
+                                                    #   instance, fails. Set false and apply first to delete it
+    # persistence:                                  # [OPTIONAL] RDB snapshots (no extra charge; Redis 5.0 or later,
+                                                    #   BASIC and STANDARD_HA). Absent = the instance keeps its
+                                                    #   current mode (off on a new instance)
+    #   persistence_mode: "RDB"                     #   [OPTIONAL] "RDB" (default) or "DISABLED" (deletes the snapshots)
+    #   rdb_snapshot_period: "TWELVE_HOURS"         #   [MANDATORY with RDB] "ONE_HOUR", "SIX_HOURS", "TWELVE_HOURS"
+                                                    #   or "TWENTY_FOUR_HOURS"
+    #   rdb_snapshot_start_time: "2026-01-01T03:00:00Z"  #   [OPTIONAL] RFC 3339 UTC; snapshots align to it.
+                                                    #   Default: the time persistence is enabled
     # display_name: "My Cache Instance"             # [OPTIONAL] Display name in console
     # reserved_ip_range: "10.0.2.0/28"              # [OPTIONAL] Reserved IP range for the instance
     # labels:                                       # [OPTIONAL] Resource labels
