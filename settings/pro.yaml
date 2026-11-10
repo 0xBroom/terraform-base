@@ -21,6 +21,10 @@ security:
     data_read: false
     data_write: false
   artifact_scanning: true
+  # Organization policies on the project: no service account key can be
+  # created or uploaded. The applier needs roles/orgpolicy.policyAdmin, granted
+  # on the organization or a folder.
+  disable_service_account_keys: true
   # The monitoring.log_alerts presets below report these events once per
   # change, with the principal. The module's threshold alerts on the same
   # events would send a second email. Network, routes and owner stay on.

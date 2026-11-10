@@ -144,3 +144,21 @@ run "log_alert_durations_at_the_minimum_plan" {
     error_message = "300s and 1800s are accepted (positive control for the two refusals)."
   }
 }
+
+run "disable_service_account_keys_not_a_bool_is_refused" {
+  command = plan
+
+  variables {
+    settings_override = {
+      security = {
+        alerts_email                 = "replace-me@example.com"
+        disable_service_account_keys = "yes"
+      }
+    }
+  }
+
+  expect_failures = [
+    check.settings_workspace_unset,
+    google_monitoring_notification_channel.security_alerts,
+  ]
+}

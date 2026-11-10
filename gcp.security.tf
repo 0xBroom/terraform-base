@@ -30,6 +30,12 @@ resource "google_monitoring_notification_channel" "security_alerts" {
       )
       error_message = "security.metric_alerts is true, false or a map of ${join(", ", local.security_metric_alert_families)} to true or false."
     }
+    # Checked here for the same reason: with a value that is not a bool the
+    # org policies below have no instance to carry a precondition.
+    precondition {
+      condition     = local.disable_service_account_keys != null
+      error_message = "security.disable_service_account_keys is true or false."
+    }
   }
 }
 
@@ -93,6 +99,39 @@ module "basic_security" {
   notification_channels = [
     google_monitoring_notification_channel.security_alerts.name
   ]
+}
+
+# security.disable_service_account_keys enforces two boolean organization policy
+# constraints on this project: no new service account key can be created, and no
+# public key can be uploaded to a service account. Keys that already exist keep
+# working until someone deletes them. Nothing in this stack needs a key: Cloud
+# Run, jobs and Cloud Build run as attached service accounts, and external CI
+# federates through wif. The identity that applies needs
+# roles/orgpolicy.policyAdmin, which can only be granted on the organization or
+# a folder above the project, so it usually comes from the platform team.
+locals {
+  # null when the value is not a bool; the channel's precondition stops the plan.
+  disable_service_account_keys = try(tobool(coalesce(try(local.settings.security.disable_service_account_keys, null), false)), null)
+
+  service_account_key_constraints = local.disable_service_account_keys == true ? [
+    "iam.disableServiceAccountKeyCreation",
+    "iam.disableServiceAccountKeyUpload",
+  ] : []
+}
+
+resource "google_org_policy_policy" "service_account_keys" {
+  for_each = toset(local.service_account_key_constraints)
+
+  name   = "projects/${local.settings.project.id}/policies/${each.value}"
+  parent = "projects/${local.settings.project.id}"
+
+  spec {
+    rules {
+      enforce = "TRUE"
+    }
+  }
+
+  depends_on = [google_project_service.enabled_apis]
 }
 
 # Data Access logs for Secret Manager only, so the secret_access alert in

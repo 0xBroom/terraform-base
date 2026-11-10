@@ -83,6 +83,15 @@ run "pro_shape_is_hardened" {
   }
 
   assert {
+    condition = (
+      toset(keys(google_org_policy_policy.service_account_keys)) == toset(["iam.disableServiceAccountKeyCreation", "iam.disableServiceAccountKeyUpload"])
+      && alltrue([for policy in values(google_org_policy_policy.service_account_keys) : policy.parent == "projects/example-app-pro" && policy.spec[0].rules[0].enforce == "TRUE"])
+      && contains(local.enabled_apis, "orgpolicy.googleapis.com")
+    )
+    error_message = "pro refuses service account key creation and upload by organization policy on the project, with the Org Policy API on."
+  }
+
+  assert {
     condition = alltrue([
       for name in ["iam_policy_change", "service_account_key_created", "firewall_change", "audit_config_change", "custom_role_change", "sql_instance_change", "bucket_iam_change"] :
       contains(keys(google_monitoring_alert_policy.log_alerts), name)
