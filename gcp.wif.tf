@@ -93,18 +93,6 @@ locals {
   }
 }
 
-# The token exchange needs the Security Token Service API. iam and iamcredentials are in
-# default.yaml already.
-resource "google_project_service" "wif_sts" {
-  count = local.wif_enabled ? 1 : 0
-
-  project = local.settings.project.id
-  service = "sts.googleapis.com"
-
-  disable_dependent_services = false
-  disable_on_destroy         = false
-}
-
 # A deleted pool or provider id stays reserved for 30 days, so a key cannot be reused at once.
 resource "google_iam_workload_identity_pool" "wif" {
   for_each = local.wif_pools
@@ -121,7 +109,7 @@ resource "google_iam_workload_identity_pool" "wif" {
     }
   }
 
-  depends_on = [google_project_service.enabled_apis, google_project_service.wif_sts]
+  depends_on = [google_project_service.enabled_apis]
 }
 
 resource "google_iam_workload_identity_pool_provider" "wif" {

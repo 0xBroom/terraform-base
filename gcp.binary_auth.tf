@@ -15,36 +15,6 @@ locals {
   )
 }
 
-resource "google_project_service" "binary_authorization" {
-  count   = local.enable_binary_auth ? 1 : 0
-  project = local.settings.project.id
-  service = "binaryauthorization.googleapis.com"
-
-  disable_on_destroy = false
-
-  depends_on = [google_project_service.enabled_apis]
-}
-
-resource "google_project_service" "container_analysis" {
-  count   = local.enable_binary_auth ? 1 : 0
-  project = local.settings.project.id
-  service = "containeranalysis.googleapis.com"
-
-  disable_on_destroy = false
-
-  depends_on = [google_project_service.enabled_apis]
-}
-
-resource "google_project_service" "binauth_kms" {
-  count   = local.enable_binary_auth ? 1 : 0
-  project = local.settings.project.id
-  service = "cloudkms.googleapis.com"
-
-  disable_on_destroy = false
-
-  depends_on = [google_project_service.enabled_apis]
-}
-
 # The key Cloud Build signs attestations with. A key ring cannot be deleted: turning
 # Binary Authorization off drops it from state only, and turning it back on needs a
 # `terraform import` of the ring (docs/cloudbuild-pipeline.md).
@@ -54,7 +24,7 @@ resource "google_kms_key_ring" "binauth" {
   name     = local.binauth_key_ring_name
   location = local.settings.region_name
 
-  depends_on = [google_project_service.binauth_kms]
+  depends_on = [google_project_service.enabled_apis]
 }
 
 # Asymmetric keys do not rotate automatically. Version 1 is the one the attestor
@@ -88,7 +58,7 @@ resource "google_container_analysis_note" "binauth" {
     }
   }
 
-  depends_on = [google_project_service.container_analysis]
+  depends_on = [google_project_service.enabled_apis]
 }
 
 resource "google_binary_authorization_attestor" "binauth" {
@@ -108,7 +78,7 @@ resource "google_binary_authorization_attestor" "binauth" {
     }
   }
 
-  depends_on = [google_project_service.container_analysis, google_project_service.binary_authorization]
+  depends_on = [google_project_service.enabled_apis]
 }
 
 # The attestor reads attestations from the note as its own service account.
@@ -184,7 +154,7 @@ resource "google_binary_authorization_policy" "policy" {
   }
 
   depends_on = [
-    google_project_service.binary_authorization,
+    google_project_service.enabled_apis,
     google_binary_authorization_attestor.binauth,
   ]
 }

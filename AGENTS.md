@@ -142,7 +142,8 @@ The item you closed has to print `done`. Format Terraform you touched, then
 Rules that are easy to break:
 
 - `merge()` in `locals.tf` is shallow. Do not override `active-apis` in an environment
-  file.
+  file. A feature's APIs go in `local.feature_apis` (`gcp.enabled.apis.tf`), one-off
+  APIs in the workspace's `extra-apis`.
 - One shared VPC, and only when `settings.network.services_cidr` is set. Never one
   network per service.
 - Services live under `app.service` and jobs under `app.job`.

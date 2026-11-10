@@ -78,7 +78,7 @@ the common ones if you don't want to read 900 lines of comments.
 3. Copy `backend.hcl.example` to `backend.hcl` (gitignored) and set `bucket`, plus
    `prefix` if several stacks share the bucket. `versions.tf` keeps an empty
    `backend "gcs" {}`, so no tracked file holds the bucket name.
-4. Edit `settings/default.yaml`. Set the region, the enabled APIs, and `client.name`, which
+4. Edit `settings/default.yaml`. Set the region, the base APIs, and `client.name`, which
    is the short prefix every resource name starts with.
 5. Start from `settings/pre.yaml` or `settings/pro.yaml` (see `docs/ENVIRONMENTS.md`),
    or copy the sections you need from `settings/example.yaml`. Replace the
@@ -92,8 +92,9 @@ the common ones if you don't want to read 900 lines of comments.
    terraform apply
    ```
 
-The first apply turns on the APIs listed under `active-apis` and creates the security
-baseline. What happens after that depends on which sections your YAML has: the Cloud
+The first apply turns on the base APIs listed under `active-apis`, plus the APIs of
+each feature the workspace uses (`docs/CONFIGURATION_GUIDE.md`, "Enabled APIs"), and
+creates the security baseline. What happens after that depends on which sections your YAML has: the Cloud
 Build service account and its artifacts bucket, for example, come with the first build.
 
 After an apply, `terraform output` prints what you need next, from `outputs.tf`:

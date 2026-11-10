@@ -81,6 +81,12 @@ project:
 #   name: "my-system-project-name"                 # System project name
 #   number: "987654321098"                         # System project number
 
+# APIs. default.yaml lists the base (`active-apis`); each section below turns on
+# its own APIs when it exists (local.feature_apis, docs/CONFIGURATION_GUIDE.md).
+# Never set `active-apis` here: the merge is shallow and it would replace the base.
+# extra-apis:                                      # [OPTIONAL] Added to the base and feature APIs (default: none)
+#   - "aiplatform.googleapis.com"                  #   An API no section enables, for example Vertex AI
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # 2. BITBUCKET WORKSPACE CONFIGURATION
@@ -294,7 +300,8 @@ app:
         annotations:                                # [OPTIONAL] Annotations on the Cloud Run service
           "run.googleapis.com/binary-authorization": "default"  # Example: Enable binary authorization
 
-        # Cloud SQL connection (mounts Cloud SQL Auth Proxy sidecar)
+        # Cloud SQL connection (mounts Cloud SQL Auth Proxy sidecar). Also enables
+        # sqladmin.googleapis.com, with or without a database section.
         cloud_sql_instances_mount:                  # [OPTIONAL] Cloud SQL instances to connect
           - "my-sql-instance-connection-name"       #   Format: "{instance-name}" or full connection string
                                                     #   The Cloud SQL Auth Proxy handles authentication
@@ -440,7 +447,7 @@ app:
 
         # Advanced: VPC access configuration (alternative to enable_vpc_access)
         # vpc_access:                               # [OPTIONAL] Custom VPC access settings
-        #   connector: "my-connector"               #   VPC connector name
+        #   connector: "my-connector"               #   VPC connector name (enables vpcaccess.googleapis.com)
         #   egress: "ALL_TRAFFIC"                   #   Egress setting (default: "ALL_TRAFFIC")
         #   network_interfaces:                     #   Direct VPC egress (alternative to connector)
         #     network: "my-network"
@@ -1214,7 +1221,8 @@ security:
 # ═══════════════════════════════════════════════════════════════════════════════
 # Lets GitHub Actions, GitLab CI or any OIDC issuer act as a service account with
 # short-lived tokens, so no service account key is ever created. Omit `wif` and
-# nothing is created. When present it also enables sts.googleapis.com. No cost.
+# nothing is created. When present it also enables sts.googleapis.com and
+# iamcredentials.googleapis.com (local.feature_apis). No cost.
 #
 # Each provider MUST have an attribute_condition: without it any token of the
 # issuer (any repository on github.com) could use the pool, and the plan stops.
