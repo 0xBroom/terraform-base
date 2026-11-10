@@ -696,18 +696,32 @@ database:
                                                     #   1+ = read replicas for load distribution
 
       # Database flags (PostgreSQL configuration parameters)
-      flags:                                        # [OPTIONAL] PostgreSQL server flags
+      flags:                                        # [OPTIONAL] Cloud SQL database flags, name: value
+                                                    #   Values are sent as strings: quote "on" and "off"
         max_connections: 200                        #   Max concurrent connections
+        # Audit trail, pro only (dev and stg leave these out: log volume is billed)
+        # log_connections: "on"                     #   Log every connection with user and database
+        # log_disconnections: "on"                  #   Log every session end with its duration
+        # log_min_duration_statement: "1000"        #   Log statements slower than N ms (-1 = off)
+        # log_lock_waits: "on"                      #   Log waits longer than deadlock_timeout
+        # cloudsql.enable_pgaudit: "on"             #   Load pgAudit (restarts the instance once)
+        # pgaudit.log: "ddl,role"                   #   Classes to log: ddl, role, write, read, all
+        #                                           #   "write" logs every INSERT/UPDATE/DELETE text,
+        #                                           #   with the literal values in it
+        # pgAudit also needs CREATE EXTENSION pgaudit; run once in each database by the
+        # application's migration. This stack has no PostgreSQL provider and does not run it.
+        # shared_buffers: 256                       #   Shared memory buffers (MB)
       # insights:                                   # [OPTIONAL] Query Insights. Off unless a workspace asks.
       #   enabled: true                             #   pro should turn this on
       #   query_plans_per_minute: 5
-        # log_min_duration_statement: 1000          #   Log queries slower than N ms
-        # shared_buffers: 256                       #   Shared memory buffers (MB)
 
-      # Password generation configuration
+      # Password generation for the admin and app users (default: letters and digits only)
       special_password:                             # [OPTIONAL] Complex password generation
-        enabled: true                               #   Generate passwords with special characters
-        characters: "@#~"                           #   Special characters to include
+        enabled: true                               #   Add special characters to generated passwords
+        characters: "-_.~"                          #   Allowed special characters. Keep them URL-safe:
+                                                    #   @ : / % ? # break connection strings
+                                                    #   Changing either key on a live instance generates
+                                                    #   new passwords for every user (new secret versions)
 
       # Backup configuration
       backup:
