@@ -4,7 +4,7 @@ The list of work that takes this template to a public, production-grade
 release: dev and stg cheap, pro ready for a security, backup and
 data-retention audit. Each item has a check in `bin/audit-terraform.py`.
 
-Open: 10. Done: 42. Accepted, not a gap: 22.
+Open: 9. Done: 43. Accepted, not a gap: 22.
 
 Regenerate with `python3 bin/audit-terraform.py --write` in the pull request
 that closes an item. `--next` names the item to take. How a session works an
@@ -12,12 +12,6 @@ item: `docs/audit/OPERATING.md`.
 
 
 ## Open
-
-### AUD-TF-OUTPUTS (p2) The root module has no outputs
-
-A user has to dig in state to find the LB IP, service URLs, SQL connection names or the registry.
-
-Next change: Add outputs.tf with at least those four, nothing sensitive.
 
 ### AUD-TF-BACKEND (p2) The state bucket is a literal in versions.tf
 
@@ -254,6 +248,7 @@ Next change: Keep it equal to stg.
 - AUD-TF-GUARDS (p1) A minimal workspace still fails on missing keys and wrong defaults
 - AUD-TF-ALWAYS-ON (p2) Some resources are created in every workspace whether used or not
 - AUD-TF-LABELS (p2) common_labels are not applied by the providers
+- AUD-TF-OUTPUTS (p2) The root module has no outputs
 - AUD-CI-MATRIX (p1) CI validates only the default workspace
 - AUD-CI-RUNNER (p1) CI runs on a moving runner label with Node 20 actions
 - AUD-COST-DEFAULTS (p1) Two code defaults cost money when a key is left out

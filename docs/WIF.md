@@ -62,6 +62,10 @@ gcloud iam workload-identity-pools providers describe github \
   --format='value(name)'
 ```
 
+`terraform output wif_providers` prints the same name for every provider (keyed
+`<pool>/<provider>`), and `terraform output wif_service_accounts` the email of
+each binding's account.
+
 Then, in the workflow:
 
 ```yaml

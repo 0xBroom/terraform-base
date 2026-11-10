@@ -94,6 +94,14 @@ The first apply turns on the APIs listed under `active-apis` and creates the sec
 baseline. What happens after that depends on which sections your YAML has: the Cloud
 Build service account and its artifacts bucket, for example, come with the first build.
 
+After an apply, `terraform output` prints what you need next, from `outputs.tf`:
+`load_balancer_ip` and `load_balancer_domains` (for the DNS A records),
+`cloud_run_service_urls`, `cloud_sql_connection_names`,
+`artifact_registry_service_urls` and `artifact_registry_standalone_urls`,
+`wif_providers` and `wif_service_accounts` (for the CI auth step) and
+`audit_archive_bucket`. A feature the workspace does not have gives an empty
+map or null. No output carries a password or other secret.
+
 ### Oracle Cloud
 
 The `oracle.*.tf` files do nothing until the YAML has an `oracle:` section. The OCI
@@ -110,6 +118,7 @@ before you plan a workspace that uses it.
 | `gcp.<type>.tf` | One root file per resource type, each a `for_each` over its YAML section |
 | `oracle.*.tf` | The OCI side |
 | `locals.tf` · `providers.tf` · `versions.tf` | YAML loading, provider config and pins, state backend |
+| `outputs.tf` | Root outputs: load balancer IP and domains, service URLs, SQL connection names, registries, federation |
 | `modules/` | 9 vendored modules, with the version in the directory name |
 | `cloudbuild_files/` | The one Cloud Build pipeline every service shares (see `docs/cloudbuild-pipeline.md`) |
 | `cloud_function_source/` | The Cloud Function that disables billing when the budget runs out |
