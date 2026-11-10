@@ -1,5 +1,5 @@
 module "storage_processing" {
-  source = "./modules/tf_gcp_storage_v2.5-202406121124"
+  source = "./modules/tf_gcp_storage_v2.6-202611091700"
 
   base_name      = local.base_name
   region_name    = local.settings.region_name

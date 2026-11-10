@@ -1,5 +1,18 @@
-# Network Module
+# One shared VPC for the whole project. It is created only when the workspace
+# sets network.services_cidr. A project that does not need private connectivity
+# plans with no network, no NAT and no firewall. This is not a VPC per service.
+locals {
+  network_enabled = can(local.settings.network.services_cidr)
+}
+
+# Addresses before this count was introduced. Harmless on a fresh state.
+moved {
+  from = module.network
+  to   = module.network[0]
+}
+
 module "network" {
+  count  = local.network_enabled ? 1 : 0
   source = "./modules/tf_gcp_networking_v3.5-202503101237"
 
   # Base name used in module (Mandatory)
@@ -9,15 +22,15 @@ module "network" {
   # Project ID where to create the monitoring resources (Mandatory only when NAT is created)
   gcp_project_sys_id = local.settings.project_sys.id
   # Network tier used for the created NAT IP addresses (Optional. Only used when NAT is created. Default: PREMIUM)
-  network_tier = local.settings.network.network_tier
+  network_tier = try(local.settings.network.network_tier, "PREMIUM")
   # Create an internal connector to be used in SaS resources (Optional. Default: false)
-  internal_connection = local.settings.network.internal_connection
+  internal_connection = try(local.settings.network.internal_connection, true)
 
   # Create one or more subnetworks (Optional, but for sure you will need at least one)
   subnets = {
     services = {
       # Cidr used in the new subnetwork (Mandatory)
-      cidr = local.settings.network.services_cidr
+      cidr = try(local.settings.network.services_cidr, null)
       # Region where will be created (Mandatory)
       region = local.settings.region_name
       # Subnetwork purpose (Optional. Used for internal LB for example. Default: null)
@@ -25,7 +38,7 @@ module "network" {
       # Subnetwork role (Optional. Used for internal LB for example. Default: null)
       role = null
       # Enable the private access to google resources. (Optional. Must be false if purpose = INTERNAL_HTTPS_LOAD_BALANCER. Default: true)
-      private_google_access = local.settings.network.private_google_access
+      private_google_access = try(local.settings.network.private_google_access, true)
       # The service range name will use single dashes instead double dashes
       single_dash = false
     }

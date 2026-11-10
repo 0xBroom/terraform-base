@@ -171,9 +171,7 @@ resource "google_compute_global_address" "lb_static_ip" {
 
   name = "${local.base_name_medium}-lb-ip"
 
-  labels = {
-    managed_by = "terraform"
-  }
+  labels = local.common_labels
 }
 
 # Managed SSL Certificate
@@ -311,9 +309,7 @@ resource "google_compute_global_forwarding_rule" "lb_forwarding_rule" {
   ip_address            = google_compute_global_address.lb_static_ip[0].address
   load_balancing_scheme = "EXTERNAL_MANAGED"
 
-  labels = {
-    managed_by = "terraform"
-  }
+  labels = local.common_labels
 
   # Explicit dependency to ensure proper destruction order
   depends_on = [
@@ -371,9 +367,7 @@ resource "google_compute_global_forwarding_rule" "lb_http_forwarding_rule" {
   ip_address            = google_compute_global_address.lb_static_ip[0].address
   load_balancing_scheme = "EXTERNAL_MANAGED"
 
-  labels = {
-    managed_by = "terraform"
-  }
+  labels = local.common_labels
 
   # Explicit dependency to ensure proper destruction order
   depends_on = [

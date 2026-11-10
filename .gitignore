@@ -24,7 +24,7 @@ override.tf
 override.tf.json
 *_override.tf
 *_override.tf.json
-*.lock.hcl
+# .terraform.lock.hcl is committed so every clone uses the same provider builds.
 # Include override files you do wish to add to version control using negated pattern
 #
 # !example_override.tf
@@ -34,6 +34,8 @@ override.tf.json
 
 *.swp
 *~
+__pycache__/
+*.pyc
 
 ## script folder
 scripts/

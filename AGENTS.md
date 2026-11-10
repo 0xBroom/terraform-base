@@ -2,7 +2,7 @@
 
 Read `README.md` and `docs/PROJECT_STRUCTURE.md` before changing anything. This file adds
 the conventions an agent must follow when it sets up or extends a project from this
-template.
+template. The gap list against a production baseline is `docs/audit/BACKLOG.md`.
 
 ## GCP resource hierarchy
 
@@ -95,5 +95,46 @@ gcloud billing projects link "$ORG-$APP-dev-$SUFFIX" --billing-account=<billing-
   read.
 - Never use `-target`. Run a full plan.
 - Never create resources in the console. Add them to the YAML, or import them.
-- Validate with a real workspace, for example `TF_WORKSPACE=dev terraform validate`. The
-  `default` workspace has no `project` key and does not validate by design.
+- Validate with `terraform validate` on the default workspace, or on `dev`, `stg`
+  or `pro`. The default file carries placeholder project values so CI can validate
+  without a GCP login. Replace them before any plan of that workspace.
+
+## Catching up with a production baseline
+
+Workspaces are `settings/<workspace>.yaml` merged over `settings/default.yaml`. Root
+files are `gcp.<type>.tf`. Modules under `modules/` are vendored snapshots. Do not edit
+them in place.
+
+Read `docs/audit/OPERATING.md`. Run:
+
+```bash
+python3 bin/audit-terraform.py
+```
+
+Pick one open item. Skip every item marked accepted. Those exist so a later session does
+not copy a platform feature this template does not need: a VPC per module, a `module:`
+map of products, Shieldcode, Harbor, SonarQube, the data-retention sweeper, the SQL night
+resizer, Renovate, VPC Service Controls, Model Armor, Pulumi, Cloud Identity groups, a
+full IAM role matrix, a build-failure Chat notifier, CMEK on every resource, or replacing
+the hello placeholder image.
+
+One backlog id, one branch, one pull request. Refresh the backlog in that same pull
+request:
+
+```bash
+python3 bin/audit-terraform.py --write
+```
+
+The item you closed has to print `done`. Format Terraform you touched, then
+`terraform init -backend=false` and `terraform validate` when `.tf` files changed.
+
+Rules that are easy to break:
+
+- `merge()` in `locals.tf` is shallow. Do not override `active-apis` in an environment
+  file.
+- One shared VPC, and only when `settings.network.services_cidr` is set. Never one
+  network per service.
+- Services live under `app.service` and jobs under `app.job`.
+- No secret values in YAML, HCL, or commit messages. Names and Secret Manager ids only.
+- A missing settings section creates nothing. If you add a `for_each`, wrap the map in
+  `try(..., {})`.

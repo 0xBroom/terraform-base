@@ -244,6 +244,7 @@ app:
                                                     #   "INGRESS_TRAFFIC_INTERNAL_ONLY" = only VPC traffic
                                                     #   "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER" = LB + VPC only
         min_instances: 0                            # [OPTIONAL] Minimum running instances (default: 0)
+        # deletion_protection: true                 # [OPTIONAL] Default true when the workspace is pro, false otherwise
                                                     #   0 = scale to zero (cost saving, but cold starts)
                                                     #   1+ = always warm (faster responses, higher cost)
         max_instances: 5                            # [OPTIONAL] Maximum instances for auto-scaling (default: 10)
@@ -586,8 +587,10 @@ bucket:
 # ═══════════════════════════════════════════════════════════════════════════════
 # 11. NETWORK CONFIGURATION (VPC)
 # ═══════════════════════════════════════════════════════════════════════════════
-# VPC network for secure internal communication between services.
-# Creates: VPC, subnet, VPC connector for Cloud Run, optional NAT.
+# One shared VPC for the project. Omit this whole section and Terraform creates
+# no network, no firewall and no NAT. There is not a VPC per service.
+# Creates: VPC, services subnet, Private Service Access for Cloud SQL, optional NAT.
+# Cloud Run uses direct VPC egress onto this network when the section exists.
 network:
   network_tier: PREMIUM                             # [MANDATORY] Network tier for NAT IPs
                                                     #   "PREMIUM" = Google's premium backbone (recommended)
@@ -654,6 +657,10 @@ redis:
 database:
   my-database:                                      # Unique database instance identifier
     name: "my-database"                             # [MANDATORY] Instance name (becomes: "{client.name}-{name}")
+    # databases: ["api-db"]                         # [OPTIONAL] Omit to create <service>-db for every service
+    # users:                                        # [OPTIONAL] Omit to create <service>-app-user for every service
+    #   - name: "api-app-user"
+    #     host: ""
 
     sql:
       version: "POSTGRES_15"                        # [MANDATORY] PostgreSQL version
@@ -690,6 +697,9 @@ database:
       # Database flags (PostgreSQL configuration parameters)
       flags:                                        # [OPTIONAL] PostgreSQL server flags
         max_connections: 200                        #   Max concurrent connections
+      # insights:                                   # [OPTIONAL] Query Insights. Off unless a workspace asks.
+      #   enabled: true                             #   pro should turn this on
+      #   query_plans_per_minute: 5
         # log_min_duration_statement: 1000          #   Log queries slower than N ms
         # shared_buffers: 256                       #   Shared memory buffers (MB)
 
@@ -957,3 +967,7 @@ monitoring:
 # (security baseline, Cloud Run, LB, NAT). Always created, so this is mandatory.
 security:
   alerts_email: "alerts@example.com"                # [MANDATORY] Recipient of every alert
+  # audit_logging:                                  # [OPTIONAL] Defaults: admin_read true, data reads and writes off
+  #   admin_read: true
+  #   data_read: false
+  #   data_write: false

@@ -78,9 +78,10 @@ the common ones if you don't want to read 900 lines of comments.
 3. Put that bucket name in the `backend "gcs"` block of `versions.tf`.
 4. Edit `settings/default.yaml`. Set the region, the enabled APIs, and `client.name`, which
    is the short prefix every resource name starts with.
-5. Create `settings/<workspace>.yaml` and copy in the sections you need from
-   `settings/example.yaml`. The only required keys are `project.id`, `project.name`,
-   `project.number` and `security.alerts_email`.
+5. Start from `settings/pre.yaml` or `settings/pro.yaml` (see `docs/ENVIRONMENTS.md`),
+   or copy the sections you need from `settings/example.yaml`. Replace the
+   placeholder project id, billing account and email. The only required keys are
+   `project.id`, `project.name`, `project.number` and `security.alerts_email`.
 6. Plan and apply:
    ```bash
    terraform init
@@ -133,6 +134,22 @@ version, and you add the real value with `gcloud secrets versions add`.
 
 Check that destroys actually happened. Firestore in particular can survive an apply that
 says it was destroyed, so confirm with `gcloud` afterwards.
+
+## Checks
+
+Pull requests run `terraform fmt` on the root files, then `terraform init
+-backend=false` and `terraform validate` on the default workspace. The job
+does not format the vendored modules and it does not need a GCP login. It
+also fails while a p0 item in `docs/audit/BACKLOG.md` is still open.
+
+## Catching up with a production baseline
+
+`docs/audit/BACKLOG.md` is the gap list against the current Tools Hub Terraform,
+plus the platform pieces this template deliberately does not copy (a VPC per
+product, Shieldcode, a CMEK programme, and the rest of that list). Refresh it
+with `python3 bin/audit-terraform.py --write`. How to take one item into a
+pull request: `docs/audit/OPERATING.md`. Sessions that edit this repo should
+read `AGENTS.md` first.
 
 ## License
 

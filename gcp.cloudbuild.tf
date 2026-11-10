@@ -501,7 +501,7 @@ locals {
 }
 
 module "cloudbuild_artifacts_bucket" {
-  source = "./modules/tf_gcp_storage_v2.5-202406121124"
+  source = "./modules/tf_gcp_storage_v2.6-202611091700"
 
   base_name      = "${local.base_name_medium}-cloudbuild-artifacts"
   region_name    = local.settings.region_name

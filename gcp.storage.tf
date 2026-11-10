@@ -6,6 +6,9 @@
 
 # Local variables for dynamic permission processing
 locals {
+  # A workspace with no bucket: key creates nothing (AUD-BUCKET).
+  buckets = try(local.settings.bucket, {})
+
   # Process bucket permissions, expanding the same member shorthands the rest of this repo
   # uses:
   #
@@ -17,7 +20,7 @@ locals {
   # is of an unknown type» — half way through a plan, which is the worst moment to discover a typo-shaped problem. A
   # prefix should mean the same thing wherever it is written.
   bucket_permissions = {
-    for bucket_name, bucket_config in local.settings.bucket : bucket_name => {
+    for bucket_name, bucket_config in local.buckets : bucket_name => {
       for permission_name, permission_config in try(bucket_config.permissions, {}) : permission_name => {
         members = [
           for member in permission_config.members :
@@ -35,9 +38,9 @@ locals {
 
 # Create all storage buckets using for_each loop
 module "storage_buckets" {
-  for_each = local.settings.bucket
+  for_each = local.buckets
 
-  source = "./modules/tf_gcp_storage_v2.5-202406121124"
+  source = "./modules/tf_gcp_storage_v2.6-202611091700"
 
   # If custom_name is set, use the exact bucket name; otherwise use standard naming convention
   base_name      = try(each.value.custom_name, null) != null ? each.value.custom_name : "${local.base_name_medium}-${try(each.value.name, each.key)}"
@@ -52,6 +55,7 @@ module "storage_buckets" {
   force_destroy               = try(each.value.force_destroy, false)
   enable_versioning           = try(each.value.enable_versioning, false)
   uniform_bucket_level_access = try(each.value.uniform_access, true)
+  public_access_prevention    = try(each.value.public_access_prevention, "enforced")
   authoritative_permissions   = try(each.value.authoritative_permissions, false)
   # Soft delete retention: Convert days to seconds (GCP requires seconds, min 7 days, max 90 days)
   soft_delete_retention_duration = try(each.value.soft_delete_days, 7) * 86400

@@ -1,0 +1,27 @@
+name: terraform
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.14.5"
+          terraform_wrapper: false
+      - name: Format the root files
+        run: find . -name '*.tf' -not -path './modules/*' -print0 | xargs -0 terraform fmt -check -diff
+      - name: Init without a backend
+        run: terraform init -backend=false -input=false
+      - name: Validate the default workspace
+        run: terraform validate
+      - name: Fail on an open p0
+        run: python3 bin/audit-terraform.py --fail-on p0

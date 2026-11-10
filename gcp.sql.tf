@@ -1,17 +1,20 @@
 
 locals {
-  # Extract service names dynamically from app configuration
-  service_names = keys(local.app_services)
+  # Used only when an instance omits databases and users. A list on the instance
+  # entry (database.<name>.databases / .users) replaces this default.
+  sql_default_databases = [for name in keys(local.app_services) : "${name}-db"]
+  sql_default_users = [
+    for name in keys(local.app_services) : { name = "${name}-app-user", host = "" }
+  ]
+}
 
-  schema = {
-    # Database names for each service - dynamically generated from app services
-    databases = [
-      for service in local.service_names : "${service}-db"
-    ]
-    # Database users for each service - dynamically generated from app services
-    users = [
-      for service in local.service_names : { name = "${service}-app-user", host = "" }
-    ]
+check "private_sql_needs_shared_vpc" {
+  assert {
+    condition = alltrue([
+      for db in try(values(local.settings.database), []) :
+      try(db.sql.ipv4_enabled, false) || local.network_enabled
+    ])
+    error_message = "A database with ipv4_enabled false needs network.services_cidr so it can take a private IP on the shared VPC."
   }
 }
 
@@ -28,22 +31,29 @@ module "cloud_sql" {
   region_name        = local.settings.region_name
 
   ## All the below options are optional and if not provided, the default settings will be used
-  dbe                     = try(each.value.sql, null)         # Pass the specific database configuration
-  databases               = try(local.schema.databases, null) # All services get databases in each instance
-  users                   = try(local.schema.users, null)     # All service users in each instance
+  dbe = try(each.value.sql, null)
+  databases = length(try(each.value.databases, [])) > 0 ? [
+    for db in each.value.databases : try(db.name, db)
+  ] : local.sql_default_databases
+  users = length(try(each.value.users, [])) > 0 ? [
+    for user in each.value.users : {
+      name = try(user.name, user)
+      host = try(user.host, "")
+    }
+  ] : local.sql_default_users
   backup_configuration    = try(each.value.sql.backup, null)
   maintenance_window      = try(each.value.sql.maintenance, null)
   deny_maintenance_period = try(each.value.sql.deny_maintenance_period, null)
   zones_name              = try(local.settings.zones_name, [])
   special_characters_pass = try(each.value.sql.special_password, null)
-  secrets_locations       = [local.settings.region_name]                                                          # Use regional location for secrets
-  net_id                  = try(each.value.sql.ipv4_enabled, false) ? null : try(module.network.network_id, null) # Only pass network when using private IP
+  secrets_locations       = [local.settings.region_name] # Use regional location for secrets
+  net_id                  = try(each.value.sql.ipv4_enabled, false) ? null : try(module.network[0].network_id, null)
   insights_config = {
-    query_insights_enabled  = false
-    query_plans_per_minute  = 0
-    query_string_length     = 2048
-    record_application_tags = false
-    record_client_address   = false
+    query_insights_enabled  = try(each.value.sql.insights.enabled, false)
+    query_plans_per_minute  = try(each.value.sql.insights.query_plans_per_minute, 0)
+    query_string_length     = try(each.value.sql.insights.query_string_length, 2048)
+    record_application_tags = try(each.value.sql.insights.record_application_tags, false)
+    record_client_address   = try(each.value.sql.insights.record_client_address, false)
   }
   monitoring                        = try(each.value.sql.monitoring, {})
   flags                             = try(each.value.sql.flags, {})

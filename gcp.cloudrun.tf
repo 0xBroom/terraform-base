@@ -181,7 +181,7 @@ locals {
 module "cloudrun_gcs_volumes" {
   for_each = local.gcs_volumes_to_create
 
-  source = "./modules/tf_gcp_storage_v2.5-202406121124"
+  source = "./modules/tf_gcp_storage_v2.6-202611091700"
 
   base_name      = local.gcs_bucket_names[each.key]
   region_name    = local.settings.region_name
@@ -227,7 +227,7 @@ module "cloud_run_services" {
   gcp_project_id      = local.settings.project.id
   gcp_project_sys_id  = local.settings.project_sys.id
   region_name         = local.service_regions[each.key]
-  deletion_protection = false
+  deletion_protection = try(each.value.cloudrun.deletion_protection, terraform.workspace == "pro")
 
   # Service account: use external SA if specified, otherwise create a dedicated one
   service_account = try(each.value.cloudrun.external_sa, null) != null ? {
@@ -293,7 +293,7 @@ module "cloud_run_services" {
     ]
 
     # VPC access configuration
-    vpc_access = try(each.value.cloudrun.vpc_access_enabled, true) ? {
+    vpc_access = try(each.value.cloudrun.vpc_access_enabled, local.network_enabled) ? {
       egress = try(each.value.cloudrun.vpc.egress, "ALL_TRAFFIC")
       network_interfaces = {
         network    = try(each.value.cloudrun.vpc.network, "${local.base_name}-vpc")

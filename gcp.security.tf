@@ -20,11 +20,12 @@ module "basic_security" {
   base_name      = local.base_name
   gcp_project_id = local.settings.project.id
 
-  # Audit logging is optional
+  # Admin activity is the trail you need after an IAM or firewall change.
+  # Data access logs are expensive, so they stay off unless a workspace asks.
   audit_logging = {
-    admin_read = false
-    data_read  = false
-    data_write = false
+    admin_read = try(local.settings.security.audit_logging.admin_read, true)
+    data_read  = try(local.settings.security.audit_logging.data_read, false)
+    data_write = try(local.settings.security.audit_logging.data_write, false)
   }
 
   notification_channels = [

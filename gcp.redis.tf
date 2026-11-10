@@ -4,6 +4,13 @@
 # This file creates Redis instances based on settings configuration
 # following the same pattern as Cloud SQL module usage
 
+check "redis_needs_shared_vpc" {
+  assert {
+    condition     = length(try(local.settings.redis, {})) == 0 || local.network_enabled
+    error_message = "A redis entry needs network.services_cidr. Memorystore joins the one shared VPC."
+  }
+}
+
 # Create Redis instances for each configuration in settings
 resource "google_redis_instance" "redis_instances" {
   for_each = try(local.settings.redis, {})
@@ -20,7 +27,7 @@ resource "google_redis_instance" "redis_instances" {
 
   # Network Configuration - VPC Integration
   connect_mode       = each.value.connect_mode
-  authorized_network = module.network.network_id
+  authorized_network = try(module.network[0].network_id, null)
   reserved_ip_range  = try(each.value.reserved_ip_range, null)
 
   # Security Configuration
@@ -32,14 +39,7 @@ resource "google_redis_instance" "redis_instances" {
   display_name  = "${local.base_name_medium}-${each.value.name}"
 
   # Labels for resource management
-  labels = merge(
-    try(each.value.labels, {}),
-    {
-      workspace  = terraform.workspace
-      client     = local.settings.client.name
-      managed_by = "terraform"
-    }
-  )
+  labels = merge(local.common_labels, try(each.value.labels, {}))
 
   # Redis configuration parameters (optional)
   redis_configs = try(each.value.redis_configs, {})

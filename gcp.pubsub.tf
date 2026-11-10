@@ -5,6 +5,7 @@
 # {env}.{domain}.{context}.{event}
 
 resource "google_project_service_identity" "pubsub_agent" {
+  count    = length(try(local.settings.pubsub.topics, {})) > 0 ? 1 : 0
   provider = google-beta
   service  = "pubsub.googleapis.com"
   project  = local.settings.project.id
@@ -81,13 +82,14 @@ resource "google_pubsub_topic" "topics" {
 
   message_retention_duration = try(local.settings.pubsub.message_retention, "604800s") # default 7 days
 
-  labels = {
+  labels = merge(local.common_labels, {
     environment = terraform.workspace
     domain      = local.topic_config[each.key].domain
     context     = local.topic_config[each.key].context
     event       = local.topic_config[each.key].event
-    managed_by  = "terraform"
-  }
+  })
+
+  depends_on = [google_project_service_identity.pubsub_agent]
 }
 
 # Dead Letter Topics
@@ -99,11 +101,12 @@ resource "google_pubsub_topic" "dead_letter" {
 
   message_retention_duration = "${each.value.retention_days * 86400}s" # days to seconds
 
-  labels = {
+  labels = merge(local.common_labels, {
     environment = terraform.workspace
     type        = "dead-letter"
-    managed_by  = "terraform"
-  }
+  })
+
+  depends_on = [google_project_service_identity.pubsub_agent]
 }
 #Permisos para que Pub/Sub firme tokens
 resource "google_service_account_iam_member" "pubsub_token_creator" {
@@ -111,7 +114,7 @@ resource "google_service_account_iam_member" "pubsub_token_creator" {
 
   service_account_id = "projects/${local.settings.project.id}/serviceAccounts/${local.base_name}-${each.value}-sa@${local.settings.project.id}.iam.gserviceaccount.com"
   role               = "roles/iam.serviceAccountTokenCreator"
-  member             = "serviceAccount:${google_project_service_identity.pubsub_agent.email}"
+  member             = "serviceAccount:${try(one(google_project_service_identity.pubsub_agent[*].email), "unused@example.com")}"
 
   depends_on = [module.cloud_run_services]
 }
@@ -129,9 +132,7 @@ resource "google_pubsub_subscription" "subscriptions" {
   ack_deadline_seconds       = try(each.value.ack_deadline_seconds, 600)
   message_retention_duration = try(local.settings.pubsub.message_retention, "604800s") # default 7 days
 
-  labels = {
-    managed_by = "terraform"
-  }
+  labels = local.common_labels
 
   dynamic "push_config" {
     for_each = each.value.type == "push" ? [1] : []

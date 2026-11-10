@@ -56,9 +56,7 @@ resource "google_secret_manager_secret" "github_token" {
   project   = local.settings.project.id
   secret_id = format("%s-github-token", try(local.provider_configs["github"].connection_name, "github-repo-connection"))
 
-  labels = {
-    managed_by = "terraform"
-  }
+  labels = local.common_labels
 
   replication {
     user_managed {

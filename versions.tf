@@ -29,5 +29,9 @@ terraform {
       source  = "hashicorp/time"
       version = "~> 0.13.0"
     }
+    sops = {
+      source  = "carlpett/sops"
+      version = "~> 1.1"
+    }
   }
 }
