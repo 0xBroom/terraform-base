@@ -181,7 +181,7 @@ locals {
 module "cloudrun_gcs_volumes" {
   for_each = local.gcs_volumes_to_create
 
-  source = "./modules/tf_gcp_storage_v2.7"
+  source = "./modules/gcp_storage_v2.7"
 
   base_name      = local.gcs_bucket_names[each.key]
   region_name    = local.settings.region_name
@@ -220,7 +220,7 @@ resource "google_storage_bucket_iam_member" "cloudrun_gcs_access" {
 module "cloud_run_services" {
   for_each = local.app_services
 
-  source = "./modules/tf_gcp_cloudrun_v2_v6.6-202611092030"
+  source = "./modules/gcp_cloudrun_v6.6"
 
   # If custom_name is set, use the exact service name; otherwise use standard naming
   base_name           = try(each.value.custom_name, null) != null ? each.value.custom_name : "${local.base_name}-${local.run_service_names[each.key]}"

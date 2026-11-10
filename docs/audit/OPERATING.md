@@ -84,7 +84,24 @@ when one feature needs it, and to the workspace's `extra-apis` otherwise.
 
 ## Vendored modules
 
-`modules/*` are snapshots. Do not edit a module in place without giving the
-directory a new version suffix. The one exception is a comment or documentation fix
-(a translation, a typo) that changes no argument, default or expression: it may be
-made in place, because a new directory would only churn every `source` for nothing.
+`modules/*` are snapshots. The directory is the module name plus its version,
+`modules/gcp_<name>_v<major.minor>` (`modules/gcp_cloudsql_v7.5`), with no build
+timestamp. Do not edit a module in place: copy it to a directory with the next
+version (`gcp_cloudsql_v7.6`, or the next major for a breaking change), edit the
+copy, point every `source` at it, and delete the old directory once nothing
+references it. Only the versions a root file uses are kept. The one exception is a
+comment or documentation fix (a translation, a typo) that changes no argument,
+default or expression: it may be made in place, because a new directory would only
+churn every `source` for nothing.
+
+Renaming a module directory changes its `source` only. The module address in state
+is the block name (`module.cloud_sql`), so the rename needs `terraform init` and
+leaves the plan empty.
+
+## File names
+
+Root files are `gcp.<type>.tf` or `gcp.<type>.<part>.tf` (`oracle.` for the OCI
+side): dots between levels, underscores inside a word
+(`gcp.cloudrun.domain_mappings.tf`, `gcp.compute.nat.tf`), no hyphens. Only
+`locals.tf`, `providers.tf`, `versions.tf` and `outputs.tf` sit outside the pattern.
+`AUD-NAMES` checks both conventions.

@@ -747,8 +747,10 @@ ITEMS: list[Item] = [
          "The first apply boots a placeholder and Cloud Build replaces it. Terraform ignores later image changes.",
          "Leave it.", disposition=ACCEPTED),
     Item("OK-MODULE-SNAPSHOTS", "p2", "Vendored modules stay snapshots",
-         "A module changes only through a new version directory. Newer private modules are not copied in.",
-         "Upgrade one module per change, with a new directory.", disposition=ACCEPTED),
+         "A module changes only through a new version directory, named modules/gcp_<name>_v<major.minor> with no "
+         "timestamp. Newer private modules are not copied in.",
+         "Upgrade one module per change, with a new directory that bumps the version, and delete the old one "
+         "once no source points at it.", disposition=ACCEPTED),
     Item("OK-OCI", "p3", "The optional Oracle Cloud files stay",
          "oracle.*.tf create nothing without an oracle section. The provider is required at init only.",
          "Leave it. Document it as optional.", disposition=ACCEPTED),

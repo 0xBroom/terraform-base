@@ -24,7 +24,7 @@ resource "google_monitoring_notification_channel" "security_alerts" {
 }
 
 module "basic_security" {
-  source = "./modules/tf_gcp_basic_project_security_v1.8-202405071510"
+  source = "./modules/gcp_basic_project_security_v1.8"
 
   base_name      = local.base_name
   gcp_project_id = local.settings.project.id

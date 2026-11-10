@@ -73,7 +73,7 @@ locals {
 module "artifact_registry" {
   for_each = local.app_services
 
-  source = "./modules/tf_gcp_artifactregistry_v2.1-202503050945"
+  source = "./modules/gcp_artifactregistry_v2.1"
 
   gcp_project_id = local.settings.project.id
   base_name      = try(each.value.custom_name, null) != null ? each.value.custom_name : format("%s-%s", local.base_name, try(each.value.name, each.key))

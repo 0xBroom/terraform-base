@@ -185,7 +185,7 @@ resource "google_compute_global_address" "lb_static_ip" {
 module "certificate_main" {
   count = local.lb_enabled ? 1 : 0
 
-  source         = "./modules/tf_gcp_managed_ssl_certificate_v1.1-202408221449"
+  source         = "./modules/gcp_managed_ssl_certificate_v1.1"
   base_name      = format("%s--%s-main", local.base_name, terraform.workspace)
   region_name    = local.settings.region_name
   gcp_project_id = local.settings.project.id
@@ -410,7 +410,7 @@ resource "google_compute_global_forwarding_rule" "lb_http_forwarding_rule" {
 module "monitoring_load_balancing" {
   count = local.lb_enabled && local.lb_monitoring ? 1 : 0
 
-  source = "./modules/tf_gcp_monitoring_lb_v2.6-202611091200"
+  source = "./modules/gcp_monitoring_lb_v2.6"
 
   gcp_project_id            = local.settings.project.id
   gcp_project_id_monitoring = local.settings.project.id
