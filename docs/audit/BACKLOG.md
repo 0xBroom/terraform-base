@@ -5,7 +5,7 @@ settings, locals, network, security, SQL, KMS and provider pins). This
 repository is that template: root files `gcp.*.tf`, vendored `tf_gcp_*`
 modules, one workspace file per environment.
 
-Open: 5. Done: 19. Accepted, do not port: 16.
+Open: 4. Done: 20. Accepted, do not port: 16.
 
 Regenerate this file with `python3 bin/audit-terraform.py --write` in the same
 pull request that closes an item. The status comes from the code, not from
@@ -45,14 +45,6 @@ modules/tf_gcp_cloudrun_v2_v6.5-202502191120. Tools Hub has moved on. Root files
 Evidence: gcp.cloudrun.tf source path contains tf_gcp_cloudrun_v2_v6.5.
 
 Next change: Upgrade in one PR when a republishable module is available. Do not fork the vendored copy in place.
-
-### AUD-CODEOWNERS (p3) No CODEOWNERS file
-
-Anyone with write access can change a pro setting and a module in the same review with nobody named. A one-line CODEOWNERS is enough until the project has a team.
-
-Evidence: No CODEOWNERS at the repo root or under .github/.
-
-Next change: Add CODEOWNERS when the project has a GitHub team or user to name. Do not invent an owner.
 
 ## Done
 
@@ -199,6 +191,14 @@ There is no google_logging_project_bucket_config. Admin activity is on once AUD-
 Evidence: No gcp.logging.tf. gcp.security.tf creates the notification channel and the security module only.
 
 Next change: Add a small logging file driven by settings.logging.retention_days, with a sane default of 30 for pre and 90 for pro.
+
+### AUD-CODEOWNERS (p3) No CODEOWNERS file
+
+Anyone with write access can change a pro setting and a module in the same review with nobody named. A one-line CODEOWNERS is enough until the project has a team.
+
+Evidence: No CODEOWNERS at the repo root or under .github/.
+
+Next change: Add CODEOWNERS when the project has a GitHub team or user to name. Do not invent an owner.
 
 ### AUD-AGENTS (p1) A session that opens this repo has no operating rules
 
