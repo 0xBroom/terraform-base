@@ -90,4 +90,4 @@ module "network" {
   monitoring = {
     notification_channels = [google_monitoring_notification_channel.security_alerts.id]
   }
-} 
+}

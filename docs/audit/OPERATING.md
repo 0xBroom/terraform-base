@@ -40,8 +40,8 @@ when a full audit adds no new item.
    validate in the `dev`, `stg` and `pro` workspaces (a local backend
    override, `*_override.tf`, is gitignored).
 6. CI repeats part of this on the pull request: `terraform fmt -check`,
-   `terraform validate` in `default`, `dev`, `stg`, `pre` and `pro`,
-   `terraform test`,
+   `tflint` on the root module, `terraform validate` in `default`, `dev`,
+   `stg`, `pre` and `pro`, `terraform test`,
    `python3 bin/cloudbuild-render-test.py`,
    `python3 bin/validate-settings.py` and
    `python3 bin/audit-terraform.py --fail-on p0`. A key you add to the

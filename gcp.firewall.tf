@@ -132,4 +132,4 @@ resource "google_compute_firewall" "allow_https" {
   log_config {
     metadata = "INCLUDE_ALL_METADATA"
   }
-} 
+}

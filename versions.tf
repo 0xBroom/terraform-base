@@ -33,5 +33,9 @@ terraform {
       source  = "carlpett/sops"
       version = "~> 1.1"
     }
+    archive = {
+      source  = "hashicorp/archive"
+      version = "~> 2.8"
+    }
   }
 }

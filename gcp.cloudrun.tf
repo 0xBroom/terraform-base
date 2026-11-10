@@ -413,4 +413,3 @@ resource "google_storage_bucket_iam_member" "dedicated_sa_gcs_access" {
 
   depends_on = [module.cloud_run_services]
 }
-
